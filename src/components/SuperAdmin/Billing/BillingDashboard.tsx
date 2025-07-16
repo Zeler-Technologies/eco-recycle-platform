@@ -129,14 +129,14 @@ export const BillingDashboard = () => {
 
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="pricing">Pricing</TabsTrigger>
-            <TabsTrigger value="per-tenant">Per Tenant</TabsTrigger>
-            <TabsTrigger value="invoices">Invoices</TabsTrigger>
-            <TabsTrigger value="usage">Usage</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-7 bg-admin-primary">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Overview</TabsTrigger>
+            <TabsTrigger value="pricing" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Pricing</TabsTrigger>
+            <TabsTrigger value="per-tenant" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Per Tenant</TabsTrigger>
+            <TabsTrigger value="invoices" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Invoices</TabsTrigger>
+            <TabsTrigger value="usage" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Usage</TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Analytics</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">

@@ -270,12 +270,12 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
           <div className="lg:col-span-2">
             {selectedTenantData ? (
               <Tabs defaultValue="info" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="info">Info</TabsTrigger>
-                  <TabsTrigger value="users">Users</TabsTrigger>
-                  <TabsTrigger value="api">API</TabsTrigger>
-                  <TabsTrigger value="billing">Billing</TabsTrigger>
-                  <TabsTrigger value="config">Config</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-5 bg-admin-primary">
+                  <TabsTrigger value="info" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Info</TabsTrigger>
+                  <TabsTrigger value="users" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Users</TabsTrigger>
+                  <TabsTrigger value="api" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">API</TabsTrigger>
+                  <TabsTrigger value="billing" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Billing</TabsTrigger>
+                  <TabsTrigger value="config" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Config</TabsTrigger>
                 </TabsList>
 
                 {/* Tenant Information Tab */}

@@ -574,13 +574,13 @@ const APIConnectionsPanel = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Overview</TabsTrigger>
-          <TabsTrigger value="monitoring" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Monitoring</TabsTrigger>
-          <TabsTrigger value="payments" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Payment Systems</TabsTrigger>
-          <TabsTrigger value="sms" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">SMS</TabsTrigger>
-          <TabsTrigger value="maps" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Google Maps</TabsTrigger>
-          <TabsTrigger value="health" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Health Panel</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6 bg-admin-primary">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Overview</TabsTrigger>
+          <TabsTrigger value="monitoring" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Monitoring</TabsTrigger>
+          <TabsTrigger value="payments" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Payment Systems</TabsTrigger>
+          <TabsTrigger value="sms" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">SMS</TabsTrigger>
+          <TabsTrigger value="maps" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Google Maps</TabsTrigger>
+          <TabsTrigger value="health" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Health Panel</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">

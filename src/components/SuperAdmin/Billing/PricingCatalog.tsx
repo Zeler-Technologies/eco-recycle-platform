@@ -514,12 +514,12 @@ export const PricingCatalog = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="pricing-rules">Pricing Rules</TabsTrigger>
-          <TabsTrigger value="subscription-tiers">Subscription Tiers</TabsTrigger>
-          <TabsTrigger value="vat-config">VAT Configuration</TabsTrigger>
-          <TabsTrigger value="tenant-matrix">Tenant Matrix</TabsTrigger>
-          <TabsTrigger value="forecasting">Forecasting</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 bg-admin-primary">
+          <TabsTrigger value="pricing-rules" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Pricing Rules</TabsTrigger>
+          <TabsTrigger value="subscription-tiers" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Subscription Tiers</TabsTrigger>
+          <TabsTrigger value="vat-config" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">VAT Configuration</TabsTrigger>
+          <TabsTrigger value="tenant-matrix" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Tenant Matrix</TabsTrigger>
+          <TabsTrigger value="forecasting" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Forecasting</TabsTrigger>
         </TabsList>
 
         {/* Pricing Rules Tab */}
