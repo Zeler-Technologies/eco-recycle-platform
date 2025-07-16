@@ -166,9 +166,9 @@ const SuperAdminDashboard = () => {
                 <Users className="h-4 w-4 mr-2" />
                 Manage Users
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/billing'}>
                 <CreditCard className="h-4 w-4 mr-2" />
-                Payment Providers
+                Billing & Invoices
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <BarChart3 className="h-4 w-4 mr-2" />
