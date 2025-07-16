@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast';
 
 export type UserRole = 'super_admin' | 'tenant_admin' | 'driver';
 
@@ -29,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
+    console.error('useAuth must be used within an AuthProvider');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -72,7 +73,9 @@ const mockUsers: User[] = [
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  // const { toast } = useToast();
+
+  console.log('AuthProvider rendered, user:', user, 'loading:', loading);
 
   // Mock authentication check
   useEffect(() => {
@@ -120,17 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(mockUser);
       localStorage.setItem('user', JSON.stringify(mockUser));
       
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${mockUser.name}!`,
-      });
+      // Simple success notification without toast
+      console.log('Login successful:', mockUser.name);
 
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : 'Authentication failed',
-        variant: "destructive",
-      });
+      // Simple error notification without toast
+      console.error('Login failed:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -140,10 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+    console.log('Logged out successfully');
   };
 
   const theme = user?.role === 'super_admin' ? 'admin' : 
@@ -157,6 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user,
     theme
   };
+
+  console.log('AuthProvider providing value:', value);
 
   return (
     <AuthContext.Provider value={value}>
