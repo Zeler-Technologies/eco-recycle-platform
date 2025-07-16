@@ -129,9 +129,10 @@ export const BillingDashboard = () => {
 
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="pricing">Pricing</TabsTrigger>
+            <TabsTrigger value="per-tenant">Per Tenant</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="usage">Usage</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -239,6 +240,163 @@ export const BillingDashboard = () => {
 
           <TabsContent value="pricing">
             <PricingCatalog />
+          </TabsContent>
+
+          <TabsContent value="per-tenant">
+            <div className="space-y-6">
+              <Card className="bg-white shadow-custom-sm">
+                <CardHeader>
+                  <CardTitle className="text-admin-primary">Per Tenant Pricing Matrix</CardTitle>
+                  <CardDescription>Overview of pricing models and VAT configuration per tenant</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Tenant Pricing Overview */}
+                    {[
+                      {
+                        id: '1',
+                        name: 'Panta Bilen Stockholm',
+                        plan: 'Premium',
+                        monthlyFee: '€149',
+                        smsUsage: '1,250/2,000',
+                        carsProcessed: '425/2,000',
+                        apiRequests: '45,000/100,000',
+                        vat: '25%',
+                        totalMonthly: '€2,450',
+                        status: 'Active'
+                      },
+                      {
+                        id: '2',
+                        name: 'Oslo Scrap Yard',
+                        plan: 'Starter',
+                        monthlyFee: '€49',
+                        smsUsage: '320/500',
+                        carsProcessed: '180/500',
+                        apiRequests: '12,000/25,000',
+                        vat: '25%',
+                        totalMonthly: '€890',
+                        status: 'Active'
+                      },
+                      {
+                        id: '3',
+                        name: 'Copenhagen Metals',
+                        plan: 'Enterprise',
+                        monthlyFee: '€399',
+                        smsUsage: '8,450/10,000',
+                        carsProcessed: '2,100/5,000',
+                        apiRequests: '180,000/500,000',
+                        vat: '25%',
+                        totalMonthly: '€4,200',
+                        status: 'Active'
+                      }
+                    ].map((tenant) => (
+                      <div key={tenant.id} className="p-4 border rounded-lg hover:bg-admin-accent/10 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-admin-accent rounded-full">
+                              <Building2 className="h-4 w-4 text-admin-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold">{tenant.name}</h4>
+                              <p className="text-sm text-muted-foreground">ID: {tenant.id}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge className={`${tenant.plan === 'Enterprise' ? 'bg-admin-primary' : tenant.plan === 'Premium' ? 'bg-status-processing' : 'bg-status-pending'} text-white`}>
+                              {tenant.plan}
+                            </Badge>
+                            <Badge className="bg-status-completed text-white">
+                              {tenant.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground">Monthly Fee</p>
+                            <p className="text-lg font-bold text-admin-primary">{tenant.monthlyFee}</p>
+                          </div>
+                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground">SMS Usage</p>
+                            <p className="text-lg font-bold">{tenant.smsUsage}</p>
+                          </div>
+                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground">Cars Processed</p>
+                            <p className="text-lg font-bold">{tenant.carsProcessed}</p>
+                          </div>
+                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground">API Requests</p>
+                            <p className="text-lg font-bold">{tenant.apiRequests}</p>
+                          </div>
+                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground">VAT Rate</p>
+                            <p className="text-lg font-bold">{tenant.vat}</p>
+                          </div>
+                          <div className="text-center p-3 bg-admin-primary/10 rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground">Total Monthly</p>
+                            <p className="text-lg font-bold text-admin-primary">{tenant.totalMonthly}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Service Pricing Breakdown */}
+              <Card className="bg-white shadow-custom-sm">
+                <CardHeader>
+                  <CardTitle className="text-admin-primary">Service Pricing Breakdown</CardTitle>
+                  <CardDescription>Detailed pricing structure per service across all tenants</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3 font-semibold">Service</th>
+                          <th className="text-left p-3 font-semibold">Starter</th>
+                          <th className="text-left p-3 font-semibold">Premium</th>
+                          <th className="text-left p-3 font-semibold">Enterprise</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b hover:bg-admin-accent/10">
+                          <td className="p-3 font-medium">Platform Base Fee</td>
+                          <td className="p-3">€49/month</td>
+                          <td className="p-3">€149/month</td>
+                          <td className="p-3">€399/month</td>
+                        </tr>
+                        <tr className="border-b hover:bg-admin-accent/10">
+                          <td className="p-3 font-medium">SMS (per message)</td>
+                          <td className="p-3">€0.05 (500 incl.)</td>
+                          <td className="p-3">€0.04 (2,000 incl.)</td>
+                          <td className="p-3">€0.03 (10,000 incl.)</td>
+                        </tr>
+                        <tr className="border-b hover:bg-admin-accent/10">
+                          <td className="p-3 font-medium">Car Processing</td>
+                          <td className="p-3">€2.50 (500 incl.)</td>
+                          <td className="p-3">€2.00 (2,000 incl.)</td>
+                          <td className="p-3">€1.50 (5,000 incl.)</td>
+                        </tr>
+                        <tr className="border-b hover:bg-admin-accent/10">
+                          <td className="p-3 font-medium">Google Maps API</td>
+                          <td className="p-3">€0.005 (25,000 incl.)</td>
+                          <td className="p-3">€0.004 (100,000 incl.)</td>
+                          <td className="p-3">€0.003 (500,000 incl.)</td>
+                        </tr>
+                        <tr className="border-b hover:bg-admin-accent/10">
+                          <td className="p-3 font-medium">VAT Rate</td>
+                          <td className="p-3">25% (Sweden)</td>
+                          <td className="p-3">25% (Sweden)</td>
+                          <td className="p-3">25% (Sweden)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="invoices">

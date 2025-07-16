@@ -171,6 +171,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
         monthlyRevenue: selectedTenantData.revenue,
         invoiceEmail: selectedTenantData.adminEmail
       });
+    } else {
+      // Reset form data when no tenant is selected
+      setFormData({});
     }
   }, [selectedTenantData]);
 
@@ -184,6 +187,14 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
       ...prev,
       [field]: value
     }));
+    
+    // Update the tenant data in the tenants array for real-time reflection
+    if (selectedTenant && field === 'plan') {
+      const tenantIndex = tenants.findIndex(t => t.id === selectedTenant);
+      if (tenantIndex !== -1) {
+        tenants[tenantIndex].plan = value.charAt(0).toUpperCase() + value.slice(1);
+      }
+    }
   };
 
   return (
