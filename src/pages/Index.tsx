@@ -7,6 +7,10 @@ import TenantDashboard from '@/components/Tenant/TenantDashboard';
 const Index = () => {
   const { user, loading } = useAuth();
 
+  // Debug logging
+  console.log('Index component - User:', user);
+  console.log('Index component - Loading:', loading);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

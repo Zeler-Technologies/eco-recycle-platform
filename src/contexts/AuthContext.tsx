@@ -79,8 +79,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkAuth = async () => {
       try {
         const storedUser = localStorage.getItem('user');
+        console.log('Checking auth - storedUser:', storedUser);
         if (storedUser) {
           const userData = JSON.parse(storedUser);
+          console.log('Parsed user data:', userData);
           setUser(userData);
         }
       } catch (error) {
