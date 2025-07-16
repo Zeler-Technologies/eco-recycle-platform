@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp } from 'lucide-react';
+import { TenantSetupForm } from './TenantSetupForm';
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -121,10 +122,10 @@ const SuperAdminDashboard = () => {
                   <CardTitle className="text-admin-primary">Tenant Management</CardTitle>
                   <CardDescription>Manage scrap yard tenants and their subscriptions</CardDescription>
                 </div>
-                <Button className="bg-admin-primary hover:bg-admin-primary/90">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Tenant
-                </Button>
+                <TenantSetupForm onTenantCreated={(tenant) => {
+                  console.log('New tenant created:', tenant);
+                  // You can refresh the tenant list here
+                }} />
               </div>
             </CardHeader>
             <CardContent>
