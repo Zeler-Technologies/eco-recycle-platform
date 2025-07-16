@@ -274,6 +274,111 @@ export const PricingCatalog = () => {
     setPricingRules(prev => prev.filter(r => r.id !== ruleId));
   };
 
+  const handleDeleteTier = (tierId: string) => {
+    setSubscriptionTiers(prev => prev.filter(t => t.id !== tierId));
+  };
+
+  const SubscriptionTierForm = ({ tier, onSave }: { tier?: SubscriptionTier; onSave: (tier: SubscriptionTier) => void }) => {
+    const [formData, setFormData] = useState<SubscriptionTier>(tier || {
+      id: '',
+      name: 'Starter',
+      baseFee: 0,
+      maxSMS: 0,
+      maxCarsProcessed: 0,
+      maxGoogleMapsRequests: 0,
+      autoUpgrade: true,
+      color: 'bg-blue-500'
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      onSave(formData);
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="tierName">Tier Name</Label>
+            <Select value={formData.name} onValueChange={(value) => setFormData(prev => ({ ...prev, name: value as any }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Starter">Starter</SelectItem>
+                <SelectItem value="Premium">Premium</SelectItem>
+                <SelectItem value="Enterprise">Enterprise</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="baseFee">Monthly Base Fee (€)</Label>
+            <Input
+              id="baseFee"
+              type="number"
+              step="0.01"
+              value={formData.baseFee}
+              onChange={(e) => setFormData(prev => ({ ...prev, baseFee: parseFloat(e.target.value) }))}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="maxSMS">Max SMS/month</Label>
+            <Input
+              id="maxSMS"
+              type="number"
+              value={formData.maxSMS}
+              onChange={(e) => setFormData(prev => ({ ...prev, maxSMS: parseInt(e.target.value) }))}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="maxCarsProcessed">Max Cars/month</Label>
+            <Input
+              id="maxCarsProcessed"
+              type="number"
+              value={formData.maxCarsProcessed}
+              onChange={(e) => setFormData(prev => ({ ...prev, maxCarsProcessed: parseInt(e.target.value) }))}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="maxGoogleMapsRequests">Max API Requests/month</Label>
+            <Input
+              id="maxGoogleMapsRequests"
+              type="number"
+              value={formData.maxGoogleMapsRequests}
+              onChange={(e) => setFormData(prev => ({ ...prev, maxGoogleMapsRequests: parseInt(e.target.value) }))}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="autoUpgrade"
+            checked={formData.autoUpgrade}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, autoUpgrade: checked }))}
+          />
+          <Label htmlFor="autoUpgrade">Enable auto-upgrade when limits exceeded</Label>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => setSelectedTier(null)}>
+            Cancel
+          </Button>
+          <Button type="submit">
+            <Save className="h-4 w-4 mr-2" />
+            Save Tier
+          </Button>
+        </div>
+      </form>
+    );
+  };
+
   const PricingRuleForm = ({ rule, onSave }: { rule?: PricingRule; onSave: (rule: PricingRule) => void }) => {
     const [formData, setFormData] = useState<PricingRule>(rule || {
       id: '',
@@ -535,15 +640,44 @@ export const PricingCatalog = () => {
               <h3 className="text-lg font-semibold">Subscription Tiers</h3>
               <p className="text-sm text-muted-foreground">Configure Starter, Premium, and Enterprise tier limits and pricing</p>
             </div>
-            <Button className="bg-admin-primary hover:bg-admin-primary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Tier
-            </Button>
+            <Dialog open={!!selectedTier && !isEditMode} onOpenChange={(open) => !open && setSelectedTier(null)}>
+              <DialogTrigger asChild>
+                <Button 
+                  className="bg-admin-primary hover:bg-admin-primary/90"
+                  onClick={() => {
+                    setSelectedTier({} as SubscriptionTier);
+                    setIsEditMode(false);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Tier
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Subscription Tier</DialogTitle>
+                  <DialogDescription>
+                    Configure limits and pricing for a new subscription tier
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedTier && (
+                  <SubscriptionTierForm 
+                    onSave={handleSaveTier}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {subscriptionTiers.map((tier) => (
-              <Card key={tier.id} className={`relative overflow-hidden ${tier.name === 'Premium' ? 'ring-2 ring-admin-primary' : ''}`}>
+              <Card 
+                key={tier.id} 
+                className={`relative overflow-hidden cursor-pointer transition-all hover:shadow-custom-md ${
+                  tier.name === 'Premium' ? 'ring-2 ring-admin-primary' : ''
+                } ${selectedTier?.id === tier.id ? 'ring-2 ring-admin-primary bg-admin-accent/10' : ''}`}
+                onClick={() => setSelectedTier(selectedTier?.id === tier.id ? null : tier)}
+              >
                 <div className={`absolute inset-x-0 top-0 h-1 ${tier.color}`} />
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -551,9 +685,14 @@ export const PricingCatalog = () => {
                       <CardTitle className="text-xl">{tier.name}</CardTitle>
                       <div className="text-2xl font-bold text-admin-primary">€{tier.baseFee}/mo</div>
                     </div>
-                    {tier.name === 'Premium' && (
-                      <Badge className="bg-admin-primary text-white">Popular</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {tier.name === 'Premium' && (
+                        <Badge className="bg-admin-primary text-white">Popular</Badge>
+                      )}
+                      {selectedTier?.id === tier.id && (
+                        <Badge className="bg-status-completed text-white">Selected</Badge>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -577,10 +716,47 @@ export const PricingCatalog = () => {
                       </Badge>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Tier
-                  </Button>
+                  <div className="flex gap-2">
+                    <Dialog open={selectedTier?.id === tier.id && isEditMode} onOpenChange={(open) => !open && setIsEditMode(false)}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTier(tier);
+                            setIsEditMode(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Edit Subscription Tier</DialogTitle>
+                          <DialogDescription>
+                            Modify limits and pricing for {tier.name} tier
+                          </DialogDescription>
+                        </DialogHeader>
+                        <SubscriptionTierForm 
+                          tier={tier}
+                          onSave={handleSaveTier}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTier(tier.id);
+                      }}
+                      className="text-status-cancelled hover:text-status-cancelled"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
