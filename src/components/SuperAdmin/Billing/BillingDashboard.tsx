@@ -99,10 +99,10 @@ export const BillingDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => navigate("/")}
-                className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                className="border border-white/30 bg-transparent text-white hover:bg-white/20 hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Admin
@@ -115,9 +115,9 @@ export const BillingDashboard = () => {
             </div>
             <div className="flex items-center gap-4">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                className="border border-white/30 bg-transparent text-white hover:bg-white/20 hover:text-white"
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Generate Monthly Bills
