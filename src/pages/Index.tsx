@@ -1,14 +1,46 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
+import SuperAdminDashboard from '@/components/SuperAdmin/SuperAdminDashboard';
+import TenantDashboard from '@/components/Tenant/TenantDashboard';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Role-based dashboard rendering
+  switch (user.role) {
+    case 'super_admin':
+      return <SuperAdminDashboard />;
+    case 'tenant_admin':
+      return <TenantDashboard />;
+    case 'driver':
+      // TODO: Implement driver mobile interface
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Driver Interface</h1>
+            <p className="text-muted-foreground">Coming soon...</p>
+          </div>
+        </div>
+      );
+    default:
+      return <Navigate to="/login" replace />;
+  }
 };
 
 export default Index;
