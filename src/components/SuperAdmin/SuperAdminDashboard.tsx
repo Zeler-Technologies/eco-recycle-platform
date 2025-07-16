@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp, Globe } from 'lucide-react';
 import { TenantSetupForm } from './TenantSetupForm';
 import APIConnectionsPanel from './API/APIConnectionsPanel';
+import TenantManagement from './TenantManagement';
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
   const [showAPIConnections, setShowAPIConnections] = React.useState(false);
+  const [showTenantManagement, setShowTenantManagement] = React.useState(false);
 
   if (showAPIConnections) {
     return (
@@ -47,6 +49,10 @@ const SuperAdminDashboard = () => {
         <APIConnectionsPanel />
       </div>
     );
+  }
+
+  if (showTenantManagement) {
+    return <TenantManagement onBack={() => setShowTenantManagement(false)} />;
   }
 
   const stats = [
@@ -203,9 +209,9 @@ const SuperAdminDashboard = () => {
               <CardDescription>Common administrative tasks</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                <Users className="h-4 w-4 mr-2" />
-                Manage Users
+              <Button variant="outline" className="w-full justify-start" onClick={() => setShowTenantManagement(true)}>
+                <Building2 className="h-4 w-4 mr-2" />
+                Manage Tenants
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/billing'}>
                 <CreditCard className="h-4 w-4 mr-2" />

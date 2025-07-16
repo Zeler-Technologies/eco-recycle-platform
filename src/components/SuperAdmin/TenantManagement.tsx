@@ -1,0 +1,537 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Building2, 
+  Users, 
+  Settings, 
+  CreditCard, 
+  Globe, 
+  Plus, 
+  Edit, 
+  Trash2,
+  Save,
+  X,
+  Check,
+  AlertCircle,
+  MapPin,
+  Mail,
+  Phone,
+  Key,
+  History
+} from 'lucide-react';
+
+interface TenantManagementProps {
+  onBack: () => void;
+}
+
+const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+
+  // Mock data for tenants
+  const tenants = [
+    { 
+      id: '1', 
+      name: 'Panta Bilen Stockholm', 
+      status: 'Active', 
+      plan: 'Premium', 
+      revenue: '€2,450',
+      orgNumber: '556123-4567',
+      vatNumber: 'SE556123456701',
+      address: 'Storgatan 1, 111 22 Stockholm, Sweden',
+      adminName: 'Lars Andersson',
+      adminEmail: 'lars@pantabilen.se',
+      users: 12,
+      apiConnections: 8
+    },
+    { 
+      id: '2', 
+      name: 'Oslo Scrap Yard', 
+      status: 'Pending', 
+      plan: 'Starter', 
+      revenue: '€890',
+      orgNumber: '923456789',
+      vatNumber: 'NO923456789MVA',
+      address: 'Hovedgata 15, 0150 Oslo, Norway',
+      adminName: 'Erik Hansen',
+      adminEmail: 'erik@osloscrap.no',
+      users: 5,
+      apiConnections: 3
+    },
+    { 
+      id: '3', 
+      name: 'Copenhagen Metals', 
+      status: 'Active', 
+      plan: 'Enterprise', 
+      revenue: '€4,200',
+      orgNumber: '12345678',
+      vatNumber: 'DK12345678',
+      address: 'Nyhavn 12, 1051 Copenhagen, Denmark',
+      adminName: 'Niels Petersen',
+      adminEmail: 'niels@copenhagenmetal.dk',
+      users: 25,
+      apiConnections: 15
+    }
+  ];
+
+  const mockUsers = [
+    { id: '1', name: 'Lars Andersson', email: 'lars@pantabilen.se', role: 'Admin', status: 'Active' },
+    { id: '2', name: 'Anna Svensson', email: 'anna@pantabilen.se', role: 'Operator', status: 'Active' },
+    { id: '3', name: 'Mikael Johansson', email: 'mikael@pantabilen.se', role: 'Viewer', status: 'Inactive' }
+  ];
+
+  const mockApiServices = [
+    { name: 'Stripe', category: 'Payment', status: 'Connected', lastSync: '2 hours ago' },
+    { name: 'Google Maps', category: 'Maps', status: 'Connected', lastSync: '5 minutes ago' },
+    { name: 'Twilio SMS', category: 'Messaging', status: 'Error', lastSync: '1 day ago' },
+    { name: 'SendGrid', category: 'Email', status: 'Connected', lastSync: '30 minutes ago' }
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Active': return 'bg-status-completed text-white';
+      case 'Pending': return 'bg-status-processing text-white';
+      case 'Suspended': return 'bg-status-cancelled text-white';
+      case 'Connected': return 'bg-status-completed text-white';
+      case 'Error': return 'bg-status-cancelled text-white';
+      default: return 'bg-muted';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Active':
+      case 'Connected':
+        return <Check className="h-3 w-3" />;
+      case 'Error':
+        return <AlertCircle className="h-3 w-3" />;
+      default:
+        return null;
+    }
+  };
+
+  const selectedTenantData = tenants.find(t => t.id === selectedTenant);
+
+  return (
+    <div className="theme-admin min-h-screen bg-admin-muted">
+      <header className="bg-admin-primary text-admin-primary-foreground shadow-custom-md">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-2 text-admin-primary-foreground hover:text-admin-primary-foreground/80 transition-colors"
+              >
+                <Building2 className="h-6 w-6" />
+                <span>← Back to Dashboard</span>
+              </button>
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">Tenant Management</h1>
+              <p className="text-sm text-admin-primary-foreground/80">Configure and manage tenant settings</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Tenant List */}
+          <Card className="bg-white shadow-custom-sm">
+            <CardHeader>
+              <CardTitle className="text-admin-primary flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                All Tenants
+              </CardTitle>
+              <CardDescription>Select a tenant to manage</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {tenants.map((tenant) => (
+                <div
+                  key={tenant.id}
+                  className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                    selectedTenant === tenant.id 
+                      ? 'border-admin-primary bg-admin-accent/30' 
+                      : 'hover:bg-admin-accent/10'
+                  }`}
+                  onClick={() => setSelectedTenant(tenant.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm">{tenant.name}</h4>
+                      <p className="text-xs text-muted-foreground">{tenant.plan} Plan</p>
+                    </div>
+                    <Badge className={getStatusColor(tenant.status)}>
+                      {getStatusIcon(tenant.status)}
+                      {tenant.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {tenant.users} users
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      {tenant.apiConnections} APIs
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Tenant Details */}
+          <div className="lg:col-span-2">
+            {selectedTenantData ? (
+              <Tabs defaultValue="info" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="info">Info</TabsTrigger>
+                  <TabsTrigger value="users">Users</TabsTrigger>
+                  <TabsTrigger value="api">API</TabsTrigger>
+                  <TabsTrigger value="billing">Billing</TabsTrigger>
+                  <TabsTrigger value="config">Config</TabsTrigger>
+                </TabsList>
+
+                {/* Tenant Information Tab */}
+                <TabsContent value="info">
+                  <Card className="bg-white shadow-custom-sm">
+                    <CardHeader>
+                      <CardTitle className="text-admin-primary">Tenant Information</CardTitle>
+                      <CardDescription>Manage basic tenant details and contact information</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Company Information */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Company Information
+                          </h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingSection(editingSection === 'company' ? null : 'company')}
+                          >
+                            {editingSection === 'company' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="companyName">Company Name</Label>
+                            <Input
+                              id="companyName"
+                              defaultValue={selectedTenantData.name}
+                              disabled={editingSection !== 'company'}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="orgNumber">Organization Number</Label>
+                            <Input
+                              id="orgNumber"
+                              defaultValue={selectedTenantData.orgNumber}
+                              disabled={editingSection !== 'company'}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="vatNumber">VAT Number</Label>
+                            <Input
+                              id="vatNumber"
+                              defaultValue={selectedTenantData.vatNumber}
+                              disabled={editingSection !== 'company'}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Address Information */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            Address Information
+                          </h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingSection(editingSection === 'address' ? null : 'address')}
+                          >
+                            {editingSection === 'address' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <div>
+                          <Label htmlFor="address">Legal Address</Label>
+                          <Textarea
+                            id="address"
+                            defaultValue={selectedTenantData.address}
+                            disabled={editingSection !== 'address'}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch disabled={editingSection !== 'address'} />
+                          <Label>Use different billing address</Label>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Administrator Information */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Administrator Information
+                          </h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingSection(editingSection === 'admin' ? null : 'admin')}
+                          >
+                            {editingSection === 'admin' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="adminName">Administrator Name</Label>
+                            <Input
+                              id="adminName"
+                              defaultValue={selectedTenantData.adminName}
+                              disabled={editingSection !== 'admin'}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="adminEmail">Administrator Email</Label>
+                            <Input
+                              id="adminEmail"
+                              defaultValue={selectedTenantData.adminEmail}
+                              disabled={editingSection !== 'admin'}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {editingSection && (
+                        <div className="flex gap-2 pt-4">
+                          <Button>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Changes
+                          </Button>
+                          <Button variant="outline" onClick={() => setEditingSection(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* User Management Tab */}
+                <TabsContent value="users">
+                  <Card className="bg-white shadow-custom-sm">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-admin-primary">User Management</CardTitle>
+                          <CardDescription>Manage users and their access rights</CardDescription>
+                        </div>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add User
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {mockUsers.map((user) => (
+                          <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-admin-accent rounded-full">
+                                <Users className="h-4 w-4 text-admin-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold">{user.name}</h4>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="secondary">{user.role}</Badge>
+                              <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                              <div className="flex gap-1">
+                                <Button variant="outline" size="sm">
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* API Integrations Tab */}
+                <TabsContent value="api">
+                  <Card className="bg-white shadow-custom-sm">
+                    <CardHeader>
+                      <CardTitle className="text-admin-primary">API Integrations</CardTitle>
+                      <CardDescription>Configure tenant-specific API connections</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {mockApiServices.map((service, index) => (
+                          <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-admin-accent rounded-full">
+                                <Globe className="h-4 w-4 text-admin-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold">{service.name}</h4>
+                                <p className="text-sm text-muted-foreground">{service.category}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <Badge className={getStatusColor(service.status)}>
+                                  {getStatusIcon(service.status)}
+                                  {service.status}
+                                </Badge>
+                                <p className="text-xs text-muted-foreground mt-1">Last sync: {service.lastSync}</p>
+                              </div>
+                              <Button variant="outline" size="sm">
+                                <Settings className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Billing Settings Tab */}
+                <TabsContent value="billing">
+                  <Card className="bg-white shadow-custom-sm">
+                    <CardHeader>
+                      <CardTitle className="text-admin-primary">Billing Settings</CardTitle>
+                      <CardDescription>Configure billing and pricing options</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div>
+                        <Label htmlFor="plan">Subscription Plan</Label>
+                        <Select defaultValue={selectedTenantData.plan.toLowerCase()}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="starter">Starter</SelectItem>
+                            <SelectItem value="premium">Premium</SelectItem>
+                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="monthlyRevenue">Monthly Revenue</Label>
+                        <Input id="monthlyRevenue" defaultValue={selectedTenantData.revenue} />
+                      </div>
+                      <div>
+                        <Label htmlFor="invoiceEmail">Invoice Email</Label>
+                        <Input id="invoiceEmail" defaultValue={selectedTenantData.adminEmail} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch />
+                        <Label>Custom pricing enabled</Label>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Configuration Tab */}
+                <TabsContent value="config">
+                  <Card className="bg-white shadow-custom-sm">
+                    <CardHeader>
+                      <CardTitle className="text-admin-primary">Configuration</CardTitle>
+                      <CardDescription>Additional tenant settings and preferences</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Service Notifications</Label>
+                            <p className="text-sm text-muted-foreground">Receive notifications for service updates</p>
+                          </div>
+                          <Switch defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>API Rate Limiting</Label>
+                            <p className="text-sm text-muted-foreground">Apply rate limits to API requests</p>
+                          </div>
+                          <Switch defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Data Retention</Label>
+                            <p className="text-sm text-muted-foreground">Extended data retention period</p>
+                          </div>
+                          <Switch />
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <Label htmlFor="notes">Internal Notes</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Add internal notes or metadata for this tenant..."
+                          rows={4}
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button variant="outline">
+                          <History className="h-4 w-4 mr-2" />
+                          View Audit Log
+                        </Button>
+                        <Button>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Configuration
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <Card className="bg-white shadow-custom-sm">
+                <CardContent className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Select a Tenant</h3>
+                    <p className="text-muted-foreground">Choose a tenant from the list to view and manage their settings</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TenantManagement;
