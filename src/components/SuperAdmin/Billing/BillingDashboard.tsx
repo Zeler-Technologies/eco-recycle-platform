@@ -102,7 +102,7 @@ export const BillingDashboard = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/")}
-                className="border border-white/30 bg-transparent text-white hover:bg-white/20 hover:text-white"
+                className="!border !border-white/30 !bg-transparent !text-white hover:!bg-white/20 hover:!text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Admin
@@ -117,7 +117,7 @@ export const BillingDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="border border-white/30 bg-transparent text-white hover:bg-white/20 hover:text-white"
+                className="!border !border-white/30 !bg-transparent !text-white hover:!bg-white/20 hover:!text-white"
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Generate Monthly Bills
