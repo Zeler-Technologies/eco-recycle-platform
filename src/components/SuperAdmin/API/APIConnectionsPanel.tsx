@@ -20,7 +20,8 @@ import {
   AlertCircle,
   XCircle,
   TrendingUp,
-  Globe
+  Globe,
+  Phone
 } from 'lucide-react';
 
 interface APIService {
@@ -89,6 +90,17 @@ const APIConnectionsPanel = () => {
           usage: { current: 1450, limit: 2000, period: 'daily' },
           latency: 120,
           uptime: 98.5
+        },
+        sms: {
+          id: 'sms-1',
+          name: 'SMS Service',
+          category: 'messaging',
+          provider: 'Twilio',
+          status: 'connected',
+          lastSync: '2024-01-15T10:20:00Z',
+          usage: { current: 245, limit: 1000, period: 'daily' },
+          latency: 85,
+          uptime: 99.2
         }
       }
     },
@@ -118,6 +130,17 @@ const APIConnectionsPanel = () => {
           usage: { current: 89, limit: 300, period: 'daily' },
           latency: 38,
           uptime: 99.5
+        },
+        sms: {
+          id: 'sms-2',
+          name: 'SMS Service',
+          category: 'messaging',
+          provider: 'MessageBird',
+          status: 'error',
+          lastSync: '2024-01-15T09:15:00Z',
+          usage: { current: 67, limit: 500, period: 'daily' },
+          latency: 150,
+          uptime: 95.8
         }
       }
     }
@@ -152,7 +175,7 @@ const APIConnectionsPanel = () => {
       case 'location':
         return <Map className="h-4 w-4" />;
       case 'messaging':
-        return <MessageSquare className="h-4 w-4" />;
+        return <Phone className="h-4 w-4" />;
       case 'auth':
         return <Shield className="h-4 w-4" />;
       case 'database':
@@ -220,9 +243,11 @@ const APIConnectionsPanel = () => {
                 <td className="border border-gray-200 p-3 text-center">
                   {tenant.services.maps ? getStatusIcon(tenant.services.maps.status) : '❌'}
                 </td>
-                <td className="border border-gray-200 p-3 text-center">❌</td>
                 <td className="border border-gray-200 p-3 text-center">
-                  <Button variant="outline" size="sm">
+                  {tenant.services.sms ? getStatusIcon(tenant.services.sms.status) : '❌'}
+                </td>
+                <td className="border border-gray-200 p-3 text-center">
+                  <Button variant="outline" size="sm" className="bg-background hover:bg-muted text-foreground">
                     <Settings className="h-3 w-3 mr-1" />
                     Configure
                   </Button>
@@ -328,7 +353,7 @@ const APIConnectionsPanel = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-2 mt-3">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="bg-background hover:bg-muted text-foreground">
                   <TestTube className="h-3 w-3 mr-1" />
                   Test Connection
                 </Button>
@@ -400,7 +425,7 @@ const APIConnectionsPanel = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background hover:bg-muted text-foreground">
               <TestTube className="h-3 w-3 mr-1" />
               Test Connection
             </Button>
@@ -429,6 +454,116 @@ const APIConnectionsPanel = () => {
     </div>
   );
 
+  const SMSTab = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Phone className="h-5 w-5" />
+            <span>SMS Service Configuration</span>
+          </CardTitle>
+          <CardDescription>
+            Configure SMS services with multiple provider support
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {['Twilio', 'MessageBird', 'Clickatell', 'Nexmo'].map(provider => (
+            <div key={provider} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Phone className="h-4 w-4" />
+                  <span className="font-medium">{provider}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {provider === 'Twilio' ? 'Primary' : 'Backup'}
+                  </Badge>
+                </div>
+                <Switch defaultChecked={provider === 'Twilio' || provider === 'MessageBird'} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`${provider}-api-key`}>API Key</Label>
+                  <Input 
+                    id={`${provider}-api-key`}
+                    type="password" 
+                    placeholder="Enter API key"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`${provider}-sender-id`}>Sender ID</Label>
+                  <Input 
+                    id={`${provider}-sender-id`}
+                    placeholder="Enter sender ID"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Label htmlFor={`${provider}-webhook`}>Webhook URL</Label>
+                  <Input 
+                    id={`${provider}-webhook`}
+                    placeholder="Enter webhook URL"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`${provider}-region`}>Region</Label>
+                  <select className="w-full border rounded px-3 py-2 mt-1">
+                    <option value="global">Global</option>
+                    <option value="eu">Europe</option>
+                    <option value="us">United States</option>
+                    <option value="ap">Asia Pacific</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 mt-3">
+                <Button variant="outline" size="sm" className="bg-background hover:bg-muted text-foreground">
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Test Connection
+                </Button>
+                <Button variant="outline" size="sm" className="bg-background hover:bg-muted text-foreground">
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  Send Test SMS
+                </Button>
+                <Badge variant="outline">Production Environment</Badge>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <TrendingUp className="h-5 w-5" />
+            <span>SMS Usage Statistics</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">2,847</div>
+              <div className="text-sm text-gray-600">Messages Sent</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">98.9%</div>
+              <div className="text-sm text-gray-600">Delivery Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">$284.50</div>
+              <div className="text-sm text-gray-600">Monthly Cost</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">157ms</div>
+              <div className="text-sm text-gray-600">Avg Response Time</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
@@ -439,12 +574,13 @@ const APIConnectionsPanel = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-          <TabsTrigger value="payments">Payment Systems</TabsTrigger>
-          <TabsTrigger value="maps">Google Maps</TabsTrigger>
-          <TabsTrigger value="health">Health Panel</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Overview</TabsTrigger>
+          <TabsTrigger value="monitoring" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Monitoring</TabsTrigger>
+          <TabsTrigger value="payments" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Payment Systems</TabsTrigger>
+          <TabsTrigger value="sms" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">SMS</TabsTrigger>
+          <TabsTrigger value="maps" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Google Maps</TabsTrigger>
+          <TabsTrigger value="health" className="data-[state=active]:bg-admin-primary data-[state=active]:text-white">Health Panel</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -457,6 +593,10 @@ const APIConnectionsPanel = () => {
 
         <TabsContent value="payments" className="space-y-6">
           <PaymentSystemsTab />
+        </TabsContent>
+
+        <TabsContent value="sms" className="space-y-6">
+          <SMSTab />
         </TabsContent>
 
         <TabsContent value="maps" className="space-y-6">
