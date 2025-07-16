@@ -36,6 +36,7 @@ interface TenantManagementProps {
 const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [formData, setFormData] = useState<any>({});
 
   // Mock data for tenants
   const tenants = [
@@ -83,18 +84,51 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
     }
   ];
 
-  const mockUsers = [
-    { id: '1', name: 'Lars Andersson', email: 'lars@pantabilen.se', role: 'Admin', status: 'Active' },
-    { id: '2', name: 'Anna Svensson', email: 'anna@pantabilen.se', role: 'Operator', status: 'Active' },
-    { id: '3', name: 'Mikael Johansson', email: 'mikael@pantabilen.se', role: 'Viewer', status: 'Inactive' }
-  ];
+  // Mock data for users per tenant
+  const getMockUsers = (tenantId: string) => {
+    const usersByTenant = {
+      '1': [
+        { id: '1', name: 'Lars Andersson', email: 'lars@pantabilen.se', role: 'Admin', status: 'Active' },
+        { id: '2', name: 'Anna Svensson', email: 'anna@pantabilen.se', role: 'Operator', status: 'Active' },
+        { id: '3', name: 'Mikael Johansson', email: 'mikael@pantabilen.se', role: 'Viewer', status: 'Inactive' }
+      ],
+      '2': [
+        { id: '4', name: 'Erik Hansen', email: 'erik@osloscrap.no', role: 'Admin', status: 'Active' },
+        { id: '5', name: 'Astrid Olsen', email: 'astrid@osloscrap.no', role: 'Operator', status: 'Active' }
+      ],
+      '3': [
+        { id: '6', name: 'Niels Petersen', email: 'niels@copenhagenmetal.dk', role: 'Admin', status: 'Active' },
+        { id: '7', name: 'Mette Hansen', email: 'mette@copenhagenmetal.dk', role: 'Operator', status: 'Active' },
+        { id: '8', name: 'Kasper Nielsen', email: 'kasper@copenhagenmetal.dk', role: 'Viewer', status: 'Active' }
+      ]
+    };
+    return usersByTenant[tenantId] || [];
+  };
 
-  const mockApiServices = [
-    { name: 'Stripe', category: 'Payment', status: 'Connected', lastSync: '2 hours ago' },
-    { name: 'Google Maps', category: 'Maps', status: 'Connected', lastSync: '5 minutes ago' },
-    { name: 'Twilio SMS', category: 'Messaging', status: 'Error', lastSync: '1 day ago' },
-    { name: 'SendGrid', category: 'Email', status: 'Connected', lastSync: '30 minutes ago' }
-  ];
+  // Mock data for API services per tenant
+  const getMockApiServices = (tenantId: string) => {
+    const servicesByTenant = {
+      '1': [
+        { name: 'Stripe', category: 'Payment', status: 'Connected', lastSync: '2 hours ago' },
+        { name: 'Google Maps', category: 'Maps', status: 'Connected', lastSync: '5 minutes ago' },
+        { name: 'Twilio SMS', category: 'Messaging', status: 'Connected', lastSync: '1 hour ago' },
+        { name: 'SendGrid', category: 'Email', status: 'Connected', lastSync: '30 minutes ago' }
+      ],
+      '2': [
+        { name: 'Stripe', category: 'Payment', status: 'Connected', lastSync: '1 hour ago' },
+        { name: 'Google Maps', category: 'Maps', status: 'Error', lastSync: '2 days ago' },
+        { name: 'Twilio SMS', category: 'Messaging', status: 'Connected', lastSync: '3 hours ago' }
+      ],
+      '3': [
+        { name: 'Stripe', category: 'Payment', status: 'Connected', lastSync: '30 minutes ago' },
+        { name: 'Google Maps', category: 'Maps', status: 'Connected', lastSync: '10 minutes ago' },
+        { name: 'Twilio SMS', category: 'Messaging', status: 'Error', lastSync: '1 day ago' },
+        { name: 'SendGrid', category: 'Email', status: 'Connected', lastSync: '45 minutes ago' },
+        { name: 'BankID', category: 'Identity', status: 'Connected', lastSync: '2 hours ago' }
+      ]
+    };
+    return servicesByTenant[tenantId] || [];
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -120,6 +154,35 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
   };
 
   const selectedTenantData = tenants.find(t => t.id === selectedTenant);
+
+  // Update form data when selected tenant changes
+  React.useEffect(() => {
+    if (selectedTenantData) {
+      setFormData({
+        companyName: selectedTenantData.name,
+        orgNumber: selectedTenantData.orgNumber,
+        vatNumber: selectedTenantData.vatNumber,
+        address: selectedTenantData.address,
+        adminName: selectedTenantData.adminName,
+        adminEmail: selectedTenantData.adminEmail,
+        plan: selectedTenantData.plan.toLowerCase(),
+        monthlyRevenue: selectedTenantData.revenue,
+        invoiceEmail: selectedTenantData.adminEmail
+      });
+    }
+  }, [selectedTenantData]);
+
+  const handleSelectTenant = (tenantId: string) => {
+    setSelectedTenant(tenantId);
+    setEditingSection(null); // Reset editing state when selecting new tenant
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   return (
     <div className="theme-admin min-h-screen bg-admin-muted">
@@ -163,7 +226,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                       ? 'border-admin-primary bg-admin-accent/30' 
                       : 'hover:bg-admin-accent/10'
                   }`}
-                  onClick={() => setSelectedTenant(tenant.id)}
+                  onClick={() => handleSelectTenant(tenant.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -230,7 +293,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             <Label htmlFor="companyName">Company Name</Label>
                             <Input
                               id="companyName"
-                              defaultValue={selectedTenantData.name}
+                              value={formData.companyName || ''}
+                              onChange={(e) => handleInputChange('companyName', e.target.value)}
                               disabled={editingSection !== 'company'}
                             />
                           </div>
@@ -238,7 +302,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             <Label htmlFor="orgNumber">Organization Number</Label>
                             <Input
                               id="orgNumber"
-                              defaultValue={selectedTenantData.orgNumber}
+              value={formData.orgNumber || ''}
+                              onChange={(e) => handleInputChange('orgNumber', e.target.value)}
                               disabled={editingSection !== 'company'}
                             />
                           </div>
@@ -246,7 +311,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             <Label htmlFor="vatNumber">VAT Number</Label>
                             <Input
                               id="vatNumber"
-                              defaultValue={selectedTenantData.vatNumber}
+                              value={formData.vatNumber || ''}
+                              onChange={(e) => handleInputChange('vatNumber', e.target.value)}
                               disabled={editingSection !== 'company'}
                             />
                           </div>
@@ -274,7 +340,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                           <Label htmlFor="address">Legal Address</Label>
                           <Textarea
                             id="address"
-                            defaultValue={selectedTenantData.address}
+                            value={formData.address || ''}
+                            onChange={(e) => handleInputChange('address', e.target.value)}
                             disabled={editingSection !== 'address'}
                           />
                         </div>
@@ -306,7 +373,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             <Label htmlFor="adminName">Administrator Name</Label>
                             <Input
                               id="adminName"
-                              defaultValue={selectedTenantData.adminName}
+                              value={formData.adminName || ''}
+                              onChange={(e) => handleInputChange('adminName', e.target.value)}
                               disabled={editingSection !== 'admin'}
                             />
                           </div>
@@ -314,7 +382,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             <Label htmlFor="adminEmail">Administrator Email</Label>
                             <Input
                               id="adminEmail"
-                              defaultValue={selectedTenantData.adminEmail}
+                              value={formData.adminEmail || ''}
+                              onChange={(e) => handleInputChange('adminEmail', e.target.value)}
                               disabled={editingSection !== 'admin'}
                             />
                           </div>
@@ -353,7 +422,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {mockUsers.map((user) => (
+                        {getMockUsers(selectedTenant || '').map((user) => (
                           <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-admin-accent rounded-full">
@@ -392,7 +461,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {mockApiServices.map((service, index) => (
+                        {getMockApiServices(selectedTenant || '').map((service, index) => (
                           <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-admin-accent rounded-full">
@@ -432,7 +501,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                     <CardContent className="space-y-6">
                       <div>
                         <Label htmlFor="plan">Subscription Plan</Label>
-                        <Select defaultValue={selectedTenantData.plan.toLowerCase()}>
+                        <Select value={formData.plan || ''} onValueChange={(value) => handleInputChange('plan', value)}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -445,11 +514,19 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                       </div>
                       <div>
                         <Label htmlFor="monthlyRevenue">Monthly Revenue</Label>
-                        <Input id="monthlyRevenue" defaultValue={selectedTenantData.revenue} />
+                        <Input 
+                          id="monthlyRevenue" 
+                          value={formData.monthlyRevenue || ''}
+                          onChange={(e) => handleInputChange('monthlyRevenue', e.target.value)}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="invoiceEmail">Invoice Email</Label>
-                        <Input id="invoiceEmail" defaultValue={selectedTenantData.adminEmail} />
+                        <Input 
+                          id="invoiceEmail" 
+                          value={formData.invoiceEmail || ''}
+                          onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
+                        />
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch />
