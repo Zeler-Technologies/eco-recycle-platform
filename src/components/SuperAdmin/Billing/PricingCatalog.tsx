@@ -673,10 +673,7 @@ export const PricingCatalog = () => {
             {subscriptionTiers.map((tier) => (
               <Card 
                 key={tier.id} 
-                className={`relative overflow-hidden cursor-pointer transition-all hover:shadow-custom-md ${
-                  tier.name === 'Premium' ? 'ring-2 ring-admin-primary' : ''
-                } ${selectedTier?.id === tier.id ? 'ring-2 ring-admin-primary bg-admin-accent/10' : ''}`}
-                onClick={() => setSelectedTier(selectedTier?.id === tier.id ? null : tier)}
+                className="relative overflow-hidden hover:shadow-custom-md transition-shadow"
               >
                 <div className={`absolute inset-x-0 top-0 h-1 ${tier.color}`} />
                 <CardHeader>
@@ -688,9 +685,6 @@ export const PricingCatalog = () => {
                     <div className="flex items-center gap-2">
                       {tier.name === 'Premium' && (
                         <Badge className="bg-admin-primary text-white">Popular</Badge>
-                      )}
-                      {selectedTier?.id === tier.id && (
-                        <Badge className="bg-status-completed text-white">Selected</Badge>
                       )}
                     </div>
                   </div>
@@ -722,8 +716,7 @@ export const PricingCatalog = () => {
                         <Button 
                           variant="outline" 
                           className="flex-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={() => {
                             setSelectedTier(tier);
                             setIsEditMode(true);
                           }}
@@ -748,10 +741,7 @@ export const PricingCatalog = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTier(tier.id);
-                      }}
+                      onClick={() => handleDeleteTier(tier.id)}
                       className="text-status-cancelled hover:text-status-cancelled"
                     >
                       <Trash2 className="h-4 w-4" />
