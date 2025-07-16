@@ -86,13 +86,19 @@ export const BillingSettings = () => {
   };
 
   const handleConfigChange = (section: string, field: string, value: any) => {
-    setConfig(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section as keyof BillingConfig],
-        [field]: value
+    setConfig(prev => {
+      const currentSection = prev[section as keyof BillingConfig];
+      if (typeof currentSection === 'object' && currentSection !== null) {
+        return {
+          ...prev,
+          [section]: {
+            ...currentSection,
+            [field]: value
+          }
+        };
       }
-    }));
+      return prev;
+    });
   };
 
   const handleDirectChange = (field: string, value: any) => {
