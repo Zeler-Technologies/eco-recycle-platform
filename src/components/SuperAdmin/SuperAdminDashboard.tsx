@@ -3,11 +3,51 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp } from 'lucide-react';
+import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp, Globe } from 'lucide-react';
 import { TenantSetupForm } from './TenantSetupForm';
+import APIConnectionsPanel from './API/APIConnectionsPanel';
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
+  const [showAPIConnections, setShowAPIConnections] = React.useState(false);
+
+  if (showAPIConnections) {
+    return (
+      <div className="theme-admin min-h-screen bg-admin-muted">
+        <header className="bg-admin-primary text-admin-primary-foreground shadow-custom-md">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAPIConnections(false)}
+                  className="flex items-center gap-2 text-admin-primary-foreground hover:text-admin-primary-foreground/80 transition-colors"
+                >
+                  <Building2 className="h-6 w-6" />
+                  <span>← Back to Dashboard</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="font-semibold">{user?.name}</p>
+                  <p className="text-sm text-admin-primary-foreground/80">{user?.email}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={logout}
+                  className="border-admin-primary-foreground/30 text-admin-primary-foreground hover:bg-admin-primary-foreground/10"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <APIConnectionsPanel />
+      </div>
+    );
+  }
 
   const stats = [
     {
@@ -174,6 +214,10 @@ const SuperAdminDashboard = () => {
               <Button variant="outline" className="w-full justify-start">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Analytics & Reports
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => setShowAPIConnections(true)}>
+                <Globe className="h-4 w-4 mr-2" />
+                API Connections
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <Settings className="h-4 w-4 mr-2" />
