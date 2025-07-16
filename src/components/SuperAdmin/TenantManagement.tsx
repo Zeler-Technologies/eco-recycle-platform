@@ -26,7 +26,9 @@ import {
   Mail,
   Phone,
   Key,
-  History
+  History,
+  Car,
+  Percent
 } from 'lucide-react';
 
 interface TenantManagementProps {
@@ -493,47 +495,363 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
 
                 {/* Billing Settings Tab */}
                 <TabsContent value="billing">
-                  <Card className="bg-white shadow-custom-sm">
-                    <CardHeader>
-                      <CardTitle className="text-admin-primary">Billing Settings</CardTitle>
-                      <CardDescription>Configure billing and pricing options</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div>
-                        <Label htmlFor="plan">Subscription Plan</Label>
-                        <Select value={formData.plan || ''} onValueChange={(value) => handleInputChange('plan', value)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="starter">Starter</SelectItem>
-                            <SelectItem value="premium">Premium</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="monthlyRevenue">Monthly Revenue</Label>
-                        <Input 
-                          id="monthlyRevenue" 
-                          value={formData.monthlyRevenue || ''}
-                          onChange={(e) => handleInputChange('monthlyRevenue', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="invoiceEmail">Invoice Email</Label>
-                        <Input 
-                          id="invoiceEmail" 
-                          value={formData.invoiceEmail || ''}
-                          onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch />
-                        <Label>Custom pricing enabled</Label>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="space-y-6">
+                    {/* Pricing Model Selection */}
+                    <Card className="bg-white shadow-custom-sm">
+                      <CardHeader>
+                        <CardTitle className="text-admin-primary flex items-center gap-2">
+                          <CreditCard className="h-5 w-5" />
+                          Pricing Model Configuration
+                        </CardTitle>
+                        <CardDescription>Select and configure the pricing model for this tenant</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid grid-cols-3 gap-4">
+                          {['starter', 'premium', 'enterprise'].map((tier) => (
+                            <div
+                              key={tier}
+                              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                formData.plan === tier 
+                                  ? 'border-admin-primary bg-admin-accent/30' 
+                                  : 'border-gray-200 hover:border-admin-primary/50'
+                              }`}
+                              onClick={() => handleInputChange('plan', tier)}
+                            >
+                              <div className="text-center">
+                                <h4 className="font-semibold capitalize">{tier}</h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {tier === 'starter' && 'Basic features, up to 500 SMS/month'}
+                                  {tier === 'premium' && 'Enhanced features, up to 2000 SMS/month'}
+                                  {tier === 'enterprise' && 'Full features, up to 10000 SMS/month'}
+                                </p>
+                                <div className="mt-2 font-bold text-admin-primary">
+                                  €{tier === 'starter' ? '49' : tier === 'premium' ? '149' : '399'}/month
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="invoiceEmail">Invoice Email</Label>
+                            <Input 
+                              id="invoiceEmail" 
+                              value={formData.invoiceEmail || ''}
+                              onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
+                              placeholder="billing@company.com"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="monthlyRevenue">Current Monthly Revenue</Label>
+                            <Input 
+                              id="monthlyRevenue" 
+                              value={formData.monthlyRevenue || ''}
+                              onChange={(e) => handleInputChange('monthlyRevenue', e.target.value)}
+                              disabled
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Service Pricing Matrix */}
+                    <Card className="bg-white shadow-custom-sm">
+                      <CardHeader>
+                        <CardTitle className="text-admin-primary flex items-center gap-2">
+                          <Settings className="h-5 w-5" />
+                          Service Pricing Matrix
+                        </CardTitle>
+                        <CardDescription>Configure pricing for individual services</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* Platform Base Service */}
+                          <div className="p-4 bg-admin-accent/10 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-admin-primary/10 rounded-full">
+                                  <Globe className="h-4 w-4 text-admin-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold">Platform Base Service</h4>
+                                  <p className="text-sm text-muted-foreground">Monthly platform access</p>
+                                </div>
+                              </div>
+                              <Switch defaultChecked />
+                            </div>
+                            <div className="grid grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Internal Cost</Label>
+                                <p className="font-medium">€29.00</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Markup</Label>
+                                <p className="font-medium">20%</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Final Price</Label>
+                                <p className="font-medium">€34.80</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Margin</Label>
+                                <p className="font-medium text-admin-primary">16.7%</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* SMS Services */}
+                          <div className="p-4 bg-admin-accent/10 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-admin-primary/10 rounded-full">
+                                  <Phone className="h-4 w-4 text-admin-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold">SMS Services</h4>
+                                  <p className="text-sm text-muted-foreground">Per SMS sent</p>
+                                </div>
+                              </div>
+                              <Switch defaultChecked />
+                            </div>
+                            <div className="grid grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Internal Cost</Label>
+                                <p className="font-medium">€0.08</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Markup</Label>
+                                <p className="font-medium">40%</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Final Price</Label>
+                                <p className="font-medium">€0.112</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Margin</Label>
+                                <p className="font-medium text-admin-primary">28.6%</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Car Processing */}
+                          <div className="p-4 bg-admin-accent/10 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-admin-primary/10 rounded-full">
+                                  <Car className="h-4 w-4 text-admin-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold">Car Processing</h4>
+                                  <p className="text-sm text-muted-foreground">Per vehicle processed</p>
+                                </div>
+                              </div>
+                              <Switch defaultChecked />
+                            </div>
+                            <div className="grid grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Internal Cost</Label>
+                                <p className="font-medium">€0.12</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Markup</Label>
+                                <p className="font-medium">25%</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Final Price</Label>
+                                <p className="font-medium">€0.15</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Margin</Label>
+                                <p className="font-medium text-admin-primary">20%</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Google Maps API */}
+                          <div className="p-4 bg-admin-accent/10 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-admin-primary/10 rounded-full">
+                                  <MapPin className="h-4 w-4 text-admin-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold">Google Maps API</h4>
+                                  <p className="text-sm text-muted-foreground">Per API request</p>
+                                </div>
+                              </div>
+                              <Switch defaultChecked />
+                            </div>
+                            <div className="grid grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Internal Cost</Label>
+                                <p className="font-medium">€0.005</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Markup</Label>
+                                <p className="font-medium">300%</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Final Price</Label>
+                                <p className="font-medium">€0.020</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Margin</Label>
+                                <p className="font-medium text-admin-primary">75%</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* VAT Configuration */}
+                    <Card className="bg-white shadow-custom-sm">
+                      <CardHeader>
+                        <CardTitle className="text-admin-primary flex items-center gap-2">
+                          <Percent className="h-5 w-5" />
+                          VAT Configuration
+                        </CardTitle>
+                        <CardDescription>Configure VAT settings for this tenant</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="defaultVAT">Default VAT Rate (%)</Label>
+                            <Input 
+                              id="defaultVAT" 
+                              type="number" 
+                              defaultValue="25" 
+                              min="0" 
+                              max="50"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="vatCountry">VAT Country</Label>
+                            <Select defaultValue="sweden">
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sweden">Sweden (25%)</SelectItem>
+                                <SelectItem value="norway">Norway (25%)</SelectItem>
+                                <SelectItem value="denmark">Denmark (25%)</SelectItem>
+                                <SelectItem value="finland">Finland (24%)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <Label>Service-specific VAT Rates</Label>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center justify-between p-3 bg-admin-accent/10 rounded-lg">
+                              <span className="text-sm">Platform Service</span>
+                              <Input className="w-20" type="number" defaultValue="25" />
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-admin-accent/10 rounded-lg">
+                              <span className="text-sm">SMS Services</span>
+                              <Input className="w-20" type="number" defaultValue="25" />
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-admin-accent/10 rounded-lg">
+                              <span className="text-sm">Car Processing</span>
+                              <Input className="w-20" type="number" defaultValue="25" />
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-admin-accent/10 rounded-lg">
+                              <span className="text-sm">Google Maps</span>
+                              <Input className="w-20" type="number" defaultValue="25" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Switch />
+                          <Label>VAT Exempt Tenant</Label>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Billing Overview */}
+                    <Card className="bg-white shadow-custom-sm">
+                      <CardHeader>
+                        <CardTitle className="text-admin-primary flex items-center gap-2">
+                          <CreditCard className="h-5 w-5" />
+                          Billing Overview
+                        </CardTitle>
+                        <CardDescription>Current billing configuration and estimated costs</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-6">
+                            <div>
+                              <Label className="text-sm font-medium">Active Pricing Model</Label>
+                              <div className="mt-2 p-3 bg-admin-accent/10 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-admin-primary text-white capitalize">
+                                    {formData.plan || 'Premium'}
+                                  </Badge>
+                                  <span className="text-sm">€{formData.plan === 'starter' ? '49' : formData.plan === 'enterprise' ? '399' : '149'}/month</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Monthly Estimate</Label>
+                              <div className="mt-2 p-3 bg-admin-accent/10 rounded-lg">
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Base Fee:</span>
+                                    <span>€{formData.plan === 'starter' ? '49.00' : formData.plan === 'enterprise' ? '399.00' : '149.00'}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span>Usage (est.):</span>
+                                    <span>€85.50</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span>VAT (25%):</span>
+                                    <span>€{((parseFloat(formData.plan === 'starter' ? '49' : formData.plan === 'enterprise' ? '399' : '149') + 85.50) * 0.25).toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between font-bold border-t pt-1">
+                                    <span>Total:</span>
+                                    <span>€{((parseFloat(formData.plan === 'starter' ? '49' : formData.plan === 'enterprise' ? '399' : '149') + 85.50) * 1.25).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Service Usage Summary</Label>
+                            <div className="mt-2 space-y-2">
+                              <div className="flex justify-between items-center p-2 bg-admin-accent/10 rounded text-sm">
+                                <span>SMS Services (1,250 sent)</span>
+                                <span>€175.00 (incl. VAT)</span>
+                              </div>
+                              <div className="flex justify-between items-center p-2 bg-admin-accent/10 rounded text-sm">
+                                <span>Car Processing (320 vehicles)</span>
+                                <span>€60.00 (incl. VAT)</span>
+                              </div>
+                              <div className="flex justify-between items-center p-2 bg-admin-accent/10 rounded text-sm">
+                                <span>Google Maps API (2,150 requests)</span>
+                                <span>€53.75 (incl. VAT)</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Save Actions */}
+                    <div className="flex gap-2">
+                      <Button className="bg-admin-primary hover:bg-admin-primary/90">
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Billing Configuration
+                      </Button>
+                      <Button variant="outline">
+                        <History className="h-4 w-4 mr-2" />
+                        View Change History
+                      </Button>
+                    </div>
+                  </div>
                 </TabsContent>
 
                 {/* Configuration Tab */}
