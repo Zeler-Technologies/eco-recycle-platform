@@ -21,7 +21,8 @@ import {
   Search,
   Check,
   X,
-  MessageSquare
+  MessageSquare,
+  Plus
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 
@@ -59,6 +60,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isAddPickupDialogOpen, setIsAddPickupDialogOpen] = useState(false);
 
   // Mock data - in real app this would come from database
   const [requests, setRequests] = useState<Request[]>([
@@ -179,6 +181,22 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     setIsDetailDialogOpen(false);
   };
 
+  // Get available requests that can be added to schedule (status 'Förfrågan')
+  const availableRequests = requests.filter(request => request.status === 'Förfrågan');
+
+  const handleAddRequestToSchedule = (requestId: string, newDate: Date, newTime: string) => {
+    setRequests(prev => prev.map(req => 
+      req.id === requestId 
+        ? { ...req, date: newDate, time: newTime }
+        : req
+    ));
+    setIsAddPickupDialogOpen(false);
+    toast({
+      title: "Hämtning tillagd",
+      description: "Förfrågan har lagts till i schemat."
+    });
+  };
+
   const renderCalendarGrid = () => {
     const monthStart = startOfMonth(selectedDate);
     const monthEnd = endOfMonth(selectedDate);
@@ -261,7 +279,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       <div className="p-6">
         {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4 mb-6 items-end">
+          <Button
+            onClick={() => setIsAddPickupDialogOpen(true)}
+            className="bg-tenant-primary hover:bg-tenant-primary/90 text-tenant-primary-foreground"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Lägg till hämtning
+          </Button>
           <div className="flex items-center gap-2">
             <Label htmlFor="month-select">Månad:</Label>
             <Select value={format(selectedDate, 'yyyy-MM')} onValueChange={(value) => {
@@ -540,6 +565,103 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Pickup Dialog */}
+      <Dialog open={isAddPickupDialogOpen} onOpenChange={setIsAddPickupDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Lägg till hämtning från förfrågningar</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {availableRequests.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Inga tillgängliga förfrågningar att schemalägga
+              </p>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {availableRequests.map(request => (
+                  <Card key={request.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-2">
+                          <Badge className="bg-blue-500 text-white">
+                            {request.status}
+                          </Badge>
+                          <span className="font-medium">ID: {request.id}</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-3">
+                          <div>
+                            <p className="font-semibold flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              {request.customerName}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Phone className="h-4 w-4" />
+                              {request.phone}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold flex items-center gap-2">
+                              <Car className="h-4 w-4" />
+                              {request.carBrand} {request.carModel}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {request.registrationNumber}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground flex items-center gap-2 mb-3">
+                          <MapPin className="h-4 w-4" />
+                          {request.address}
+                        </p>
+                        
+                        {request.notes && (
+                          <p className="text-sm bg-gray-50 p-2 rounded">
+                            <strong>Anteckningar:</strong> {request.notes}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="ml-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="date"
+                            id={`date-${request.id}`}
+                            defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                            className="w-36"
+                          />
+                          <Input
+                            type="time"
+                            id={`time-${request.id}`}
+                            defaultValue="09:00"
+                            className="w-24"
+                          />
+                        </div>
+                        <Button
+                          onClick={() => {
+                            const dateInput = document.getElementById(`date-${request.id}`) as HTMLInputElement;
+                            const timeInput = document.getElementById(`time-${request.id}`) as HTMLInputElement;
+                            const newDate = new Date(dateInput.value);
+                            const newTime = timeInput.value;
+                            handleAddRequestToSchedule(request.id, newDate, newTime);
+                          }}
+                          className="w-full bg-tenant-primary hover:bg-tenant-primary/90 text-tenant-primary-foreground"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Lägg till
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
