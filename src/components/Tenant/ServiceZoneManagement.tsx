@@ -18,11 +18,11 @@ interface ServiceZoneManagementProps {
 
 // Mock data för svenska postnummer
 const mockPostalCodes = [
-  { code: '11120', city: 'Stockholm', lat: 59.3293, lng: 18.0686, active: true },
-  { code: '41118', city: 'Göteborg', lat: 57.7089, lng: 11.9746, active: true },
-  { code: '21147', city: 'Malmö', lat: 55.6050, lng: 13.0038, active: false },
-  { code: '41314', city: 'Göteborg', lat: 57.7089, lng: 11.9746, active: true },
-  { code: '11634', city: 'Stockholm', lat: 59.3293, lng: 18.0686, active: false },
+  { code: '11120', city: 'Stockholm', address: 'Drottninggatan 45', lat: 59.3293, lng: 18.0686, active: true },
+  { code: '41118', city: 'Göteborg', address: 'Avenyn 12', lat: 57.7089, lng: 11.9746, active: true },
+  { code: '21147', city: 'Malmö', address: 'Stortorget 8', lat: 55.6050, lng: 13.0038, active: false },
+  { code: '41314', city: 'Göteborg', address: 'Nordstan 1', lat: 57.7089, lng: 11.9746, active: true },
+  { code: '11634', city: 'Stockholm', address: 'Östermalm 23', lat: 59.3293, lng: 18.0686, active: false },
 ];
 
 const mockPickupRequests = [
@@ -172,21 +172,23 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
               </div>
 
               <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Postnummer</TableHead>
-                      <TableHead>Ort</TableHead>
-                      <TableHead>Koordinater</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Åtgärder</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Postnummer</TableHead>
+                        <TableHead>Ort</TableHead>
+                        <TableHead>Adress</TableHead>
+                        <TableHead>Koordinater</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Åtgärder</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {filteredPostalCodes.map((postal, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{postal.code}</TableCell>
                         <TableCell>{postal.city}</TableCell>
+                        <TableCell>{postal.address}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {postal.lat.toFixed(4)}, {postal.lng.toFixed(4)}
                         </TableCell>
