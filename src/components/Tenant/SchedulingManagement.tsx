@@ -24,7 +24,6 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
-import { sv } from 'date-fns/locale';
 
 interface Props {
   onBack: () => void;
@@ -265,7 +264,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex items-center gap-2">
             <Label htmlFor="month-select">Månad:</Label>
-            <Select value={format(selectedDate, 'yyyy-MM')} onValueChange={(value) => setSelectedDate(new Date(value))}>
+            <Select value={format(selectedDate, 'yyyy-MM')} onValueChange={(value) => {
+              const [year, month] = value.split('-');
+              setSelectedDate(new Date(parseInt(year), parseInt(month) - 1, 1));
+            }}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -273,7 +275,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 {Array.from({ length: 12 }, (_, i) => {
                   const month = new Date(new Date().getFullYear(), i, 1);
                   const value = format(month, 'yyyy-MM');
-                  const label = format(month, 'MMMM yyyy', { locale: sv });
+                  const monthNames = [
+                    'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                    'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
+                  ];
+                  const label = `${monthNames[i]} ${new Date().getFullYear()}`;
                   return (
                     <SelectItem key={value} value={value}>
                       {label}
@@ -317,7 +323,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
-              {format(selectedDate, 'MMMM yyyy', { locale: sv })}
+              {(() => {
+                const monthNames = [
+                  'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                  'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
+                ];
+                return `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+              })()}
             </CardTitle>
             <CardDescription>
               Klicka på en dag för att se detaljer eller på en förfrågan för att hantera den
@@ -333,7 +345,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           <CardHeader>
             <CardTitle>Dagens förfrågningar</CardTitle>
             <CardDescription>
-              {format(selectedDate, 'EEEE d MMMM yyyy', { locale: sv })}
+              {(() => {
+                const monthNames = [
+                  'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                  'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
+                ];
+                const dayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
+                return `${dayNames[selectedDate.getDay()]} ${selectedDate.getDate()} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+              })()}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -402,7 +421,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   {selectedRequest.status}
                 </Badge>
                 <div className="text-sm text-muted-foreground">
-                  {format(selectedRequest.date, 'EEEE d MMMM yyyy', { locale: sv })} kl. {selectedRequest.time}
+                  {(() => {
+                    const monthNames = [
+                      'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+                      'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
+                    ];
+                    const dayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
+                    return `${dayNames[selectedRequest.date.getDay()]} ${selectedRequest.date.getDate()} ${monthNames[selectedRequest.date.getMonth()]} ${selectedRequest.date.getFullYear()}`;
+                  })()} kl. {selectedRequest.time}
                 </div>
               </div>
 
