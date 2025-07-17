@@ -61,6 +61,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isAddPickupDialogOpen, setIsAddPickupDialogOpen] = useState(false);
+  const [selectedRequestForScheduling, setSelectedRequestForScheduling] = useState<Request | null>(null);
 
   // Mock data - in real app this would come from database
   const [requests, setRequests] = useState<Request[]>([
@@ -191,10 +192,16 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         : req
     ));
     setIsAddPickupDialogOpen(false);
+    setSelectedRequestForScheduling(null);
     toast({
       title: "Hämtning tillagd",
       description: "Förfrågan har lagts till i schemat."
     });
+  };
+
+  const handleScheduleRequest = (request: Request) => {
+    setSelectedRequestForScheduling(request);
+    setIsAddPickupDialogOpen(true);
   };
 
   const renderCalendarGrid = () => {
@@ -390,14 +397,16 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 {getRequestsForDate(selectedDate).map(request => (
                   <div
                     key={request.id}
-                    className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => {
-                      setSelectedRequest(request);
-                      setIsDetailDialogOpen(true);
-                    }}
+                    className="p-4 border rounded-lg transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                      <div 
+                        className="flex items-center gap-4 flex-1 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setIsDetailDialogOpen(true);
+                        }}
+                      >
                         <div className="text-center">
                           <div className="font-bold text-lg">{request.time}</div>
                         </div>
@@ -419,9 +428,21 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                           )}
                         </div>
                       </div>
-                      <Badge className={getStatusColor(request.status)}>
-                        {request.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(request.status)}>
+                          {request.status}
+                        </Badge>
+                        {request.status === 'Förfrågan' && (
+                          <Button
+                            onClick={() => handleScheduleRequest(request)}
+                            size="sm"
+                            className="bg-tenant-primary hover:bg-tenant-primary/90 text-tenant-primary-foreground"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Schemalägg
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -570,98 +591,185 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       {/* Add Pickup Dialog */}
       <Dialog open={isAddPickupDialogOpen} onOpenChange={setIsAddPickupDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Lägg till hämtning från förfrågningar</DialogTitle>
+            <DialogTitle>
+              {selectedRequestForScheduling 
+                ? `Schemalägg hämtning - ${selectedRequestForScheduling.id}`
+                : 'Lägg till hämtning från förfrågningar'
+              }
+            </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
-            {availableRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Inga tillgängliga förfrågningar att schemalägga
-              </p>
-            ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {availableRequests.map(request => (
-                  <Card key={request.id} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-2">
-                          <Badge className="bg-blue-500 text-white">
-                            {request.status}
-                          </Badge>
-                          <span className="font-medium">ID: {request.id}</span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mb-3">
-                          <div>
-                            <p className="font-semibold flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              {request.customerName}
-                            </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-2">
-                              <Phone className="h-4 w-4" />
-                              {request.phone}
-                            </p>
+          {selectedRequestForScheduling ? (
+            // Single request scheduling
+            <div className="space-y-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <Badge className="bg-blue-500 text-white">
+                    {selectedRequestForScheduling.status}
+                  </Badge>
+                  <span className="font-medium">ID: {selectedRequestForScheduling.id}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="font-semibold flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {selectedRequestForScheduling.customerName}
+                    </p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      {selectedRequestForScheduling.phone}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-semibold flex items-center gap-2">
+                      <Car className="h-4 w-4" />
+                      {selectedRequestForScheduling.carBrand} {selectedRequestForScheduling.carModel}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequestForScheduling.registrationNumber}
+                    </p>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-muted-foreground flex items-center gap-2 mb-4">
+                  <MapPin className="h-4 w-4" />
+                  {selectedRequestForScheduling.address}
+                </p>
+                
+                {selectedRequestForScheduling.notes && (
+                  <p className="text-sm bg-gray-50 p-2 rounded mb-4">
+                    <strong>Anteckningar:</strong> {selectedRequestForScheduling.notes}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="schedule-date">Datum:</Label>
+                    <Input
+                      type="date"
+                      id="schedule-date"
+                      defaultValue={format(selectedDate, 'yyyy-MM-dd')}
+                      className="w-40"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="schedule-time">Tid:</Label>
+                    <Input
+                      type="time"
+                      id="schedule-time"
+                      defaultValue="09:00"
+                      className="w-32"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      const dateInput = document.getElementById('schedule-date') as HTMLInputElement;
+                      const timeInput = document.getElementById('schedule-time') as HTMLInputElement;
+                      const newDate = new Date(dateInput.value);
+                      const newTime = timeInput.value;
+                      handleAddRequestToSchedule(selectedRequestForScheduling.id, newDate, newTime);
+                    }}
+                    className="bg-tenant-primary hover:bg-tenant-primary/90 text-tenant-primary-foreground"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schemalägg
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          ) : (
+            // Multiple requests list
+            <div className="space-y-4">
+              {availableRequests.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  Inga tillgängliga förfrågningar att schemalägga
+                </p>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {availableRequests.map(request => (
+                    <Card key={request.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4 mb-2">
+                            <Badge className="bg-blue-500 text-white">
+                              {request.status}
+                            </Badge>
+                            <span className="font-medium">ID: {request.id}</span>
                           </div>
-                          <div>
-                            <p className="font-semibold flex items-center gap-2">
-                              <Car className="h-4 w-4" />
-                              {request.carBrand} {request.carModel}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {request.registrationNumber}
-                            </p>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <p className="font-semibold flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                {request.customerName}
+                              </p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                <Phone className="h-4 w-4" />
+                                {request.phone}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-semibold flex items-center gap-2">
+                                <Car className="h-4 w-4" />
+                                {request.carBrand} {request.carModel}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {request.registrationNumber}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground flex items-center gap-2 mb-3">
-                          <MapPin className="h-4 w-4" />
-                          {request.address}
-                        </p>
-                        
-                        {request.notes && (
-                          <p className="text-sm bg-gray-50 p-2 rounded">
-                            <strong>Anteckningar:</strong> {request.notes}
+                          
+                          <p className="text-sm text-muted-foreground flex items-center gap-2 mb-3">
+                            <MapPin className="h-4 w-4" />
+                            {request.address}
                           </p>
-                        )}
-                      </div>
-                      
-                      <div className="ml-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="date"
-                            id={`date-${request.id}`}
-                            defaultValue={format(new Date(), 'yyyy-MM-dd')}
-                            className="w-36"
-                          />
-                          <Input
-                            type="time"
-                            id={`time-${request.id}`}
-                            defaultValue="09:00"
-                            className="w-24"
-                          />
+                          
+                          {request.notes && (
+                            <p className="text-sm bg-gray-50 p-2 rounded">
+                              <strong>Anteckningar:</strong> {request.notes}
+                            </p>
+                          )}
                         </div>
-                        <Button
-                          onClick={() => {
-                            const dateInput = document.getElementById(`date-${request.id}`) as HTMLInputElement;
-                            const timeInput = document.getElementById(`time-${request.id}`) as HTMLInputElement;
-                            const newDate = new Date(dateInput.value);
-                            const newTime = timeInput.value;
-                            handleAddRequestToSchedule(request.id, newDate, newTime);
-                          }}
-                          className="w-full bg-tenant-primary hover:bg-tenant-primary/90 text-tenant-primary-foreground"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Lägg till
-                        </Button>
+                        
+                        <div className="ml-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date"
+                              id={`date-${request.id}`}
+                              defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                              className="w-36"
+                            />
+                            <Input
+                              type="time"
+                              id={`time-${request.id}`}
+                              defaultValue="09:00"
+                              className="w-24"
+                            />
+                          </div>
+                          <Button
+                            onClick={() => {
+                              const dateInput = document.getElementById(`date-${request.id}`) as HTMLInputElement;
+                              const timeInput = document.getElementById(`time-${request.id}`) as HTMLInputElement;
+                              const newDate = new Date(dateInput.value);
+                              const newTime = timeInput.value;
+                              handleAddRequestToSchedule(request.id, newDate, newTime);
+                            }}
+                            className="w-full bg-tenant-primary hover:bg-tenant-primary/90 text-tenant-primary-foreground"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Lägg till
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
