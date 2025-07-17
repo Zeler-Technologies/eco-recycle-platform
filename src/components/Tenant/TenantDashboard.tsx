@@ -8,6 +8,7 @@ import PricingManagement from './PricingManagement';
 import UserManagement from '../SuperAdmin/UserManagement';
 import SchedulingManagement from './SchedulingManagement';
 import { ServiceZoneManagement } from './ServiceZoneManagement';
+import { CustomerMessageManagement } from './CustomerMessageManagement';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
@@ -34,20 +35,7 @@ const TenantDashboard = () => {
   }
 
   if (showCustomerMessages) {
-    // Customer messages component will be implemented later
-    return (
-      <div className="min-h-screen bg-tenant-muted p-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-tenant-primary">Meddelanden till kund</h1>
-            <Button variant="outline" onClick={() => setShowCustomerMessages(false)}>
-              Tillbaka
-            </Button>
-          </div>
-          <p className="text-muted-foreground">Denna funktionalitet kommer att implementeras.</p>
-        </div>
-      </div>
-    );
+    return <CustomerMessageManagement onBack={() => setShowCustomerMessages(false)} />;
   }
 
   const stats = [
