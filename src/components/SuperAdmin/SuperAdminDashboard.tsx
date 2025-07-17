@@ -7,11 +7,13 @@ import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, Trendi
 import { TenantSetupForm } from './TenantSetupForm';
 import APIConnectionsPanel from './API/APIConnectionsPanel';
 import TenantManagement from './TenantManagement';
+import UserManagement from './UserManagement';
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
   const [showAPIConnections, setShowAPIConnections] = React.useState(false);
   const [showTenantManagement, setShowTenantManagement] = React.useState(false);
+  const [showUserManagement, setShowUserManagement] = React.useState(false);
 
   if (showAPIConnections) {
     return (
@@ -53,6 +55,10 @@ const SuperAdminDashboard = () => {
 
   if (showTenantManagement) {
     return <TenantManagement onBack={() => setShowTenantManagement(false)} />;
+  }
+
+  if (showUserManagement) {
+    return <UserManagement onBack={() => setShowUserManagement(false)} />;
   }
 
   const stats = [
@@ -212,6 +218,10 @@ const SuperAdminDashboard = () => {
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowTenantManagement(true)}>
                 <Building2 className="h-4 w-4 mr-2" />
                 Manage Tenants
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => setShowUserManagement(true)}>
+                <Users className="h-4 w-4 mr-2" />
+                Hantera Förare
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/billing'}>
                 <CreditCard className="h-4 w-4 mr-2" />
