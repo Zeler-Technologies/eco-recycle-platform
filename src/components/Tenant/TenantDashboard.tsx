@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock } from 'lucide-react';
 import PricingManagement from './PricingManagement';
 import UserManagement from '../SuperAdmin/UserManagement';
+import SchedulingManagement from './SchedulingManagement';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
   const [showPricingManagement, setShowPricingManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showSchedulingManagement, setShowSchedulingManagement] = useState(false);
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
@@ -18,6 +20,10 @@ const TenantDashboard = () => {
 
   if (showUserManagement) {
     return <UserManagement onBack={() => setShowUserManagement(false)} />;
+  }
+
+  if (showSchedulingManagement) {
+    return <SchedulingManagement onBack={() => setShowSchedulingManagement(false)} />;
   }
 
   const stats = [
@@ -178,7 +184,11 @@ const TenantDashboard = () => {
               <CardDescription>Vanliga uppgifter</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setShowSchedulingManagement(true)}
+              >
                 <Calendar className="h-4 w-4 mr-2" />
                 Schemaläggning
               </Button>
