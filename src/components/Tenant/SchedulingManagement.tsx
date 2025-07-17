@@ -56,7 +56,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
   const [filterLocation, setFilterLocation] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
@@ -123,7 +123,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     const matchesLocation = !filterLocation || 
       request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
       request.address.match(/\d{5}/)?.[0] === filterLocation;
-    const matchesStatus = !filterStatus || request.status === filterStatus;
+    const matchesStatus = filterStatus === 'all' || !filterStatus || request.status === filterStatus;
     return matchesLocation && matchesStatus;
   });
 
@@ -308,7 +308,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 <SelectValue placeholder="Alla statusar" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Alla statusar</SelectItem>
+                <SelectItem value="all">Alla statusar</SelectItem>
                 <SelectItem value="Förfrågan">Förfrågan</SelectItem>
                 <SelectItem value="Bekräftad">Bekräftad</SelectItem>
                 <SelectItem value="Utförd">Utförd</SelectItem>
