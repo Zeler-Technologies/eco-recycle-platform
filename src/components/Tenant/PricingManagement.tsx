@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Save, RotateCcw, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -104,30 +105,11 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    // Validate all fields
-    const isValid = 
-      // Age bonuses validation (0-20000)
-      validateValue(settings.ageBonuses.age0to5, 0, 20000) &&
-      validateValue(settings.ageBonuses.age5to10, 0, 20000) &&
-      validateValue(settings.ageBonuses.age10to15, 0, 20000) &&
-      validateValue(settings.ageBonuses.age15to20, 0, 20000) &&
-      validateValue(settings.ageBonuses.age20plus, 0, 20000) &&
-      // Old car deduction validation (-5000 to 0)
-      validateValue(settings.oldCarDeduction.before1990, -5000, 0) &&
-      // Distance adjustments validation
-      validateValue(settings.distanceAdjustments.dropoffComplete, 0, 5000) &&
-      validateValue(settings.distanceAdjustments.dropoffIncomplete, 0, 5000) &&
-      validateValue(settings.distanceAdjustments.pickup0to20, -5000, 0) &&
-      validateValue(settings.distanceAdjustments.pickup20to50, -5000, 0) &&
-      validateValue(settings.distanceAdjustments.pickup50to75, -5000, 0) &&
-      validateValue(settings.distanceAdjustments.pickup75to100, -5000, 0) &&
-      validateValue(settings.distanceAdjustments.pickup100plus, -5000, 0) &&
-      // Parts bonuses validation (0-5000)
-      validateValue(settings.partsBonuses.engineTransmissionCatalyst, 0, 5000) &&
-      validateValue(settings.partsBonuses.batteryWheelsOther, 0, 5000) &&
-      // Fuel adjustments validation
-      validateValue(settings.fuelAdjustments.other, -1000, 0);
+  const handleSectionSave = (sectionName: string, sectionSettings: any, validationRules: { field: string, min: number, max: number }[]) => {
+    // Validate section fields
+    const isValid = validationRules.every(rule => 
+      validateValue(sectionSettings[rule.field], rule.min, rule.max)
+    );
 
     if (!isValid) {
       toast({
@@ -138,18 +120,14 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       return;
     }
 
-    // Show confirmation dialog
-    if (window.confirm("Är du säker på att du vill spara dessa prisändringar?")) {
-      // Simulate saving to database
-      setTimeout(() => {
-        setHasChanges(false);
-        setLastSaved(new Date());
-        toast({
-          title: "Inställningarna har sparats",
-          description: "Prisändringarna är nu aktiva.",
-        });
-      }, 500);
-    }
+    // Simulate saving to database
+    setTimeout(() => {
+      setLastSaved(new Date());
+      toast({
+        title: "Inställningarna har sparats",
+        description: `${sectionName} är nu uppdaterat.`,
+      });
+    }, 500);
   };
 
   const handleReset = () => {
@@ -236,7 +214,37 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       {/* Age Bonuses Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Åldersbonus för Bil</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Åldersbonus för Bil</CardTitle>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  Spara
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Är du säker på ändringarna?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleSectionSave('Åldersbonus', settings.ageBonuses, [
+                    { field: 'age0to5', min: 0, max: 20000 },
+                    { field: 'age5to10', min: 0, max: 20000 },
+                    { field: 'age10to15', min: 0, max: 20000 },
+                    { field: 'age15to20', min: 0, max: 20000 },
+                    { field: 'age20plus', min: 0, max: 20000 }
+                  ])}>
+                    Spara
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <InputField
@@ -280,7 +288,33 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       {/* Old Car Deduction Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Avdrag för gamla årsmodeller</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Avdrag för gamla årsmodeller</CardTitle>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  Spara
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Är du säker på ändringarna?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleSectionSave('Avdrag för gamla årsmodeller', settings.oldCarDeduction, [
+                    { field: 'before1990', min: -5000, max: 0 }
+                  ])}>
+                    Spara
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent>
           <InputField
@@ -296,7 +330,39 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       {/* Distance Adjustments Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Avståndsjusteringar</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Avståndsjusteringar</CardTitle>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  Spara
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Är du säker på ändringarna?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleSectionSave('Avståndsjusteringar', settings.distanceAdjustments, [
+                    { field: 'dropoffComplete', min: 0, max: 5000 },
+                    { field: 'dropoffIncomplete', min: 0, max: 5000 },
+                    { field: 'pickup0to20', min: -5000, max: 0 },
+                    { field: 'pickup20to50', min: -5000, max: 0 },
+                    { field: 'pickup50to75', min: -5000, max: 0 },
+                    { field: 'pickup75to100', min: -5000, max: 0 },
+                    { field: 'pickup100plus', min: -5000, max: 0 }
+                  ])}>
+                    Spara
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
@@ -367,7 +433,34 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       {/* Parts Bonuses Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Bonus för värdefulla delar</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Bonus för värdefulla delar</CardTitle>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  Spara
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Är du säker på ändringarna?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleSectionSave('Bonus för värdefulla delar', settings.partsBonuses, [
+                    { field: 'engineTransmissionCatalyst', min: 0, max: 5000 },
+                    { field: 'batteryWheelsOther', min: 0, max: 5000 }
+                  ])}>
+                    Spara
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <InputField
@@ -390,7 +483,33 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       {/* Fuel Adjustments Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Bränslejustering</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Bränslejustering</CardTitle>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  Spara
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Är du säker på ändringarna?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleSectionSave('Bränslejustering', settings.fuelAdjustments, [
+                    { field: 'other', min: -1000, max: 0 }
+                  ])}>
+                    Spara
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <InputField
@@ -427,13 +546,9 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
         </CardContent>
       </Card>
 
-      {/* Action Buttons */}
+      {/* Reset Button */}
       {hasChanges && (
-        <div className="flex space-x-4 pt-6">
-          <Button onClick={handleSave} className="flex items-center space-x-2">
-            <Save className="h-4 w-4" />
-            <span>Spara inställningar</span>
-          </Button>
+        <div className="flex justify-center pt-6">
           <Button variant="outline" onClick={handleReset} className="flex items-center space-x-2">
             <RotateCcw className="h-4 w-4" />
             <span>Återställ till standard</span>
