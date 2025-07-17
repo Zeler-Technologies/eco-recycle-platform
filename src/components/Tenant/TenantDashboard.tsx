@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock } from 'lucide-react';
+import PricingManagement from './PricingManagement';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
+  const [showPricingManagement, setShowPricingManagement] = useState(false);
+
+  if (showPricingManagement) {
+    return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
+  }
 
   const stats = [
     {
@@ -174,7 +180,11 @@ const TenantDashboard = () => {
                 <Users className="h-4 w-4 mr-2" />
                 Hantera förare
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setShowPricingManagement(true)}
+              >
                 <Settings className="h-4 w-4 mr-2" />
                 Prishantering
               </Button>
