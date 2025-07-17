@@ -5,13 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock } from 'lucide-react';
 import PricingManagement from './PricingManagement';
+import UserManagement from '../SuperAdmin/UserManagement';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
   const [showPricingManagement, setShowPricingManagement] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
+  }
+
+  if (showUserManagement) {
+    return <UserManagement onBack={() => setShowUserManagement(false)} />;
   }
 
   const stats = [
@@ -176,7 +182,11 @@ const TenantDashboard = () => {
                 <Calendar className="h-4 w-4 mr-2" />
                 Schemaläggning
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setShowUserManagement(true)}
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Hantera förare
               </Button>
