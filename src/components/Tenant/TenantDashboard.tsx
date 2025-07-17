@@ -7,12 +7,14 @@ import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock } 
 import PricingManagement from './PricingManagement';
 import UserManagement from '../SuperAdmin/UserManagement';
 import SchedulingManagement from './SchedulingManagement';
+import { ServiceZoneManagement } from './ServiceZoneManagement';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
   const [showPricingManagement, setShowPricingManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showSchedulingManagement, setShowSchedulingManagement] = useState(false);
+  const [showServiceZoneManagement, setShowServiceZoneManagement] = useState(false);
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
@@ -24,6 +26,10 @@ const TenantDashboard = () => {
 
   if (showSchedulingManagement) {
     return <SchedulingManagement onBack={() => setShowSchedulingManagement(false)} />;
+  }
+
+  if (showServiceZoneManagement) {
+    return <ServiceZoneManagement onBack={() => setShowServiceZoneManagement(false)} />;
   }
 
   const stats = [
@@ -208,7 +214,11 @@ const TenantDashboard = () => {
                 <Settings className="h-4 w-4 mr-2" />
                 Prishantering
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setShowServiceZoneManagement(true)}
+              >
                 <MapPin className="h-4 w-4 mr-2" />
                 Servicezoner
               </Button>
