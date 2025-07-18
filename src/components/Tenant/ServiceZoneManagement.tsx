@@ -13,6 +13,7 @@ import { AlertCircle, ArrowLeft, CheckCircle, Download, Edit, FileUp, MapPin, Pl
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ServiceZoneManagementProps {
   onBack: () => void;
@@ -75,6 +76,10 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   const [applicableBonuses, setApplicableBonuses] = useState<any[]>([]);
   
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Convert string tenant_id from mock auth to number for database
+  const tenantId = user?.tenant_id ? parseInt(user.tenant_id.replace('tenant_', '')) : null;
 
   // Load data on component mount
   useEffect(() => {
@@ -83,10 +88,13 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   }, []);
 
   const loadDistanceRules = async () => {
+    if (!tenantId) return;
+    
     try {
       const { data, error } = await supabase
         .from('distance_rules')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('min_distance_km');
       
       if (error) throw error;
@@ -102,10 +110,13 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   };
 
   const loadBonusOffers = async () => {
+    if (!tenantId) return;
+    
     try {
       const { data, error } = await supabase
         .from('bonus_offers')
         .select('*')
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
@@ -123,8 +134,12 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
 
   const saveDistanceRule = async () => {
     try {
+      if (!tenantId) {
+        throw new Error('No tenant ID available');
+      }
+
       const ruleData = {
-        tenant_id: 1, // Mock tenant ID - should come from auth context
+        tenant_id: tenantId,
         min_distance_km: parseInt(newDistanceRule.min_distance_km),
         max_distance_km: newDistanceRule.max_distance_km ? parseInt(newDistanceRule.max_distance_km) : null,
         deduction_sek: parseInt(newDistanceRule.deduction_sek)
@@ -189,8 +204,12 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
 
   const saveBonusOffer = async () => {
     try {
+      if (!tenantId) {
+        throw new Error('No tenant ID available');
+      }
+
       const bonusData = {
-        tenant_id: 1, // Mock tenant ID - should come from auth context
+        tenant_id: tenantId,
         bonus_name: newBonusOffer.bonus_name,
         bonus_amount_sek: parseInt(newBonusOffer.bonus_amount_sek),
         start_date: newBonusOffer.start_date,
