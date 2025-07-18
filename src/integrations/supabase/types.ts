@@ -231,6 +231,39 @@ export type Database = {
           },
         ]
       }
+      custom_message_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          template_name: string
+          template_type: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          template_name: string
+          template_type: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          template_name?: string
+          template_type?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           car_id: string

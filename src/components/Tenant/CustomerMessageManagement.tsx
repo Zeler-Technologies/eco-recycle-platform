@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +24,12 @@ import {
   Eye,
   TestTube,
   Plus,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CustomerMessageManagementProps {
   onBack: () => void;
@@ -51,6 +54,17 @@ interface MessageLog {
   status: 'sent' | 'failed' | 'pending';
   template: string;
   pickupId: string;
+}
+
+interface CustomMessageTemplate {
+  id: string;
+  tenant_id: number;
+  template_type: 'initial_owner' | 'initial_non_owner' | 'pickup_confirmed';
+  template_name: string;
+  content: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const defaultTemplates: MessageTemplate[] = [
@@ -130,9 +144,19 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
   const [messageLogs] = useState<MessageLog[]>(mockMessageLogs);
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
-  const [customTemplates, setCustomTemplates] = useState<MessageTemplate[]>([]);
-  const [newCustomTemplate, setNewCustomTemplate] = useState({ name: '', content: '', stage: '' });
+  const [customTemplates, setCustomTemplates] = useState<CustomMessageTemplate[]>([]);
+  const [editingCustomTemplate, setEditingCustomTemplate] = useState<CustomMessageTemplate | null>(null);
+  const [previewData, setPreviewData] = useState({
+    namn: 'Anna Andersson',
+    registreringsnummer: 'ABC123',
+    kontrollnummer: 'CTRL456789',
+    datum: '2024-01-25'
+  });
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Map mock tenant_id to actual database tenant_id
+  const tenantId = user?.tenant_id === 'tenant_1' ? 1234 : null;
 
   const handleSaveTemplate = (template: MessageTemplate) => {
     setTemplates(prev => prev.map(t => t.id === template.id ? template : t));
@@ -183,32 +207,94 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     }
   };
 
-  const handleAddCustomTemplate = () => {
-    if (!newCustomTemplate.name || !newCustomTemplate.content || !newCustomTemplate.stage) {
+  // Load custom templates on component mount
+  useEffect(() => {
+    loadCustomTemplates();
+  }, [tenantId]);
+
+  const loadCustomTemplates = async () => {
+    if (!tenantId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('custom_message_templates')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setCustomTemplates((data || []) as CustomMessageTemplate[]);
+    } catch (error) {
       toast({
-        title: "Ofullständig information",
-        description: "Fyll i alla fält för den nya mallen.",
+        title: "Fel vid laddning",
+        description: "Kunde inte ladda anpassade mallar.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const validateRequiredVariables = (content: string): boolean => {
+    const requiredVariables = ['[namn]', '[registreringsnummer]', '[kontrollnummer]', '[datum]'];
+    return requiredVariables.every(variable => content.includes(variable));
+  };
+
+  const handleSaveCustomTemplate = async (template: CustomMessageTemplate) => {
+    if (!tenantId) return;
+
+    if (!validateRequiredVariables(template.content)) {
+      toast({
+        title: "Saknade variabler",
+        description: "Mallen måste innehålla [namn], [registreringsnummer], [kontrollnummer] och [datum].",
         variant: "destructive",
       });
       return;
     }
 
-    const customTemplate: MessageTemplate = {
-      id: `custom_${Date.now()}`,
-      name: newCustomTemplate.name,
-      stage: newCustomTemplate.stage,
-      content: newCustomTemplate.content,
-      enabled: true,
-      trigger: 'Anpassad utlösare',
-      variables: []
-    };
+    try {
+      const { error } = await supabase
+        .from('custom_message_templates')
+        .upsert({
+          id: template.id,
+          tenant_id: tenantId,
+          template_type: template.template_type,
+          template_name: template.template_name,
+          content: template.content,
+          is_active: template.is_active
+        });
 
-    setCustomTemplates(prev => [...prev, customTemplate]);
-    setNewCustomTemplate({ name: '', content: '', stage: '' });
-    toast({
-      title: "Anpassad mall skapad",
-      description: "Den nya mallen har lagts till framgångsrikt.",
-    });
+      if (error) throw error;
+
+      await loadCustomTemplates();
+      setEditingCustomTemplate(null);
+      
+      toast({
+        title: "Mall sparad",
+        description: "Anpassad mall har uppdaterats framgångsrikt.",
+      });
+    } catch (error) {
+      toast({
+        title: "Fel vid sparande",
+        description: "Kunde inte spara mallen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generatePreview = (template: string): string => {
+    return template
+      .replace(/\[namn\]/g, previewData.namn)
+      .replace(/\[registreringsnummer\]/g, previewData.registreringsnummer)
+      .replace(/\[kontrollnummer\]/g, previewData.kontrollnummer)
+      .replace(/\[datum\]/g, previewData.datum);
+  };
+
+  const getTemplateTypeDisplayName = (type: string): string => {
+    switch (type) {
+      case 'initial_owner': return 'Initial förfrågan - Bilägare';
+      case 'initial_non_owner': return 'Initial förfrågan - Ej bilägare';
+      case 'pickup_confirmed': return 'Hämtning bekräftad';
+      default: return type;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -496,92 +582,168 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 
           {/* Custom Templates Tab */}
           <TabsContent value="custom" className="space-y-6">
+            {/* Information Card */}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Obligatoriska variabler</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Alla mallar måste innehålla följande variabler: <strong>[namn]</strong>, <strong>[registreringsnummer]</strong>, <strong>[kontrollnummer]</strong>, <strong>[datum]</strong>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preview Data Configuration */}
             <Card className="bg-white shadow-custom-sm">
               <CardHeader>
-                <CardTitle className="text-tenant-primary">Anpassade mallar</CardTitle>
-                <CardDescription>Skapa egna SMS-mallar för specifika situationer</CardDescription>
+                <CardTitle className="text-tenant-primary">Förhandsgranskningsdata</CardTitle>
+                <CardDescription>Anpassa exempeldata för förhandsgranskning av mallar</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="preview-namn">Namn</Label>
+                  <Input
+                    id="preview-namn"
+                    value={previewData.namn}
+                    onChange={(e) => setPreviewData(prev => ({ ...prev, namn: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="preview-registreringsnummer">Registreringsnummer</Label>
+                  <Input
+                    id="preview-registreringsnummer"
+                    value={previewData.registreringsnummer}
+                    onChange={(e) => setPreviewData(prev => ({ ...prev, registreringsnummer: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="preview-kontrollnummer">Kontrollnummer</Label>
+                  <Input
+                    id="preview-kontrollnummer"
+                    value={previewData.kontrollnummer}
+                    onChange={(e) => setPreviewData(prev => ({ ...prev, kontrollnummer: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="preview-datum">Datum</Label>
+                  <Input
+                    id="preview-datum"
+                    value={previewData.datum}
+                    onChange={(e) => setPreviewData(prev => ({ ...prev, datum: e.target.value }))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Custom Message Templates */}
+            <Card className="bg-white shadow-custom-sm">
+              <CardHeader>
+                <CardTitle className="text-tenant-primary">Anpassade meddelandemallar</CardTitle>
+                <CardDescription>Hantera och anpassa SMS-mallar för olika kundscenarier</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Card className="border-dashed">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Skapa ny mall</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="template-name">Mallnamn</Label>
-                      <Input
-                        id="template-name"
-                        placeholder="t.ex. Speciell påminnelse"
-                        value={newCustomTemplate.name}
-                        onChange={(e) => setNewCustomTemplate(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="template-stage">Utlösarsteg</Label>
-                      <Select
-                        value={newCustomTemplate.stage}
-                        onValueChange={(value) => setNewCustomTemplate(prev => ({ ...prev, stage: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Välj när meddelandet ska skickas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="greeting">Hälsning</SelectItem>
-                          <SelectItem value="confirming">Bekräftelse</SelectItem>
-                          <SelectItem value="heads_up">Påminnelse</SelectItem>
-                          <SelectItem value="pickup_confirmation">Hämtningsbekräftelse</SelectItem>
-                          <SelectItem value="followup">Uppföljning</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="template-custom-content">Meddelandetext</Label>
-                      <Textarea
-                        id="template-custom-content"
-                        placeholder="Skriv ditt anpassade meddelande här..."
-                        value={newCustomTemplate.content}
-                        onChange={(e) => setNewCustomTemplate(prev => ({ ...prev, content: e.target.value }))}
-                        className="min-h-24"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleAddCustomTemplate}
-                      className="bg-tenant-primary hover:bg-tenant-primary/90"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Skapa mall
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Display Custom Templates */}
-                {customTemplates.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Dina anpassade mallar</h3>
-                    {customTemplates.map((template) => (
-                      <Card key={template.id} className="border">
-                        <CardHeader className="pb-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <CardTitle className="text-lg">{template.name}</CardTitle>
-                              <CardDescription>Steg: {template.stage}</CardDescription>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setCustomTemplates(prev => prev.filter(t => t.id !== template.id))}
-                            >
-                              <Trash2 className="h-4 w-4" />
+                {customTemplates.map((template) => (
+                  <Card key={template.id} className="border">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-tenant-accent rounded-full">
+                            <MessageSquare className="h-4 w-4 text-tenant-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">{template.template_name}</CardTitle>
+                            <CardDescription>{getTemplateTypeDisplayName(template.template_type)}</CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={template.is_active ? "default" : "secondary"}>
+                            {template.is_active ? 'Aktiv' : 'Inaktiv'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="p-4 bg-tenant-accent/20 rounded-lg">
+                        <p className="text-sm font-medium mb-2">Mall:</p>
+                        <p className="text-sm">{template.content}</p>
+                        <div className="mt-3 pt-3 border-t border-tenant-accent/30">
+                          <p className="text-sm font-medium mb-2">Förhandsgranskning:</p>
+                          <p className="text-sm italic">{generatePreview(template.content)}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setEditingCustomTemplate(template)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Redigera
                             </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="p-3 bg-muted/50 rounded-md">
-                            <p className="text-sm">{template.content}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Redigera anpassad mall: {template.template_name}</DialogTitle>
+                              <DialogDescription>
+                                Anpassa meddelandemallen. Alla mallar måste innehålla [namn], [registreringsnummer], [kontrollnummer] och [datum].
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="template-name">Mallnamn</Label>
+                                <Input
+                                  id="template-name"
+                                  value={editingCustomTemplate?.template_name || template.template_name}
+                                  onChange={(e) => setEditingCustomTemplate(prev => 
+                                    prev ? { ...prev, template_name: e.target.value } : null
+                                  )}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="template-content">Meddelandetext</Label>
+                                <Textarea
+                                  id="template-content"
+                                  value={editingCustomTemplate?.content || template.content}
+                                  onChange={(e) => setEditingCustomTemplate(prev => 
+                                    prev ? { ...prev, content: e.target.value } : null
+                                  )}
+                                  placeholder="Skriv ditt meddelande här med [namn], [registreringsnummer], [kontrollnummer], [datum]..."
+                                  className="min-h-32"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Obligatoriska variabler: [namn], [registreringsnummer], [kontrollnummer], [datum]
+                                </p>
+                              </div>
+                              {editingCustomTemplate && (
+                                <div className="p-3 bg-muted/50 rounded-md">
+                                  <p className="text-sm font-medium mb-2">Förhandsgranskning:</p>
+                                  <p className="text-sm italic">{generatePreview(editingCustomTemplate.content)}</p>
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => editingCustomTemplate && handleSaveCustomTemplate(editingCustomTemplate)}
+                                  className="bg-tenant-primary hover:bg-tenant-primary/90"
+                                >
+                                  <Save className="h-4 w-4 mr-2" />
+                                  Spara ändringar
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {customTemplates.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Inga anpassade mallar hittades.</p>
+                    <p className="text-sm">Standardmallar är förinstallerade för denna tenant.</p>
                   </div>
                 )}
               </CardContent>
