@@ -46,6 +46,53 @@ export type Database = {
           },
         ]
       }
+      bonus_offers: {
+        Row: {
+          bonus_amount_sek: number
+          bonus_name: string
+          conditions: Json | null
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          start_date: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          bonus_amount_sek: number
+          bonus_name: string
+          conditions?: Json | null
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          start_date: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          bonus_amount_sek?: number
+          bonus_name?: string
+          conditions?: Json | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_offers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       car_images: {
         Row: {
           car_id: string
@@ -245,6 +292,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      distance_rules: {
+        Row: {
+          created_at: string
+          deduction_sek: number
+          id: string
+          max_distance_km: number | null
+          min_distance_km: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deduction_sek: number
+          id?: string
+          max_distance_km?: number | null
+          min_distance_km: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deduction_sek?: number
+          id?: string
+          max_distance_km?: number | null
+          min_distance_km?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distance_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
           },
         ]
       }

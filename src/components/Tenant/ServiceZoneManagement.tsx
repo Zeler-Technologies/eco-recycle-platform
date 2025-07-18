@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertCircle, ArrowLeft, CheckCircle, Download, Edit, FileUp, MapPin, Plus, Search, Settings, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle, Download, Edit, FileUp, MapPin, Plus, Search, Settings, Trash2, Upload, Calculator } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ServiceZoneManagementProps {
   onBack: () => void;
@@ -44,6 +46,261 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   const [isAddingPostal, setIsAddingPostal] = useState(false);
   const [newPostalCode, setNewPostalCode] = useState('');
   const [selectedTab, setSelectedTab] = useState('zones');
+  
+  // Distance rules management
+  const [distanceRules, setDistanceRules] = useState<any[]>([]);
+  const [isAddingDistanceRule, setIsAddingDistanceRule] = useState(false);
+  const [editingDistanceRule, setEditingDistanceRule] = useState<any>(null);
+  const [newDistanceRule, setNewDistanceRule] = useState({
+    min_distance_km: '',
+    max_distance_km: '',
+    deduction_sek: ''
+  });
+  
+  // Bonus offers management
+  const [bonusOffers, setBonusOffers] = useState<any[]>([]);
+  const [isAddingBonus, setIsAddingBonus] = useState(false);
+  const [editingBonus, setEditingBonus] = useState<any>(null);
+  const [newBonusOffer, setNewBonusOffer] = useState({
+    bonus_name: '',
+    bonus_amount_sek: '',
+    start_date: '',
+    end_date: '',
+    conditions: ''
+  });
+  
+  // Preview calculator
+  const [testDistance, setTestDistance] = useState('');
+  const [calculatedDeduction, setCalculatedDeduction] = useState(0);
+  const [applicableBonuses, setApplicableBonuses] = useState<any[]>([]);
+  
+  const { toast } = useToast();
+
+  // Load data on component mount
+  useEffect(() => {
+    loadDistanceRules();
+    loadBonusOffers();
+  }, []);
+
+  const loadDistanceRules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('distance_rules')
+        .select('*')
+        .order('min_distance_km');
+      
+      if (error) throw error;
+      setDistanceRules(data || []);
+    } catch (error) {
+      console.error('Error loading distance rules:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte ladda distansregler",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadBonusOffers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bonus_offers')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setBonusOffers(data || []);
+    } catch (error) {
+      console.error('Error loading bonus offers:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte ladda bonuserbjudanden",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveDistanceRule = async () => {
+    try {
+      const ruleData = {
+        tenant_id: 1, // Mock tenant ID - should come from auth context
+        min_distance_km: parseInt(newDistanceRule.min_distance_km),
+        max_distance_km: newDistanceRule.max_distance_km ? parseInt(newDistanceRule.max_distance_km) : null,
+        deduction_sek: parseInt(newDistanceRule.deduction_sek)
+      };
+
+      let result;
+      if (editingDistanceRule) {
+        result = await supabase
+          .from('distance_rules')
+          .update(ruleData)
+          .eq('id', editingDistanceRule.id);
+      } else {
+        result = await supabase
+          .from('distance_rules')
+          .insert([ruleData]);
+      }
+
+      if (result.error) throw result.error;
+
+      await loadDistanceRules();
+      setIsAddingDistanceRule(false);
+      setEditingDistanceRule(null);
+      setNewDistanceRule({ min_distance_km: '', max_distance_km: '', deduction_sek: '' });
+      
+      toast({
+        title: "Framgång",
+        description: editingDistanceRule ? "Distansregel uppdaterad" : "Ny distansregel skapad"
+      });
+    } catch (error) {
+      console.error('Error saving distance rule:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte spara distansregel",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteDistanceRule = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('distance_rules')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await loadDistanceRules();
+      toast({
+        title: "Framgång",
+        description: "Distansregel borttagen"
+      });
+    } catch (error) {
+      console.error('Error deleting distance rule:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte ta bort distansregel",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveBonusOffer = async () => {
+    try {
+      const bonusData = {
+        tenant_id: 1, // Mock tenant ID - should come from auth context
+        bonus_name: newBonusOffer.bonus_name,
+        bonus_amount_sek: parseInt(newBonusOffer.bonus_amount_sek),
+        start_date: newBonusOffer.start_date,
+        end_date: newBonusOffer.end_date,
+        conditions: newBonusOffer.conditions ? JSON.parse(newBonusOffer.conditions) : null
+      };
+
+      let result;
+      if (editingBonus) {
+        result = await supabase
+          .from('bonus_offers')
+          .update(bonusData)
+          .eq('id', editingBonus.id);
+      } else {
+        result = await supabase
+          .from('bonus_offers')
+          .insert([bonusData]);
+      }
+
+      if (result.error) throw result.error;
+
+      await loadBonusOffers();
+      setIsAddingBonus(false);
+      setEditingBonus(null);
+      setNewBonusOffer({ bonus_name: '', bonus_amount_sek: '', start_date: '', end_date: '', conditions: '' });
+      
+      toast({
+        title: "Framgång",
+        description: editingBonus ? "Bonuserbjudande uppdaterat" : "Nytt bonuserbjudande skapat"
+      });
+    } catch (error) {
+      console.error('Error saving bonus offer:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte spara bonuserbjudande",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteBonusOffer = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('bonus_offers')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await loadBonusOffers();
+      toast({
+        title: "Framgång",
+        description: "Bonuserbjudande inaktiverat"
+      });
+    } catch (error) {
+      console.error('Error deactivating bonus offer:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte inaktivera bonuserbjudande",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const calculatePreview = () => {
+    if (!testDistance) return;
+    
+    const distance = parseInt(testDistance);
+    let deduction = 0;
+    
+    // Find applicable distance rule
+    for (const rule of distanceRules) {
+      if (distance >= rule.min_distance_km && 
+          (rule.max_distance_km === null || distance <= rule.max_distance_km)) {
+        deduction = rule.deduction_sek;
+        break;
+      }
+    }
+    
+    setCalculatedDeduction(deduction);
+    
+    // Find applicable bonuses (active bonuses for current date)
+    const today = new Date().toISOString().split('T')[0];
+    const applicable = bonusOffers.filter(bonus => 
+      bonus.start_date <= today && bonus.end_date >= today
+    );
+    setApplicableBonuses(applicable);
+  };
+
+  const startEditingDistanceRule = (rule: any) => {
+    setEditingDistanceRule(rule);
+    setNewDistanceRule({
+      min_distance_km: rule.min_distance_km.toString(),
+      max_distance_km: rule.max_distance_km ? rule.max_distance_km.toString() : '',
+      deduction_sek: rule.deduction_sek.toString()
+    });
+    setIsAddingDistanceRule(true);
+  };
+
+  const startEditingBonus = (bonus: any) => {
+    setEditingBonus(bonus);
+    setNewBonusOffer({
+      bonus_name: bonus.bonus_name,
+      bonus_amount_sek: bonus.bonus_amount_sek.toString(),
+      start_date: bonus.start_date,
+      end_date: bonus.end_date,
+      conditions: bonus.conditions ? JSON.stringify(bonus.conditions) : ''
+    });
+    setIsAddingBonus(true);
+  };
 
   const filteredPostalCodes = mockPostalCodes.filter(code => 
     code.code.includes(searchTerm) || 
@@ -256,52 +513,308 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
 
         {/* Prislogik Tab */}
         <TabsContent value="pricing" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Distance Rules Management */}
+            <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>Distansbaserade Avdrag</CardTitle>
-                <CardDescription>Automatiska avdrag baserat på körsträcka</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Distansbaserade Avdrag</CardTitle>
+                    <CardDescription>Hantera automatiska avdrag baserat på körsträcka</CardDescription>
+                  </div>
+                  <Dialog open={isAddingDistanceRule} onOpenChange={setIsAddingDistanceRule}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Lägg till ny regel
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingDistanceRule ? 'Redigera Distansregel' : 'Lägg till Ny Distansregel'}
+                        </DialogTitle>
+                        <DialogDescription>
+                          Definiera avståndsspann och motsvarande avdrag för hämtningar
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="min-distance">Min-avstånd (km)</Label>
+                            <Input
+                              id="min-distance"
+                              type="number"
+                              placeholder="0"
+                              value={newDistanceRule.min_distance_km}
+                              onChange={(e) => setNewDistanceRule({
+                                ...newDistanceRule,
+                                min_distance_km: e.target.value
+                              })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="max-distance">Max-avstånd (km)</Label>
+                            <Input
+                              id="max-distance"
+                              type="number"
+                              placeholder="Lämna tom för obegränsat"
+                              value={newDistanceRule.max_distance_km}
+                              onChange={(e) => setNewDistanceRule({
+                                ...newDistanceRule,
+                                max_distance_km: e.target.value
+                              })}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="deduction">Avdrag (SEK)</Label>
+                          <Input
+                            id="deduction"
+                            type="number"
+                            placeholder="250"
+                            value={newDistanceRule.deduction_sek}
+                            onChange={(e) => setNewDistanceRule({
+                              ...newDistanceRule,
+                              deduction_sek: e.target.value
+                            })}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                          setIsAddingDistanceRule(false);
+                          setEditingDistanceRule(null);
+                          setNewDistanceRule({ min_distance_km: '', max_distance_km: '', deduction_sek: '' });
+                        }}>
+                          Avbryt
+                        </Button>
+                        <Button onClick={saveDistanceRule}>
+                          {editingDistanceRule ? 'Uppdatera' : 'Lägg till'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {distanceTiers.map((tier, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
-                      <span className="font-medium">{tier.range}</span>
-                      <span className="text-destructive font-bold">{tier.deduction} SEK</span>
+                  {distanceRules.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Inga distansregler definierade ännu
                     </div>
-                  ))}
+                  ) : (
+                    distanceRules.map((rule) => (
+                      <div key={rule.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div>
+                          <span className="font-medium">
+                            {rule.min_distance_km} - {rule.max_distance_km || '∞'} km
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-destructive font-bold">{rule.deduction_sek} SEK</span>
+                          <Button variant="ghost" size="sm" onClick={() => startEditingDistanceRule(rule)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteDistanceRule(rule.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <Button variant="outline" className="w-full mt-4">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Redigera prislogik
-                </Button>
               </CardContent>
             </Card>
 
+            {/* Preview Calculator */}
             <Card>
               <CardHeader>
-                <CardTitle>Bonuserbjudanden</CardTitle>
-                <CardDescription>Tillfälliga kampanjer och bonusar</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Priskalkylator
+                </CardTitle>
+                <CardDescription>Testa prisberäkning</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-3 border rounded-lg bg-green-50">
-                  <h4 className="font-medium text-green-800">Sommarkampanj 2024</h4>
-                  <p className="text-sm text-green-600">+500 SEK extra för alla hämtningar</p>
-                  <p className="text-xs text-green-500 mt-1">Aktiv till 31 augusti</p>
+                <div>
+                  <Label htmlFor="test-distance">Avstånd (km)</Label>
+                  <Input
+                    id="test-distance"
+                    type="number"
+                    placeholder="35"
+                    value={testDistance}
+                    onChange={(e) => setTestDistance(e.target.value)}
+                  />
                 </div>
-                
-                <Button variant="outline" className="w-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Lägg till bonus
+                <Button onClick={calculatePreview} className="w-full">
+                  Beräkna
                 </Button>
+                {calculatedDeduction !== 0 && (
+                  <div className="space-y-2 p-3 bg-muted rounded-lg">
+                    <div className="flex justify-between">
+                      <span>Avdrag:</span>
+                      <span className="text-destructive font-bold">{calculatedDeduction} SEK</span>
+                    </div>
+                    {applicableBonuses.map((bonus) => (
+                      <div key={bonus.id} className="flex justify-between">
+                        <span>{bonus.bonus_name}:</span>
+                        <span className="text-green-600 font-bold">+{bonus.bonus_amount_sek} SEK</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Total effekt:</span>
+                      <span>{calculatedDeduction + applicableBonuses.reduce((sum, b) => sum + b.bonus_amount_sek, 0)} SEK</span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
+          {/* Bonus Offers Management */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Bonuserbjudanden</CardTitle>
+                  <CardDescription>Hantera kampanjer och tillfälliga bonusar</CardDescription>
+                </div>
+                <Dialog open={isAddingBonus} onOpenChange={setIsAddingBonus}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Lägg till bonus
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingBonus ? 'Redigera Bonuserbjudande' : 'Lägg till Nytt Bonuserbjudande'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Skapa kampanjer och bonusar för specifika tidsperioder
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="bonus-name">Bonusnamn</Label>
+                        <Input
+                          id="bonus-name"
+                          placeholder="Vinterbonus 2024"
+                          value={newBonusOffer.bonus_name}
+                          onChange={(e) => setNewBonusOffer({
+                            ...newBonusOffer,
+                            bonus_name: e.target.value
+                          })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bonus-amount">Bonusbelopp (SEK)</Label>
+                        <Input
+                          id="bonus-amount"
+                          type="number"
+                          placeholder="500"
+                          value={newBonusOffer.bonus_amount_sek}
+                          onChange={(e) => setNewBonusOffer({
+                            ...newBonusOffer,
+                            bonus_amount_sek: e.target.value
+                          })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="start-date">Startdatum</Label>
+                          <Input
+                            id="start-date"
+                            type="date"
+                            value={newBonusOffer.start_date}
+                            onChange={(e) => setNewBonusOffer({
+                              ...newBonusOffer,
+                              start_date: e.target.value
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="end-date">Slutdatum</Label>
+                          <Input
+                            id="end-date"
+                            type="date"
+                            value={newBonusOffer.end_date}
+                            onChange={(e) => setNewBonusOffer({
+                              ...newBonusOffer,
+                              end_date: e.target.value
+                            })}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="conditions">Villkor (JSON, valfritt)</Label>
+                        <Textarea
+                          id="conditions"
+                          placeholder='{"min_age": 10, "vehicle_types": ["personbil"]}'
+                          value={newBonusOffer.conditions}
+                          onChange={(e) => setNewBonusOffer({
+                            ...newBonusOffer,
+                            conditions: e.target.value
+                          })}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => {
+                        setIsAddingBonus(false);
+                        setEditingBonus(null);
+                        setNewBonusOffer({ bonus_name: '', bonus_amount_sek: '', start_date: '', end_date: '', conditions: '' });
+                      }}>
+                        Avbryt
+                      </Button>
+                      <Button onClick={saveBonusOffer}>
+                        {editingBonus ? 'Uppdatera' : 'Lägg till'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {bonusOffers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Inga aktiva bonuserbjudanden
+                  </div>
+                ) : (
+                  bonusOffers.map((bonus) => (
+                    <div key={bonus.id} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{bonus.bonus_name}</h4>
+                          <p className="text-sm text-green-600">+{bonus.bonus_amount_sek} SEK</p>
+                          <p className="text-xs text-muted-foreground">
+                            {bonus.start_date} - {bonus.end_date}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => startEditingBonus(bonus)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteBonusOffer(bonus.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Pickup Requests */}
           <Card>
             <CardHeader>
               <CardTitle>Senaste Hämtningsförfrågningar</CardTitle>
-              <CardDescription>Översikt av prisberäkningar och ersättningar</CardDescription>
+              <CardDescription>Översikt av prisberäkningar med aktuella regler</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
