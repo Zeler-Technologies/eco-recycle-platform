@@ -25,7 +25,8 @@ import {
   TestTube,
   Plus,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Smartphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -146,6 +147,14 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [customTemplates, setCustomTemplates] = useState<CustomMessageTemplate[]>([]);
   const [editingCustomTemplate, setEditingCustomTemplate] = useState<CustomMessageTemplate | null>(null);
+  const [newCustomTemplate, setNewCustomTemplate] = useState<Partial<CustomMessageTemplate>>({
+    template_type: 'initial_owner',
+    template_name: '',
+    content: 'Hej [namn]! Vi har mottagit din förfrågan för bil [registreringsnummer] med kontrollnummer [kontrollnummer]. Hämtningsdatum: [datum]. Tack för att du använder Panta Bilen!',
+    is_active: true
+  });
+  const [showPhonePreview, setShowPhonePreview] = useState(false);
+  const [phonePreviewMessage, setPhonePreviewMessage] = useState('');
   const [previewData, setPreviewData] = useState({
     namn: 'Anna Andersson',
     registreringsnummer: 'ABC123',
@@ -278,6 +287,64 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         variant: "destructive",
       });
     }
+  };
+
+  const handleCreateNewTemplate = async () => {
+    if (!tenantId || !newCustomTemplate.template_name || !newCustomTemplate.content) {
+      toast({
+        title: "Obligatoriska fält saknas",
+        description: "Mallnamn och innehåll är obligatoriska.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateRequiredVariables(newCustomTemplate.content)) {
+      toast({
+        title: "Saknade variabler",
+        description: "Mallen måste innehålla [namn], [registreringsnummer], [kontrollnummer] och [datum].",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('custom_message_templates')
+        .insert({
+          tenant_id: tenantId,
+          template_type: newCustomTemplate.template_type!,
+          template_name: newCustomTemplate.template_name,
+          content: newCustomTemplate.content,
+          is_active: newCustomTemplate.is_active ?? true
+        });
+
+      if (error) throw error;
+
+      await loadCustomTemplates();
+      setNewCustomTemplate({
+        template_type: 'initial_owner',
+        template_name: '',
+        content: 'Hej [namn]! Vi har mottagit din förfrågan för bil [registreringsnummer] med kontrollnummer [kontrollnummer]. Hämtningsdatum: [datum]. Tack för att du använder Panta Bilen!',
+        is_active: true
+      });
+      
+      toast({
+        title: "Mall skapad",
+        description: "Ny anpassad mall har skapats framgångsrikt.",
+      });
+    } catch (error) {
+      toast({
+        title: "Fel vid skapande",
+        description: "Kunde inte skapa mallen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTestMessageLook = (message: string) => {
+    setPhonePreviewMessage(generatePreview(message));
+    setShowPhonePreview(true);
   };
 
   const generatePreview = (template: string): string => {
@@ -603,38 +670,124 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                 <CardTitle className="text-tenant-primary">Förhandsgranskningsdata</CardTitle>
                 <CardDescription>Anpassa exempeldata för förhandsgranskning av mallar</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="preview-namn">Namn</Label>
-                  <Input
-                    id="preview-namn"
-                    value={previewData.namn}
-                    onChange={(e) => setPreviewData(prev => ({ ...prev, namn: e.target.value }))}
-                  />
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="preview-namn">Namn</Label>
+                    <Input
+                      id="preview-namn"
+                      value={previewData.namn}
+                      onChange={(e) => setPreviewData(prev => ({ ...prev, namn: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="preview-registreringsnummer">Registreringsnummer</Label>
+                    <Input
+                      id="preview-registreringsnummer"
+                      value={previewData.registreringsnummer}
+                      onChange={(e) => setPreviewData(prev => ({ ...prev, registreringsnummer: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="preview-kontrollnummer">Kontrollnummer</Label>
+                    <Input
+                      id="preview-kontrollnummer"
+                      value={previewData.kontrollnummer}
+                      onChange={(e) => setPreviewData(prev => ({ ...prev, kontrollnummer: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="preview-datum">Datum</Label>
+                    <Input
+                      id="preview-datum"
+                      value={previewData.datum}
+                      onChange={(e) => setPreviewData(prev => ({ ...prev, datum: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleTestMessageLook(newCustomTemplate.content || '')}
+                    className="flex-1"
+                  >
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    Testa meddelandets utseende
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Create New Template */}
+            <Card className="bg-white shadow-custom-sm">
+              <CardHeader>
+                <CardTitle className="text-tenant-primary">Skapa ny mall</CardTitle>
+                <CardDescription>Skapa en ny anpassad meddelandemall</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="new-template-name">Mallnamn</Label>
+                    <Input
+                      id="new-template-name"
+                      value={newCustomTemplate.template_name || ''}
+                      onChange={(e) => setNewCustomTemplate(prev => ({ ...prev, template_name: e.target.value }))}
+                      placeholder="Ange mallnamn..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="new-template-type">Malltyp</Label>
+                    <Select
+                      value={newCustomTemplate.template_type || 'initial_owner'}
+                      onValueChange={(value: 'initial_owner' | 'initial_non_owner' | 'pickup_confirmed') => 
+                        setNewCustomTemplate(prev => ({ ...prev, template_type: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Välj malltyp" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="initial_owner">Initial förfrågan - Bilägare</SelectItem>
+                        <SelectItem value="initial_non_owner">Initial förfrågan - Ej bilägare</SelectItem>
+                        <SelectItem value="pickup_confirmed">Hämtning bekräftad</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="preview-registreringsnummer">Registreringsnummer</Label>
-                  <Input
-                    id="preview-registreringsnummer"
-                    value={previewData.registreringsnummer}
-                    onChange={(e) => setPreviewData(prev => ({ ...prev, registreringsnummer: e.target.value }))}
+                  <Label htmlFor="new-template-content">Meddelandetext</Label>
+                  <Textarea
+                    id="new-template-content"
+                    value={newCustomTemplate.content || ''}
+                    onChange={(e) => setNewCustomTemplate(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="Skriv ditt meddelande här med [namn], [registreringsnummer], [kontrollnummer], [datum]..."
+                    className="min-h-32"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Obligatoriska variabler: [namn], [registreringsnummer], [kontrollnummer], [datum]
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="preview-kontrollnummer">Kontrollnummer</Label>
-                  <Input
-                    id="preview-kontrollnummer"
-                    value={previewData.kontrollnummer}
-                    onChange={(e) => setPreviewData(prev => ({ ...prev, kontrollnummer: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="preview-datum">Datum</Label>
-                  <Input
-                    id="preview-datum"
-                    value={previewData.datum}
-                    onChange={(e) => setPreviewData(prev => ({ ...prev, datum: e.target.value }))}
-                  />
+                {newCustomTemplate.content && (
+                  <div className="p-3 bg-muted/50 rounded-md">
+                    <p className="text-sm font-medium mb-2">Förhandsgranskning:</p>
+                    <p className="text-sm italic">{generatePreview(newCustomTemplate.content)}</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCreateNewTemplate}
+                    className="bg-tenant-primary hover:bg-tenant-primary/90"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Spara mall
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleTestMessageLook(newCustomTemplate.content || '')}
+                  >
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    Testa utseende
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -750,6 +903,57 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Phone Preview Dialog */}
+        <Dialog open={showPhonePreview} onOpenChange={setShowPhonePreview}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Meddelandeförhandsgranskning</DialogTitle>
+              <DialogDescription>
+                Så här kommer meddelandet att se ut på kundens telefon
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mx-auto">
+              {/* Phone mockup */}
+              <div className="bg-black rounded-3xl p-2 w-72 h-96 shadow-2xl">
+                <div className="bg-white rounded-2xl h-full flex flex-col">
+                  {/* Phone status bar */}
+                  <div className="flex justify-between items-center px-4 py-2 text-xs text-gray-600">
+                    <span>09:41</span>
+                    <div className="flex gap-1">
+                      <div className="w-1 h-1 bg-black rounded-full"></div>
+                      <div className="w-1 h-1 bg-black rounded-full"></div>
+                      <div className="w-1 h-1 bg-black rounded-full"></div>
+                    </div>
+                  </div>
+                  {/* SMS header */}
+                  <div className="border-b px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                        P
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Panta Bilen</p>
+                        <p className="text-xs text-gray-500">SMS</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* SMS content */}
+                  <div className="flex-1 p-4">
+                    <div className="bg-gray-100 rounded-2xl p-3 max-w-64">
+                      <p className="text-sm text-gray-800 leading-relaxed">
+                        {phonePreviewMessage}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2 text-right">
+                        {new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
