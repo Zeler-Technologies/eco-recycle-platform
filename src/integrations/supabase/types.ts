@@ -46,6 +46,50 @@ export type Database = {
           },
         ]
       }
+      bidding_system: {
+        Row: {
+          bid_amount: number
+          bid_end_date: string
+          bid_start_date: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          payment_status: string | null
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          bid_amount: number
+          bid_end_date: string
+          bid_start_date: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          payment_status?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          bid_amount?: number
+          bid_end_date?: string
+          bid_start_date?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          payment_status?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bidding_system_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       bonus_offers: {
         Row: {
           bonus_amount_sek: number
@@ -264,6 +308,80 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_requests: {
+        Row: {
+          car_brand: string
+          car_model: string
+          car_registration_number: string
+          car_year: number | null
+          control_number: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          owner_address: string
+          owner_name: string
+          owner_postal_code: string
+          pickup_address: string
+          pickup_latitude: number | null
+          pickup_longitude: number | null
+          pickup_postal_code: string
+          quote_amount: number | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          car_brand: string
+          car_model: string
+          car_registration_number: string
+          car_year?: number | null
+          control_number?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          owner_address: string
+          owner_name: string
+          owner_postal_code: string
+          pickup_address: string
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
+          pickup_postal_code: string
+          quote_amount?: number | null
+          status?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          car_brand?: string
+          car_model?: string
+          car_registration_number?: string
+          car_year?: number | null
+          control_number?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          owner_address?: string
+          owner_name?: string
+          owner_postal_code?: string
+          pickup_address?: string
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
+          pickup_postal_code?: string
+          quote_amount?: number | null
+          status?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           car_id: string
@@ -404,27 +522,164 @@ export type Database = {
           },
         ]
       }
+      pickup_orders: {
+        Row: {
+          actual_pickup_date: string | null
+          created_at: string
+          customer_request_id: string | null
+          driver_name: string | null
+          final_price: number | null
+          id: string
+          scheduled_pickup_date: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_pickup_date?: string | null
+          created_at?: string
+          customer_request_id?: string | null
+          driver_name?: string | null
+          final_price?: number | null
+          id?: string
+          scheduled_pickup_date?: string | null
+          status?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_pickup_date?: string | null
+          created_at?: string
+          customer_request_id?: string | null
+          driver_name?: string | null
+          final_price?: number | null
+          id?: string
+          scheduled_pickup_date?: string | null
+          status?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickup_orders_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      price_viewing_payments: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          is_active: boolean | null
+          payment_amount: number
+          payment_date: string
+          stripe_session_id: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          payment_amount: number
+          payment_date?: string
+          stripe_session_id?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          payment_amount?: number
+          payment_date?: string
+          stripe_session_id?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      scrap_yard_locations: {
+        Row: {
+          bidding_amount: number | null
+          created_at: string
+          id: string
+          is_premium_listed: boolean | null
+          priority_position: number | null
+          service_radius_km: number | null
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          bidding_amount?: number | null
+          created_at?: string
+          id?: string
+          is_premium_listed?: boolean | null
+          priority_position?: number | null
+          service_radius_km?: number | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          bidding_amount?: number | null
+          created_at?: string
+          id?: string
+          is_premium_listed?: boolean | null
+          priority_position?: number | null
+          service_radius_km?: number | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
+          base_address: string | null
           country: string
           created_at: string
           date: string
+          latitude: number | null
+          longitude: number | null
           name: string
           service_type: string | null
           tenants_id: number
         }
         Insert: {
+          base_address?: string | null
           country: string
           created_at?: string
           date: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           service_type?: string | null
           tenants_id?: number
         }
         Update: {
+          base_address?: string | null
           country?: string
           created_at?: string
           date?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           service_type?: string | null
           tenants_id?: number
@@ -479,7 +734,7 @@ export type Database = {
     Enums: {
       car_status: "new" | "ongoing" | "done" | "error" | "archive" | "deleted"
       treatment_type: "pickup" | "drivein"
-      user_role: "super_admin" | "tenant_admin" | "user"
+      user_role: "super_admin" | "tenant_admin" | "user" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -609,7 +864,7 @@ export const Constants = {
     Enums: {
       car_status: ["new", "ongoing", "done", "error", "archive", "deleted"],
       treatment_type: ["pickup", "drivein"],
-      user_role: ["super_admin", "tenant_admin", "user"],
+      user_role: ["super_admin", "tenant_admin", "user", "customer"],
     },
   },
 } as const
