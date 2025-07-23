@@ -3,7 +3,6 @@ import { CalendarIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
-import swedishRegistrationDoc from '@/assets/swedish-registration-document.png';
 
 interface CarDetails {
   registrationNumber: string;
@@ -253,9 +252,10 @@ const CustomerApp = () => {
           {/* Document Image */}
           <div className="mt-6">
             <img
-              src={swedishRegistrationDoc}
+              src="/lovable-uploads/72928b26-68a0-4a8e-857b-083b92eb9bda.png"
               alt="Swedish Registration Document"
-              className="w-full rounded-lg shadow-sm"
+              className="w-full rounded-lg shadow-sm transform rotate-90"
+              style={{ transformOrigin: 'center' }}
             />
           </div>
 
