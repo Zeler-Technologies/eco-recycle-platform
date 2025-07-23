@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import CustomerApp from "./pages/CustomerApp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { BillingDashboard } from "./components/SuperAdmin/Billing/BillingDashboard";
+import BankIDLogin from "./components/BankID/BankIDLogin";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route path="/bankid" element={<BankIDLogin />} />
             <Route 
               path="/customer-app" 
               element={

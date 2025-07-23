@@ -1,11 +1,13 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import SuperAdminDashboard from '@/components/SuperAdmin/SuperAdminDashboard';
 import TenantDashboard from '@/components/Tenant/TenantDashboard';
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   // Debug logging
   console.log('Index component - User:', user);
@@ -23,7 +25,36 @@ const Index = () => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Bilskrot Management System
+          </h1>
+          <p className="text-xl text-gray-800 mb-8">
+            Välj hur du vill logga in
+          </p>
+          <div className="space-y-4">
+            <Button
+              onClick={() => navigate('/bankid')}
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-6 rounded-2xl text-lg font-semibold"
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <div className="text-xl font-bold">iD</div>
+                <span>Logga in med BankID</span>
+              </div>
+            </Button>
+            <Button
+              onClick={() => navigate('/login')}
+              variant="outline"
+              className="w-full border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white py-4 rounded-2xl font-medium"
+            >
+              Traditionell inloggning
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Role-based dashboard rendering
