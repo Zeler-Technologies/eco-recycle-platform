@@ -530,8 +530,9 @@ const CustomerApp = () => {
                 <textarea
                   value={partsInfo.additionalInfo}
                   onChange={(e) => {
-                    if (e.target.value.length <= 240) {
-                      setPartsInfo({...partsInfo, additionalInfo: e.target.value})
+                    const value = e.target.value;
+                    if (value.length <= 240) {
+                      setPartsInfo(prev => ({ ...prev, additionalInfo: value }));
                     }
                   }}
                   placeholder=""
