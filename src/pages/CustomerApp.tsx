@@ -259,13 +259,17 @@ const CustomerApp = () => {
             onClick={() => setActiveTab('pickup-info')}
             disabled={
               !carDetails.registrationNumber || 
+              carDetails.registrationNumber.length < 3 ||
               !carDetails.controlNumber || 
+              carDetails.controlNumber.length < 3 ||
               !carDetails.ownerConfirmation || 
               Object.keys(validationErrors).length > 0
             }
             className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
               !carDetails.registrationNumber || 
+              carDetails.registrationNumber.length < 3 ||
               !carDetails.controlNumber || 
+              carDetails.controlNumber.length < 3 ||
               !carDetails.ownerConfirmation || 
               Object.keys(validationErrors).length > 0
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
