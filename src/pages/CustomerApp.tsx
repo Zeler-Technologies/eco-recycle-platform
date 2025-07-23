@@ -132,9 +132,9 @@ const CustomerApp = () => {
     <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 p-4">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between text-gray-900">
+        <div className="flex items-center justify-between text-black">
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-gray-900 rounded-full"></div>
+            <div className="w-2 h-2 bg-black rounded-full"></div>
             <span className="font-medium">Biluppgifter</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -147,38 +147,40 @@ const CustomerApp = () => {
 
       {/* Main Content */}
       <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">BILUPPGIFTER</h1>
+        <h1 className="text-3xl font-bold text-black mb-6">BILUPPGIFTER</h1>
         
-        <Card className="bg-white rounded-2xl shadow-lg">
+        <Card className="bg-white rounded-xl shadow-lg">
           <CardContent className="p-6 space-y-6">
             {/* Registration Certificate Section */}
             <div>
-              <Label className="text-lg font-semibold text-gray-900 mb-4 block">
+              <h2 className="text-lg font-bold text-black mb-4">
                 Registreringsbevis*
-              </Label>
+              </h2>
               
-              <div className="flex items-center space-x-3 mb-4">
-                <Checkbox
+              <div className="flex items-start space-x-3 mb-4">
+                <input
+                  type="checkbox"
                   id="owner-confirmation"
                   checked={carDetails.ownerConfirmation}
-                  onCheckedChange={(checked) => 
-                    setCarDetails({...carDetails, ownerConfirmation: checked as boolean})
+                  onChange={(e) => 
+                    setCarDetails({...carDetails, ownerConfirmation: e.target.checked})
                   }
-                  className="border-2 border-gray-400"
+                  className="mt-1 h-4 w-4 border-2 border-gray-300 rounded"
                 />
-                <Label htmlFor="owner-confirmation" className="text-gray-900 font-medium">
+                <Label htmlFor="owner-confirmation" className="text-base font-medium text-black">
                   Jag äger bilen
                 </Label>
               </div>
               
-              <p className="text-sm text-blue-600 mb-4">
-                <span className="underline cursor-pointer">Hitta information här</span> om du inte äger bilen.
+              <p className="text-sm mb-4">
+                <span className="text-blue-500 underline cursor-pointer">Hitta information här</span>
+                <span className="text-gray-600"> om du inte äger bilen.</span>
               </p>
             </div>
 
             {/* Registration Number */}
             <div>
-              <Label htmlFor="registration" className="text-gray-600 text-sm font-medium">
+              <Label htmlFor="registration" className="text-base font-semibold text-black block mb-2">
                 Registreringsnummer
               </Label>
               <div className="relative">
@@ -187,11 +189,9 @@ const CustomerApp = () => {
                   value={carDetails.registrationNumber}
                   onChange={(e) => handleCarDetailsChange('registrationNumber', e.target.value)}
                   onBlur={validateCarDetails}
-                  placeholder="Ex bilen som ska pantas"
-                  className={`mt-1 rounded-lg h-12 text-lg pr-10 ${
-                    validationErrors.registrationNumber 
-                      ? 'border-red-500 border-2' 
-                      : 'border-gray-300'
+                  placeholder="På bilen som ska pantas"
+                  className={`bg-gray-100 border-0 text-base py-3 placeholder:text-gray-400 rounded-lg ${
+                    validationErrors.registrationNumber && 'border border-red-500'
                   }`}
                 />
                 {validationErrors.registrationNumber && (
@@ -207,21 +207,21 @@ const CustomerApp = () => {
 
             {/* Control Number */}
             <div>
-              <Label htmlFor="control-number" className="text-gray-600 text-sm font-medium">
+              <Label htmlFor="control-number" className="text-base font-semibold text-black block mb-2">
                 Kontrollnummer
               </Label>
               <Input
                 id="control-number"
                 value={carDetails.controlNumber}
                 onChange={(e) => setCarDetails({...carDetails, controlNumber: e.target.value})}
-                placeholder="Ange den från Transportstyrlsens registreringsbevis del 2"
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
+                placeholder="Ange den från Transportstyrelsen registreringsbevis del 2"
+                className="bg-gray-100 border-0 text-base py-3 placeholder:text-gray-400 rounded-lg"
               />
             </div>
 
             {/* Issue Date */}
             <div>
-              <Label htmlFor="issue-date" className="text-gray-600 text-sm font-medium">
+              <Label htmlFor="issue-date" className="text-base font-semibold text-black block mb-2">
                 Utfärdande datum
               </Label>
               <div className="relative">
@@ -232,16 +232,13 @@ const CustomerApp = () => {
                   onChange={(e) => handleCarDetailsChange('issueDate', e.target.value)}
                   onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
-                  className={`mt-1 rounded-lg h-12 text-lg pr-10 ${
-                    validationErrors.issueDate 
-                      ? 'border-red-500 border-2' 
-                      : 'border-gray-300'
+                  className={`bg-gray-100 border-0 text-base py-3 placeholder:text-gray-400 rounded-lg ${
+                    validationErrors.issueDate && 'border border-red-500'
                   }`}
                 />
-                {validationErrors.issueDate ? (
-                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
-                ) : (
-                  <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                {validationErrors.issueDate && (
+                  <AlertCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
                 )}
               </div>
               {validationErrors.issueDate && (
@@ -252,26 +249,30 @@ const CustomerApp = () => {
             </div>
 
             {/* Helper Text */}
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-600">
               *Senaste registreringsbevis del 2
             </p>
 
             {/* Document Image Helper */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="space-y-4">
               <img
-                src="/lovable-uploads/94fa853a-b5c7-45e5-8e5f-743bf64a045e.png"
-                alt="Registreringsbevis guide"
-                className="w-full h-auto rounded-lg"
+                src="/lovable-uploads/865c762e-e9e8-4e21-a6ab-d4b505f28680.png"
+                alt="Registreringsbevis exempel"
+                className="w-full rounded-lg"
               />
-              <p className="text-xs text-blue-600 mt-2">
-                Hitta information på <span className="underline cursor-pointer">Pantabilens hemsida</span>.
+              
+              <p className="text-sm text-gray-600">
+                Hitta information på{" "}
+                <span className="text-blue-500 underline cursor-pointer">
+                  Pantablens hemsida.
+                </span>
               </p>
             </div>
           </CardContent>
         </Card>
 
         {/* Navigation Buttons */}
-        <div className="mt-6 space-y-3">
+        <div className="mt-6 space-y-4">
           <Button
             onClick={() => setActiveTab('pickup-info')}
             disabled={
@@ -280,18 +281,24 @@ const CustomerApp = () => {
               !carDetails.ownerConfirmation || 
               Object.keys(validationErrors).length > 0
             }
-            className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-4 rounded-2xl text-lg font-semibold disabled:opacity-50"
+            className={`w-full py-6 text-lg font-semibold rounded-full ${
+              !carDetails.registrationNumber || 
+              !carDetails.controlNumber || 
+              !carDetails.ownerConfirmation || 
+              Object.keys(validationErrors).length > 0
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-gray-800 text-white hover:bg-gray-700"
+            }`}
           >
             NÄSTA
           </Button>
           
-          <Button
-            variant="ghost"
+          <button
             onClick={() => navigate('/')}
-            className="w-full text-gray-700 py-2 text-base underline"
+            className="w-full text-center text-gray-600 underline text-base"
           >
             Backa
-          </Button>
+          </button>
         </div>
       </div>
     </div>
