@@ -1131,27 +1131,27 @@ const CustomerApp = () => {
   };
 
   const handleTransportNext = () => {
-    setCurrentView('price-value');
+    setCurrentView('payment-info');
   };
 
   const handleTransportBack = () => {
     setCurrentView('parts-info');
   };
 
-  const handlePriceValueNext = () => {
-    setCurrentView('payment-info');
-  };
-
-  const handlePriceValueBack = () => {
-    setCurrentView('transport');
-  };
-
   const handlePaymentNext = () => {
-    setCurrentView('bankid');
+    setCurrentView('price-value');
   };
 
   const handlePaymentBack = () => {
-    setCurrentView('price-value');
+    setCurrentView('transport');
+  };
+
+  const handlePriceValueNext = () => {
+    setCurrentView('bankid');
+  };
+
+  const handlePriceValueBack = () => {
+    setCurrentView('payment-info');
   };
 
   const handleBack = () => {
