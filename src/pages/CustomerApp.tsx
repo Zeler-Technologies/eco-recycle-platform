@@ -188,8 +188,12 @@ const CustomerApp = () => {
                   type="text"
                   value={carDetails.registrationNumber}
                   onChange={(e) => {
+                    console.log('Registration number changing:', e.target.value);
                     const value = e.target.value;
-                    setCarDetails(prev => ({ ...prev, registrationNumber: value }));
+                    setCarDetails(prev => {
+                      console.log('Setting registration number:', value);
+                      return { ...prev, registrationNumber: value };
+                    });
                     
                     if (value.length > 0 && value.length < 3) {
                       setValidationErrors(prev => ({ 
@@ -230,8 +234,12 @@ const CustomerApp = () => {
                 type="text"
                 value={carDetails.controlNumber}
                 onChange={(e) => {
+                  console.log('Control number changing:', e.target.value);
                   const value = e.target.value;
-                  setCarDetails(prev => ({ ...prev, controlNumber: value }));
+                  setCarDetails(prev => {
+                    console.log('Setting control number:', value);
+                    return { ...prev, controlNumber: value };
+                  });
                   
                   if (value.length > 0 && value.length < 3) {
                     setValidationErrors(prev => ({ 
