@@ -501,6 +501,8 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
 
 // Transport Screen - Moved outside to prevent re-renders
 const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
+  const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge");
+  const [additionalInfo, setAdditionalInfo] = React.useState<string>("");
   const isNextEnabled = transportMethod !== '';
   
   return (
@@ -554,7 +556,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
               (Är inkluderat i det pris du får. Gäller endast om bilen är komplett.)
             </p>
             
-            <div className="space-y-4">
+            <div className="space-y-4 mb-6">
               {/* Vi hämtar bilen */}
               <div className="flex items-center space-x-3">
                 <input
@@ -587,6 +589,56 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                 </label>
               </div>
             </div>
+
+            {/* Address and Additional Info - shown when transport option is selected */}
+            {transportMethod && (
+              <div className="space-y-4">
+                {/* Address Field */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                    placeholder="Adress"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-gray-600">
+                  Hittar du inte adress? Välj närmaste och beskriv nedan.
+                </p>
+
+                {/* Additional Info */}
+                <div>
+                  <label className="block text-base font-semibold text-black mb-2">
+                    Annan info
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={additionalInfo}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 240) {
+                          setAdditionalInfo(value);
+                        }
+                      }}
+                      maxLength={240}
+                      rows={4}
+                      className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      placeholder="Vid behov, ange mer info (exakt plats, hinder, framkomlighet)"
+                    />
+                    <div className="absolute bottom-3 right-3 text-sm text-gray-500">
+                      {additionalInfo.length}/240
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
