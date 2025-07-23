@@ -509,6 +509,8 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
 const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
   const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge");
   const [additionalInfo, setAdditionalInfo] = React.useState<string>("");
+  const [googleMapsApiKey, setGoogleMapsApiKey] = React.useState<string>("");
+  const [isLoadingApiKey, setIsLoadingApiKey] = React.useState<boolean>(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -516,11 +518,40 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
   
   const isNextEnabled = transportMethod !== '';
 
+  // Fetch Google Maps API key from Supabase on component mount
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      if (transportMethod === 'pickup') {
+        setIsLoadingApiKey(true);
+        try {
+          const response = await fetch('/functions/v1/get-google-maps-key', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setGoogleMapsApiKey(data.apiKey || '');
+          } else {
+            console.log('No Google Maps API key configured');
+          }
+        } catch (error) {
+          console.error('Failed to fetch Google Maps API key:', error);
+        } finally {
+          setIsLoadingApiKey(false);
+        }
+      }
+    };
+
+    fetchApiKey();
+  }, [transportMethod]);
+
   // Initialize Google Maps
   useEffect(() => {
-    if (transportMethod === 'pickup' && mapRef.current) {
+    if (transportMethod === 'pickup' && mapRef.current && googleMapsApiKey) {
       const loader = new Loader({
-        apiKey: '', // Will be set dynamically when user provides API key
+        apiKey: googleMapsApiKey,
         version: 'weekly',
         libraries: ['places']
       });
@@ -559,13 +590,13 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
         });
       }).catch(console.error);
     }
-  }, [transportMethod]);
+  }, [transportMethod, googleMapsApiKey]);
 
   // Initialize autocomplete
   useEffect(() => {
-    if (transportMethod === 'pickup') {
+    if (transportMethod === 'pickup' && googleMapsApiKey) {
       const loader = new Loader({
-        apiKey: '', // Will be set dynamically when user provides API key
+        apiKey: googleMapsApiKey,
         version: 'weekly',
         libraries: ['places']
       });
@@ -594,7 +625,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
         }
       }).catch(console.error);
     }
-  }, [transportMethod]);
+  }, [transportMethod, googleMapsApiKey]);
   
   return (
     <div className="min-h-screen theme-swedish mobile-container">
