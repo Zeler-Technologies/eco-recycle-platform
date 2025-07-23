@@ -520,7 +520,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
   useEffect(() => {
     if (transportMethod === 'pickup' && mapRef.current) {
       const loader = new Loader({
-        apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '', // You'll need to add this
+        apiKey: '', // Will be set dynamically when user provides API key
         version: 'weekly',
         libraries: ['places']
       });
@@ -565,7 +565,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
   useEffect(() => {
     if (transportMethod === 'pickup') {
       const loader = new Loader({
-        apiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+        apiKey: '', // Will be set dynamically when user provides API key
         version: 'weekly',
         libraries: ['places']
       });
@@ -946,11 +946,19 @@ const CustomerApp = () => {
   };
 
   const handleTransportNext = () => {
-    setCurrentView('bankid');
+    setCurrentView('payment-info');
   };
 
   const handleTransportBack = () => {
     setCurrentView('parts-info');
+  };
+
+  const handlePaymentNext = () => {
+    setCurrentView('bankid');
+  };
+
+  const handlePaymentBack = () => {
+    setCurrentView('transport');
   };
 
   const handleBack = () => {
@@ -1040,6 +1048,13 @@ const CustomerApp = () => {
                 setTransportMethod={setTransportMethod}
                 onNext={handleTransportNext}
                 onBack={handleTransportBack}
+              />
+            );
+          case 'payment-info':
+            return (
+              <PaymentInfoScreen
+                onNext={handlePaymentNext}
+                onBack={handlePaymentBack}
               />
             );
           case 'bankid':
