@@ -4,6 +4,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CarDetails {
   registrationNumber: string;
@@ -37,7 +47,7 @@ interface CarDetailsFormProps {
   onBack: () => void;
 }
 
-type ViewType = 'login' | 'car-details' | 'parts-info' | 'bankid' | 'success';
+type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'bankid' | 'success';
 
 // Car Details Form Component - Moved outside to prevent re-renders
 const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
@@ -290,6 +300,8 @@ const CustomerApp = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<ViewType>('login');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [transportMethod, setTransportMethod] = useState('');
 
   const [carDetails, setCarDetails] = useState<CarDetails>({
     registrationNumber: '',
@@ -340,11 +352,24 @@ const CustomerApp = () => {
   };
 
   const handlePartsNext = () => {
-    setCurrentView('bankid');
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmPartsNext = () => {
+    setShowConfirmDialog(false);
+    setCurrentView('transport');
   };
 
   const handlePartsBack = () => {
     setCurrentView('car-details');
+  };
+
+  const handleTransportNext = () => {
+    setCurrentView('bankid');
+  };
+
+  const handleTransportBack = () => {
+    setCurrentView('parts-info');
   };
 
   const handleBack = () => {
@@ -546,6 +571,125 @@ const CustomerApp = () => {
     );
   };
 
+  // Transport Screen
+  const TransportScreen = () => {
+    const isNextEnabled = transportMethod !== '';
+    
+    return (
+      <div className="min-h-screen theme-swedish mobile-container">
+        {/* Status Bar */}
+        <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
+          <span className="font-medium">12:30</span>
+          <div className="flex items-center space-x-1">
+            <div className="flex space-x-1">
+              <div className="w-1 h-3 bg-black rounded-full"></div>
+              <div className="w-1 h-3 bg-black rounded-full"></div>
+              <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+              <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
+            </div>
+            <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
+              <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+              <path d="M18 2v12h2V2h-2z"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex items-center justify-between text-black text-xs px-4 py-4">
+          <div className="flex items-center space-x-2">
+            <span className="opacity-50">Biluppgifter</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="opacity-50">Om bilen</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-black rounded-full"></div>
+            <span className="font-medium">Transport</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="opacity-50">Betalnings info</span>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="px-4">
+          <h1 className="text-2xl font-bold text-black mb-6">TRANSPORT</h1>
+          
+          {/* White Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-black mb-4">
+                Vad passar bäst?
+              </h2>
+              
+              <p className="text-sm text-gray-600 mb-6">
+                Lämna bilen på Ekenäsvägen 28, 863 37 Sundsvall och få{' '}
+                <span className="font-semibold text-black">500 kr extra.</span>{' '}
+                (Är inkluderat i det pris du får. Gäller endast om bilen är komplett.)
+              </p>
+              
+              <div className="space-y-4">
+                {/* Vi hämtar bilen */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="pickup"
+                    name="transport"
+                    value="pickup"
+                    checked={transportMethod === 'pickup'}
+                    onChange={(e) => setTransportMethod(e.target.value)}
+                    className="w-5 h-5 text-blue-600"
+                  />
+                  <label htmlFor="pickup" className="text-base text-black">
+                    Vi hämtar bilen
+                  </label>
+                </div>
+
+                {/* Lämna bilen själv */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    id="dropoff"
+                    name="transport"
+                    value="dropoff"
+                    checked={transportMethod === 'dropoff'}
+                    onChange={(e) => setTransportMethod(e.target.value)}
+                    className="w-5 h-5 text-blue-600"
+                  />
+                  <label htmlFor="dropoff" className="text-base text-black">
+                    Lämna bilen själv
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="mt-6 space-y-4 pb-8">
+            <button
+              onClick={handleTransportNext}
+              disabled={!isNextEnabled}
+              className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+                isNextEnabled
+                  ? "bg-gray-800 text-white hover:bg-gray-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              NÄSTA
+            </button>
+            
+            <button
+              onClick={handleTransportBack}
+              className="w-full text-center text-gray-600 underline text-base py-2"
+            >
+              Backa
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Success Screen
   const SuccessScreen = () => (
     <div className="min-h-screen theme-swedish mobile-container flex flex-col items-center justify-center p-4">
@@ -568,30 +712,57 @@ const CustomerApp = () => {
   );
 
   // Render based on current view
-  switch (currentView) {
-    case 'login':
-      return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
-    case 'car-details':
-      return (
-        <CarDetailsForm
-          carDetails={carDetails}
-          setCarDetails={setCarDetails}
-          validationErrors={validationErrors}
-          setValidationErrors={setValidationErrors}
-          validateCarDetails={validateCarDetails}
-          onNext={handleNext}
-          onBack={handleBack}
-        />
-      );
-    case 'parts-info':
-      return <PartsInfoScreen />;
-    case 'bankid':
-      return <BankIDScreen onComplete={handleBankIDComplete} />;
-    case 'success':
-      return <SuccessScreen />;
-    default:
-      return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
-  }
+  return (
+    <>
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-black">Bekräfta</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
+              Är du säker på att allt är korrekt?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-black">Nej</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPartsNext} className="bg-gray-800 text-white">
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Main Content */}
+      {(() => {
+        switch (currentView) {
+          case 'login':
+            return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
+          case 'car-details':
+            return (
+              <CarDetailsForm
+                carDetails={carDetails}
+                setCarDetails={setCarDetails}
+                validationErrors={validationErrors}
+                setValidationErrors={setValidationErrors}
+                validateCarDetails={validateCarDetails}
+                onNext={handleNext}
+                onBack={handleBack}
+              />
+            );
+          case 'parts-info':
+            return <PartsInfoScreen />;
+          case 'transport':
+            return <TransportScreen />;
+          case 'bankid':
+            return <BankIDScreen onComplete={handleBankIDComplete} />;
+          case 'success':
+            return <SuccessScreen />;
+          default:
+            return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
+        }
+      })()}
+    </>
+  );
 };
 
 export default CustomerApp;
