@@ -3,6 +3,7 @@ import { CalendarIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
+import BankIDLogin from '@/components/BankID/BankIDLogin';
 
 interface CarDetails {
   registrationNumber: string;
@@ -27,7 +28,7 @@ interface CarDetailsFormProps {
   onBack: () => void;
 }
 
-type ViewType = 'car-details' | 'bankid' | 'success';
+type ViewType = 'login' | 'car-details' | 'bankid' | 'success';
 
 // Car Details Form Component - Moved outside to prevent re-renders
 const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
@@ -279,7 +280,7 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
 const CustomerApp = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<ViewType>('car-details');
+  const [currentView, setCurrentView] = useState<ViewType>('login');
 
   const [carDetails, setCarDetails] = useState<CarDetails>({
     registrationNumber: '',
@@ -328,6 +329,10 @@ const CustomerApp = () => {
     setCurrentView('success');
   };
 
+  const handleLoginSuccess = () => {
+    setCurrentView('car-details');
+  };
+
   // Success Screen
   const SuccessScreen = () => (
     <div className="min-h-screen theme-swedish mobile-container flex flex-col items-center justify-center p-4">
@@ -351,11 +356,9 @@ const CustomerApp = () => {
 
   // Render based on current view
   switch (currentView) {
-    case 'bankid':
-      return <BankIDScreen onComplete={handleBankIDComplete} />;
-    case 'success':
-      return <SuccessScreen />;
-    default:
+    case 'login':
+      return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
+    case 'car-details':
       return (
         <CarDetailsForm
           carDetails={carDetails}
@@ -367,6 +370,12 @@ const CustomerApp = () => {
           onBack={handleBack}
         />
       );
+    case 'bankid':
+      return <BankIDScreen onComplete={handleBankIDComplete} />;
+    case 'success':
+      return <SuccessScreen />;
+    default:
+      return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
   }
 };
 

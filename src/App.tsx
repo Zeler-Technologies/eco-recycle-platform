@@ -39,7 +39,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="/bankid" element={<BankIDLogin />} />
+            <Route path="/bankid" element={<BankIDLogin onLoginSuccess={() => {}} />} />
             <Route 
               path="/customer-app" 
               element={
