@@ -88,11 +88,12 @@ const CustomerApp = () => {
 
   const [validationErrors, setValidationErrors] = useState<{
     registrationNumber?: string;
+    controlNumber?: string;
     issueDate?: string;
   }>({});
 
   const validateCarDetails = () => {
-    const errors: { registrationNumber?: string; issueDate?: string } = {};
+    const errors: { registrationNumber?: string; controlNumber?: string; issueDate?: string } = {};
     
     // Mock validation - in real app this would be API calls
     if (carDetails.registrationNumber === 'IIR387') {
@@ -186,12 +187,28 @@ const CustomerApp = () => {
                 <input
                   type="text"
                   value={carDetails.registrationNumber}
-                  onChange={(e) => handleCarDetailsChange('registrationNumber', e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCarDetails(prev => ({ ...prev, registrationNumber: value }));
+                    
+                    if (value.length > 0 && value.length < 3) {
+                      setValidationErrors(prev => ({ 
+                        ...prev, 
+                        registrationNumber: 'Registreringsnummer måste vara minst 3 tecken' 
+                      }));
+                    } else {
+                      setValidationErrors(prev => {
+                        const { registrationNumber, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
                   onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
                   className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     validationErrors.registrationNumber ? 'ring-2 ring-red-500' : ''
                   }`}
+                  autoComplete="off"
                 />
                 {validationErrors.registrationNumber && (
                   <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
@@ -212,9 +229,25 @@ const CustomerApp = () => {
               <input
                 type="text"
                 value={carDetails.controlNumber}
-                onChange={(e) => setCarDetails({...carDetails, controlNumber: e.target.value})}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCarDetails(prev => ({ ...prev, controlNumber: value }));
+                  
+                  if (value.length > 0 && value.length < 3) {
+                    setValidationErrors(prev => ({ 
+                      ...prev, 
+                      controlNumber: 'Kontrollnummer måste vara minst 3 tecken' 
+                    }));
+                  } else {
+                    setValidationErrors(prev => {
+                      const { controlNumber, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
                 placeholder="Ange den från Transportstyrelsen registreringsbevis del 2"
                 className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="off"
               />
             </div>
 
@@ -227,12 +260,23 @@ const CustomerApp = () => {
                 <input
                   type="date"
                   value={carDetails.issueDate}
-                  onChange={(e) => handleCarDetailsChange('issueDate', e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCarDetails(prev => ({ ...prev, issueDate: value }));
+                    // Clear validation error when user starts typing
+                    if (validationErrors.issueDate) {
+                      setValidationErrors(prev => {
+                        const { issueDate, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
                   onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
                   className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
                     validationErrors.issueDate ? 'ring-2 ring-red-500' : ''
                   }`}
+                  autoComplete="off"
                 />
                 <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                 {validationErrors.issueDate && (
