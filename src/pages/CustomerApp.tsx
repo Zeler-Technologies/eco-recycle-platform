@@ -302,9 +302,9 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
         <div className="mt-6 space-y-4 pb-8">
           <button
             onClick={onNext}
-            disabled={!isNextEnabled}
+            disabled={!isFormValid()}
             className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
-              isNextEnabled
+              isFormValid()
                 ? "bg-gray-800 text-white hover:bg-gray-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
