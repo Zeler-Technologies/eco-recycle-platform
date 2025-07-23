@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
+import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 import { Loader } from '@googlemaps/js-api-loader';
 import {
   AlertDialog,
@@ -1166,6 +1167,10 @@ const CustomerApp = () => {
     setCurrentView('car-details');
   };
 
+  const handleSuccessBackToHome = () => {
+    setCurrentView('car-details');
+  };
+
   // Success Screen
   const SuccessScreen = () => (
     <div className="min-h-screen theme-swedish mobile-container flex flex-col items-center justify-center p-4">
@@ -1260,7 +1265,7 @@ const CustomerApp = () => {
           case 'bankid':
             return <BankIDScreen onComplete={handleBankIDComplete} />;
           case 'success':
-            return <SuccessScreen />;
+            return <BankIDSuccess onContinue={handleSuccessBackToHome} />;
           default:
             return <BankIDLogin onLoginSuccess={handleLoginSuccess} />;
         }
