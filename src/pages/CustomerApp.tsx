@@ -137,9 +137,9 @@ const CustomerApp = () => {
           <span className="font-medium">Biluppgifter</span>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="text-sm">Om bilen</span>
-          <span className="text-sm">Transport</span>
-          <span className="text-sm">Betalnings info</span>
+          <span className="text-sm opacity-50">Om bilen</span>
+          <span className="text-sm opacity-50">Transport</span>
+          <span className="text-sm opacity-50">Betalnings info</span>
         </div>
       </div>
 
@@ -305,101 +305,110 @@ const CustomerApp = () => {
   // Pickup Info Form Component (Updated to match Swedish style)
   const PickupInfoForm = () => (
     <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 p-4">
+      {/* Header with navigation dots */}
+      <div className="flex items-center justify-between text-black text-sm mb-8 pt-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-black rounded-full"></div>
+          <span className="font-medium">Transport</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <span className="text-sm">✓ Biluppgifter</span>
+          <span className="text-sm font-medium">Transport</span>
+          <span className="text-sm opacity-50">Betalnings info</span>
+        </div>
+      </div>
+
       <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">TRANSPORT</h1>
+        <h1 className="text-3xl font-bold text-black mb-6">TRANSPORT</h1>
         
-        <Card className="bg-white rounded-2xl shadow-lg">
-          <CardContent className="p-6 space-y-6">
-            <div>
-              <Label htmlFor="car-brand" className="text-gray-600 text-sm font-medium">
-                Bilmärke
-              </Label>
-              <Input
-                id="car-brand"
-                value={pickupInfo.carBrand}
-                onChange={(e) => setPickupInfo({...pickupInfo, carBrand: e.target.value})}
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
-            </div>
+        <div className="bg-white rounded-2xl p-6 space-y-6">
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Bilmärke
+            </label>
+            <input
+              type="text"
+              value={pickupInfo.carBrand}
+              onChange={(e) => setPickupInfo({...pickupInfo, carBrand: e.target.value})}
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="car-model" className="text-gray-600 text-sm font-medium">
-                Bilmodell
-              </Label>
-              <Input
-                id="car-model"
-                value={pickupInfo.carModel}
-                onChange={(e) => setPickupInfo({...pickupInfo, carModel: e.target.value})}
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
-            </div>
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Bilmodell
+            </label>
+            <input
+              type="text"
+              value={pickupInfo.carModel}
+              onChange={(e) => setPickupInfo({...pickupInfo, carModel: e.target.value})}
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="car-year" className="text-gray-600 text-sm font-medium">
-                Årsmodell
-              </Label>
-              <Input
-                id="car-year"
-                type="number"
-                value={pickupInfo.carYear}
-                onChange={(e) => setPickupInfo({...pickupInfo, carYear: parseInt(e.target.value)})}
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
-            </div>
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Årsmodell
+            </label>
+            <input
+              type="number"
+              value={pickupInfo.carYear}
+              onChange={(e) => setPickupInfo({...pickupInfo, carYear: parseInt(e.target.value)})}
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="owner-name" className="text-gray-600 text-sm font-medium">
-                Ägarens namn
-              </Label>
-              <Input
-                id="owner-name"
-                value={pickupInfo.ownerName}
-                onChange={(e) => setPickupInfo({...pickupInfo, ownerName: e.target.value})}
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
-            </div>
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Ägarens namn
+            </label>
+            <input
+              type="text"
+              value={pickupInfo.ownerName}
+              onChange={(e) => setPickupInfo({...pickupInfo, ownerName: e.target.value})}
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="pickup-address" className="text-gray-600 text-sm font-medium">
-                Hämtningsadress
-              </Label>
-              <Input
-                id="pickup-address"
-                value={pickupInfo.pickupAddress}
-                onChange={(e) => setPickupInfo({...pickupInfo, pickupAddress: e.target.value})}
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
-            </div>
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Hämtningsadress
+            </label>
+            <input
+              type="text"
+              value={pickupInfo.pickupAddress}
+              onChange={(e) => setPickupInfo({...pickupInfo, pickupAddress: e.target.value})}
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="pickup-postal" className="text-gray-600 text-sm font-medium">
-                Postnummer
-              </Label>
-              <Input
-                id="pickup-postal"
-                value={pickupInfo.pickupPostalCode}
-                onChange={(e) => setPickupInfo({...pickupInfo, pickupPostalCode: e.target.value})}
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
-            </div>
-          </CardContent>
-        </Card>
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Postnummer
+            </label>
+            <input
+              type="text"
+              value={pickupInfo.pickupPostalCode}
+              onChange={(e) => setPickupInfo({...pickupInfo, pickupPostalCode: e.target.value})}
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
 
-        <div className="mt-6 space-y-3">
-          <Button
+        <div className="mt-6 space-y-4">
+          <button
             onClick={() => setActiveTab('scrap-yards')}
-            className="w-full bg-gray-700 hover:bg-gray-800 text-white py-4 rounded-2xl text-lg font-semibold"
+            className="w-full py-4 text-lg font-semibold rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-colors"
           >
             VISA SKROTAR
-          </Button>
+          </button>
           
-          <Button
-            variant="ghost"
+          <button
             onClick={() => setActiveTab('car-details')}
-            className="w-full text-gray-700 py-2 text-base underline"
+            className="w-full text-center text-gray-600 underline text-base py-2"
           >
             Backa
-          </Button>
+          </button>
         </div>
       </div>
     </div>
