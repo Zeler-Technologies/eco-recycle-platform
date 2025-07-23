@@ -6,6 +6,7 @@ import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 import { Loader } from '@googlemaps/js-api-loader';
+import { supabase } from '@/integrations/supabase/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1184,8 +1185,104 @@ const CustomerApp = () => {
     navigate('/');
   };
 
-  const handleBankIDComplete = () => {
-    setCurrentView('success');
+  const handleBankIDComplete = async () => {
+    try {
+      // Save customer request and parts information to database
+      await saveCustomerRequest();
+      setCurrentView('success');
+    } catch (error) {
+      console.error('Error saving customer request:', error);
+      // Still proceed to success view but log the error
+      setCurrentView('success');
+    }
+  };
+
+  const saveCustomerRequest = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Save main customer request
+    const { data: requestData, error: requestError } = await supabase
+      .from('customer_requests')
+      .insert({
+        customer_id: user.id,
+        car_registration_number: carDetails.registrationNumber,
+        car_brand: carDetails.registrationNumber, // Will be updated with real data later
+        car_model: carDetails.registrationNumber, // Will be updated with real data later
+        car_year: new Date().getFullYear(), // Default year, will be updated later
+        owner_name: user.email || 'Customer', // Use email as default
+        owner_address: 'Address from registration', // Placeholder
+        owner_postal_code: '12345', // Placeholder
+        pickup_address: 'Pickup address', // Placeholder for now
+        pickup_postal_code: '12345', // Placeholder
+        control_number: carDetails.controlNumber,
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (requestError) {
+      throw requestError;
+    }
+
+    // Prepare parts data for car_metadata table
+    const partsList = [];
+    const missingParts = [];
+
+    // Add present parts to partsList
+    if (partsInfo.hasEngine) partsList.push('motor');
+    else missingParts.push('motor');
+    
+    if (partsInfo.hasGearbox) partsList.push('växellåda');
+    else missingParts.push('växellåda');
+    
+    if (partsInfo.hasCatalyticConverter) partsList.push('katalysator');
+    else missingParts.push('katalysator');
+    
+    if (partsInfo.hasFourWheels) partsList.push('4_hjul');
+    else missingParts.push('4_hjul');
+    
+    if (partsInfo.hasBattery) partsList.push('batteri');
+    else missingParts.push('batteri');
+
+    // Create a car record first (required for car_metadata foreign key)
+    const { data: carData, error: carError } = await supabase
+      .from('cars')
+      .insert({
+        tenant_id: 1, // Default tenant ID, will be assigned properly later
+        license_plate: carDetails.registrationNumber,
+        brand: 'Unknown', // Will be updated with real data
+        model: 'Unknown', // Will be updated with real data
+        color: 'Unknown', // Will be updated with real data
+        status: 'new',
+        treatment_type: 'pickup' // Use valid treatment_type
+      })
+      .select()
+      .single();
+
+    if (carError) {
+      throw carError;
+    }
+
+    // Save parts information to car_metadata table
+    const { error: metadataError } = await supabase
+      .from('car_metadata')
+      .insert({
+        car_id: carData.id,
+        part_list: partsList,
+        missing_parts: missingParts,
+        kontrollsiffror: carDetails.controlNumber,
+        regbevis: carDetails.issueDate
+      });
+
+    if (metadataError) {
+      throw metadataError;
+    }
+
+    console.log('Customer request and parts information saved successfully');
   };
 
   const handleLoginSuccess = () => {
