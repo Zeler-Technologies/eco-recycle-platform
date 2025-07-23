@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Shield, Car, Recycle } from 'lucide-react';
+import { Building2, Shield, Car, Recycle, Smartphone } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -20,9 +20,13 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      // Navigate to dashboard after successful login
-      navigate('/');
+      const user = await login(email, password);
+      // Navigate based on user role
+      if (email === 'customer@demo.se') {
+        navigate('/customer-app');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       // Error handling is done in AuthContext
     } finally {
@@ -54,6 +58,14 @@ const Login = () => {
       description: 'Vehicle pickup operations',
       icon: Car,
       color: 'bg-status-processing'
+    },
+    {
+      role: 'Customer App',
+      email: 'customer@demo.se',
+      password: 'customer123',
+      description: 'Customer interface for car pickup requests',
+      icon: Smartphone,
+      color: 'bg-primary'
     }
   ];
 

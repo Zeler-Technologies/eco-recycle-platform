@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 // import { useToast } from '@/hooks/use-toast';
 
-export type UserRole = 'super_admin' | 'tenant_admin' | 'driver';
+export type UserRole = 'super_admin' | 'tenant_admin' | 'driver' | 'customer';
 
 export interface User {
   id: string;
@@ -21,7 +21,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
-  theme: 'admin' | 'tenant' | 'default';
+  theme: 'admin' | 'tenant' | 'customer' | 'default';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +65,15 @@ const mockUsers: User[] = [
     tenant_id: 'tenant_1',
     tenant_name: 'Panta Bilen Stockholm',
     permissions: ['view_assigned_orders', 'update_order_status'],
+    is_active: true,
+    language: 'sv'
+  },
+  {
+    id: '4',
+    email: 'customer@demo.se',
+    name: 'Anna Larsson',
+    role: 'customer',
+    permissions: ['request_pickup', 'view_quotes', 'track_orders'],
     is_active: true,
     language: 'sv'
   }
@@ -113,7 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const validPasswords: { [key: string]: string } = {
         'admin@superadmin.com': 'admin123',
         'admin@scrapyard.se': 'scrapyard123',
-        'driver@scrapyard.se': 'driver123'
+        'driver@scrapyard.se': 'driver123',
+        'customer@demo.se': 'customer123'
       };
 
       if (validPasswords[email] !== password) {
@@ -142,7 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const theme = user?.role === 'super_admin' ? 'admin' : 
-               user?.role === 'tenant_admin' ? 'tenant' : 'default';
+               user?.role === 'tenant_admin' ? 'tenant' : 
+               user?.role === 'customer' ? 'customer' : 'default';
 
   const value: AuthContextType = {
     user,

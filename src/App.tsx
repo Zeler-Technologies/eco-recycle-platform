@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import CustomerApp from "./pages/CustomerApp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { BillingDashboard } from "./components/SuperAdmin/Billing/BillingDashboard";
 
@@ -34,6 +35,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <BillingDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/customer-app" 
+              element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <CustomerApp />
                 </ProtectedRoute>
               } 
             />
