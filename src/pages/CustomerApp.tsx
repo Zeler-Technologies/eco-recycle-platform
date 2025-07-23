@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Star, Clock, Car, User, LogOut, CalendarIcon, DollarSign, Camera } from 'lucide-react';
+import { Calendar, MapPin, Star, Clock, Car, User, LogOut, CalendarIcon, DollarSign, Camera, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -86,6 +86,35 @@ const CustomerApp = () => {
     ownerConfirmation: false
   });
 
+  const [validationErrors, setValidationErrors] = useState<{
+    registrationNumber?: string;
+    issueDate?: string;
+  }>({});
+
+  const validateCarDetails = () => {
+    const errors: { registrationNumber?: string; issueDate?: string } = {};
+    
+    // Mock validation - in real app this would be API calls
+    if (carDetails.registrationNumber === 'IIR387') {
+      errors.registrationNumber = 'Du är inte registrerad ägare. Kontrollera registreringsnumret och försök igen';
+    }
+    
+    if (carDetails.issueDate === '2005-10-07') {
+      errors.issueDate = 'Kontrollera utfärdandedatum och att du har det senaste registreringsbeviset.';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCarDetailsChange = (field: keyof CarDetails, value: any) => {
+    setCarDetails({ ...carDetails, [field]: value });
+    // Clear validation error when user starts typing
+    if (validationErrors[field as keyof typeof validationErrors]) {
+      setValidationErrors({ ...validationErrors, [field]: undefined });
+    }
+  };
+
   const [pickupInfo, setPickupInfo] = useState<PickupInfo>({
     ownerName: '',
     ownerAddress: '',
@@ -152,13 +181,28 @@ const CustomerApp = () => {
               <Label htmlFor="registration" className="text-gray-600 text-sm font-medium">
                 Registreringsnummer
               </Label>
-              <Input
-                id="registration"
-                value={carDetails.registrationNumber}
-                onChange={(e) => setCarDetails({...carDetails, registrationNumber: e.target.value})}
-                placeholder="Ex bilen som ska pantas"
-                className="mt-1 border-gray-300 rounded-lg h-12 text-lg"
-              />
+              <div className="relative">
+                <Input
+                  id="registration"
+                  value={carDetails.registrationNumber}
+                  onChange={(e) => handleCarDetailsChange('registrationNumber', e.target.value)}
+                  onBlur={validateCarDetails}
+                  placeholder="Ex bilen som ska pantas"
+                  className={`mt-1 rounded-lg h-12 text-lg pr-10 ${
+                    validationErrors.registrationNumber 
+                      ? 'border-red-500 border-2' 
+                      : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.registrationNumber && (
+                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+                )}
+              </div>
+              {validationErrors.registrationNumber && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.registrationNumber}
+                </p>
+              )}
             </div>
 
             {/* Control Number */}
@@ -185,12 +229,26 @@ const CustomerApp = () => {
                   id="issue-date"
                   type="date"
                   value={carDetails.issueDate}
-                  onChange={(e) => setCarDetails({...carDetails, issueDate: e.target.value})}
+                  onChange={(e) => handleCarDetailsChange('issueDate', e.target.value)}
+                  onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
-                  className="mt-1 border-gray-300 rounded-lg h-12 text-lg pr-10"
+                  className={`mt-1 rounded-lg h-12 text-lg pr-10 ${
+                    validationErrors.issueDate 
+                      ? 'border-red-500 border-2' 
+                      : 'border-gray-300'
+                  }`}
                 />
-                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                {validationErrors.issueDate ? (
+                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+                ) : (
+                  <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                )}
               </div>
+              {validationErrors.issueDate && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.issueDate}
+                </p>
+              )}
             </div>
 
             {/* Helper Text */}
@@ -216,7 +274,12 @@ const CustomerApp = () => {
         <div className="mt-6 space-y-3">
           <Button
             onClick={() => setActiveTab('pickup-info')}
-            disabled={!carDetails.registrationNumber || !carDetails.controlNumber || !carDetails.ownerConfirmation}
+            disabled={
+              !carDetails.registrationNumber || 
+              !carDetails.controlNumber || 
+              !carDetails.ownerConfirmation || 
+              Object.keys(validationErrors).length > 0
+            }
             className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-4 rounded-2xl text-lg font-semibold disabled:opacity-50"
           >
             NÄSTA
