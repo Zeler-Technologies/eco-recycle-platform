@@ -686,7 +686,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             </p>
             
             <div className="space-y-4 mb-6">
-              {/* Vi hämtar bilen */}
+              {/* Ni hämtar bilen */}
               <div className="flex items-center space-x-3">
                 <input
                   type="radio"
@@ -698,7 +698,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                   className="w-5 h-5 text-blue-600"
                 />
                 <label htmlFor="pickup" className="text-base text-black">
-                  Vi hämtar bilen
+                  Ni hämtar bilen
                 </label>
               </div>
 
@@ -719,7 +719,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
               </div>
             </div>
 
-            {/* Address and Additional Info - shown only when "Vi hämtar bilen" is selected */}
+            {/* Address and Additional Info - shown only when "Ni hämtar bilen" is selected */}
             {transportMethod === 'pickup' && (
               <div className="space-y-4">
                 {/* Address Field with Google Maps Autocomplete */}
