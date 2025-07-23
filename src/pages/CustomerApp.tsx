@@ -250,13 +250,15 @@ const CustomerApp = () => {
           </div>
 
           {/* Document Image */}
-          <div className="mt-6">
-            <img
-              src="/lovable-uploads/72928b26-68a0-4a8e-857b-083b92eb9bda.png"
-              alt="Swedish Registration Document"
-              className="w-full rounded-lg shadow-sm transform rotate-90"
-              style={{ transformOrigin: 'center' }}
-            />
+          <div className="mt-6 mb-6 flex justify-center">
+            <div className="w-48 h-64 overflow-hidden rounded-lg shadow-sm flex items-center justify-center">
+              <img
+                src="/lovable-uploads/72928b26-68a0-4a8e-857b-083b92eb9bda.png"
+                alt="Swedish Registration Document"
+                className="h-48 w-auto transform rotate-90"
+                style={{ transformOrigin: 'center' }}
+              />
+            </div>
           </div>
 
           {/* Helper Text */}
