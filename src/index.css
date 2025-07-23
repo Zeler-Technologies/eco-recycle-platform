@@ -224,7 +224,7 @@
     appearance: none;
     width: 1rem;
     height: 1rem;
-    border: 2px solid hsl(var(--navy-primary));
+    border: 2px solid black;
     border-radius: 0.25rem;
     position: relative;
     cursor: pointer;
@@ -234,7 +234,7 @@
   
   .swedish-checkbox:checked {
     background-color: hsl(var(--navy-primary));
-    border-color: hsl(var(--navy-primary));
+    border-color: black;
   }
   
   .swedish-checkbox:checked::after {
@@ -249,7 +249,7 @@
   }
   
   .swedish-checkbox:hover {
-    border-color: hsl(var(--navy-light));
+    border-color: black;
   }
   
   /* Mobile-first design constraints */
