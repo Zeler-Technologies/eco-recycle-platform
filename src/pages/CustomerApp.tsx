@@ -130,18 +130,16 @@ const CustomerApp = () => {
   // Car Details Form Component
   const CarDetailsForm = () => (
     <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 p-4">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-black">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-black rounded-full"></div>
-            <span className="font-medium">Biluppgifter</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="font-medium">Om bilen</span>
-            <span className="font-medium">Transport</span>
-            <span className="font-medium">Betalnings info</span>
-          </div>
+      {/* Header with navigation dots */}
+      <div className="flex items-center justify-between text-black text-sm mb-8 pt-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-black rounded-full"></div>
+          <span className="font-medium">Biluppgifter</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <span className="text-sm">Om bilen</span>
+          <span className="text-sm">Transport</span>
+          <span className="text-sm">Betalnings info</span>
         </div>
       </div>
 
@@ -149,49 +147,50 @@ const CustomerApp = () => {
       <div className="max-w-md mx-auto">
         <h1 className="text-3xl font-bold text-black mb-6">BILUPPGIFTER</h1>
         
-        <Card className="bg-white rounded-xl shadow-lg">
-          <CardContent className="p-6 space-y-6">
-            {/* Registration Certificate Section */}
-            <div>
-              <h2 className="text-lg font-bold text-black mb-4">
-                Registreringsbevis*
-              </h2>
-              
-              <div className="flex items-start space-x-3 mb-4">
-                <input
-                  type="checkbox"
-                  id="owner-confirmation"
-                  checked={carDetails.ownerConfirmation}
-                  onChange={(e) => 
-                    setCarDetails({...carDetails, ownerConfirmation: e.target.checked})
-                  }
-                  className="mt-1 h-4 w-4 border-2 border-gray-300 rounded"
-                />
-                <Label htmlFor="owner-confirmation" className="text-base font-medium text-black">
-                  Jag äger bilen
-                </Label>
-              </div>
-              
-              <p className="text-sm mb-4">
-                <span className="text-blue-500 underline cursor-pointer">Hitta information här</span>
-                <span className="text-gray-600"> om du inte äger bilen.</span>
-              </p>
+        <div className="bg-white rounded-2xl p-6 space-y-6">
+          {/* Registration Certificate Section */}
+          <div>
+            <h2 className="text-xl font-bold text-black mb-4">
+              Registreringsbevis*
+            </h2>
+            
+            <div className="flex items-start space-x-3 mb-4">
+              <input
+                type="checkbox"
+                id="owner-confirmation"
+                checked={carDetails.ownerConfirmation}
+                onChange={(e) => 
+                  setCarDetails({...carDetails, ownerConfirmation: e.target.checked})
+                }
+                className="mt-1 h-4 w-4 border-2 border-gray-400 rounded"
+              />
+              <label htmlFor="owner-confirmation" className="text-base font-medium text-black">
+                Jag äger bilen
+              </label>
             </div>
+            
+            <p className="text-sm mb-6">
+              <span className="text-blue-500 underline cursor-pointer">Hitta information här</span>
+              <span className="text-gray-600"> om du inte äger bilen.</span>
+            </p>
+          </div>
 
+          {/* Form Fields */}
+          <div className="space-y-4">
             {/* Registration Number */}
             <div>
-              <Label htmlFor="registration" className="text-base font-semibold text-black block mb-2">
+              <label className="block text-base font-semibold text-black mb-2">
                 Registreringsnummer
-              </Label>
+              </label>
               <div className="relative">
-                <Input
-                  id="registration"
+                <input
+                  type="text"
                   value={carDetails.registrationNumber}
                   onChange={(e) => handleCarDetailsChange('registrationNumber', e.target.value)}
                   onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
-                  className={`bg-gray-100 border-0 text-base py-3 placeholder:text-gray-400 rounded-lg ${
-                    validationErrors.registrationNumber && 'border border-red-500'
+                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.registrationNumber ? 'ring-2 ring-red-500' : ''
                   }`}
                 />
                 {validationErrors.registrationNumber && (
@@ -207,36 +206,35 @@ const CustomerApp = () => {
 
             {/* Control Number */}
             <div>
-              <Label htmlFor="control-number" className="text-base font-semibold text-black block mb-2">
+              <label className="block text-base font-semibold text-black mb-2">
                 Kontrollnummer
-              </Label>
-              <Input
-                id="control-number"
+              </label>
+              <input
+                type="text"
                 value={carDetails.controlNumber}
                 onChange={(e) => setCarDetails({...carDetails, controlNumber: e.target.value})}
                 placeholder="Ange den från Transportstyrelsen registreringsbevis del 2"
-                className="bg-gray-100 border-0 text-base py-3 placeholder:text-gray-400 rounded-lg"
+                className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             {/* Issue Date */}
             <div>
-              <Label htmlFor="issue-date" className="text-base font-semibold text-black block mb-2">
+              <label className="block text-base font-semibold text-black mb-2">
                 Utfärdande datum
-              </Label>
+              </label>
               <div className="relative">
-                <Input
-                  id="issue-date"
+                <input
                   type="date"
                   value={carDetails.issueDate}
                   onChange={(e) => handleCarDetailsChange('issueDate', e.target.value)}
                   onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
-                  className={`bg-gray-100 border-0 text-base py-3 placeholder:text-gray-400 rounded-lg ${
-                    validationErrors.issueDate && 'border border-red-500'
+                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
+                    validationErrors.issueDate ? 'ring-2 ring-red-500' : ''
                   }`}
                 />
-                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                 {validationErrors.issueDate && (
                   <AlertCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
                 )}
@@ -247,33 +245,33 @@ const CustomerApp = () => {
                 </p>
               )}
             </div>
+          </div>
 
-            {/* Helper Text */}
+          {/* Helper Text */}
+          <p className="text-sm text-gray-600">
+            *Senaste registreringsbevis del 2
+          </p>
+
+          {/* Registration Document Image */}
+          <div className="space-y-4">
+            <img
+              src="/lovable-uploads/865c762e-e9e8-4e21-a6ab-d4b505f28680.png"
+              alt="Registreringsbevis exempel"
+              className="w-full rounded-lg"
+            />
+            
             <p className="text-sm text-gray-600">
-              *Senaste registreringsbevis del 2
+              Hitta information på{" "}
+              <span className="text-blue-500 underline cursor-pointer">
+                Pantablens hemsida.
+              </span>
             </p>
-
-            {/* Document Image Helper */}
-            <div className="space-y-4">
-              <img
-                src="/lovable-uploads/865c762e-e9e8-4e21-a6ab-d4b505f28680.png"
-                alt="Registreringsbevis exempel"
-                className="w-full rounded-lg"
-              />
-              
-              <p className="text-sm text-gray-600">
-                Hitta information på{" "}
-                <span className="text-blue-500 underline cursor-pointer">
-                  Pantablens hemsida.
-                </span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Navigation Buttons */}
         <div className="mt-6 space-y-4">
-          <Button
+          <button
             onClick={() => setActiveTab('pickup-info')}
             disabled={
               !carDetails.registrationNumber || 
@@ -281,7 +279,7 @@ const CustomerApp = () => {
               !carDetails.ownerConfirmation || 
               Object.keys(validationErrors).length > 0
             }
-            className={`w-full py-6 text-lg font-semibold rounded-full ${
+            className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
               !carDetails.registrationNumber || 
               !carDetails.controlNumber || 
               !carDetails.ownerConfirmation || 
@@ -291,11 +289,11 @@ const CustomerApp = () => {
             }`}
           >
             NÄSTA
-          </Button>
+          </button>
           
           <button
             onClick={() => navigate('/')}
-            className="w-full text-center text-gray-600 underline text-base"
+            className="w-full text-center text-gray-600 underline text-base py-2"
           >
             Backa
           </button>
