@@ -73,6 +73,228 @@ const mockScrapYards: ScrapYard[] = [
   }
 ];
 
+// Car Details Form Component - Moved outside to prevent re-renders
+const CarDetailsForm = React.memo(({ 
+  carDetails, 
+  setCarDetails, 
+  validationErrors, 
+  setValidationErrors, 
+  validateCarDetails, 
+  setActiveTab, 
+  navigate 
+}: {
+  carDetails: CarDetails;
+  setCarDetails: React.Dispatch<React.SetStateAction<CarDetails>>;
+  validationErrors: { registrationNumber?: string; controlNumber?: string; issueDate?: string };
+  setValidationErrors: React.Dispatch<React.SetStateAction<{ registrationNumber?: string; controlNumber?: string; issueDate?: string }>>;
+  validateCarDetails: () => boolean;
+  setActiveTab: (tab: string) => void;
+  navigate: (path: string) => void;
+}) => (
+  <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 p-4">
+    {/* Header with navigation dots */}
+    <div className="flex items-center justify-between text-black text-sm mb-8 pt-4">
+      <div className="flex items-center space-x-2">
+        <div className="w-2 h-2 bg-black rounded-full"></div>
+        <span className="font-medium">Biluppgifter</span>
+      </div>
+      <div className="flex items-center space-x-4">
+        <span className="text-sm opacity-50">Om bilen</span>
+        <span className="text-sm opacity-50">Transport</span>
+        <span className="text-sm opacity-50">Betalnings info</span>
+      </div>
+    </div>
+
+    {/* Main Content */}
+    <div className="max-w-md mx-auto">
+      <h1 className="text-3xl font-bold text-black mb-6">BILUPPGIFTER</h1>
+      
+      <div className="bg-white rounded-2xl p-6 space-y-6">
+        {/* Registration Certificate Section */}
+        <div>
+          <h2 className="text-xl font-bold text-black mb-4">
+            Registreringsbevis*
+          </h2>
+          
+          <div className="flex items-start space-x-3 mb-4">
+            <input
+              type="checkbox"
+              id="owner-confirmation"
+              checked={carDetails.ownerConfirmation}
+              onChange={(e) => 
+                setCarDetails({...carDetails, ownerConfirmation: e.target.checked})
+              }
+              className="mt-1 h-4 w-4 border-2 border-gray-400 rounded"
+            />
+            <label htmlFor="owner-confirmation" className="text-base font-medium text-black">
+              Jag äger bilen
+            </label>
+          </div>
+          
+          <p className="text-sm mb-6">
+            <span className="text-blue-500 underline cursor-pointer">Hitta information här</span>
+            <span className="text-gray-600"> om du inte äger bilen.</span>
+          </p>
+        </div>
+
+        {/* Form Fields */}
+        <div className="space-y-4">
+          {/* Registration Number */}
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Registreringsnummer
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={carDetails.registrationNumber}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCarDetails(prev => ({ ...prev, registrationNumber: value }));
+                  
+                  if (value.length > 0 && value.length < 3) {
+                    setValidationErrors(prev => ({ 
+                      ...prev, 
+                      registrationNumber: 'Registreringsnummer måste vara minst 3 tecken' 
+                    }));
+                  } else {
+                    setValidationErrors(prev => {
+                      const { registrationNumber, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                onBlur={validateCarDetails}
+                placeholder="På bilen som ska pantas"
+                className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  validationErrors.registrationNumber ? 'ring-2 ring-red-500' : ''
+                }`}
+                autoComplete="off"
+              />
+              {validationErrors.registrationNumber && (
+                <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+              )}
+            </div>
+            {validationErrors.registrationNumber && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationErrors.registrationNumber}
+              </p>
+            )}
+          </div>
+
+          {/* Control Number */}
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Kontrollnummer
+            </label>
+            <input
+              type="text"
+              value={carDetails.controlNumber}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCarDetails(prev => ({ ...prev, controlNumber: value }));
+                
+                if (value.length > 0 && value.length < 3) {
+                  setValidationErrors(prev => ({ 
+                    ...prev, 
+                    controlNumber: 'Kontrollnummer måste vara minst 3 tecken' 
+                  }));
+                } else {
+                  setValidationErrors(prev => {
+                    const { controlNumber, ...rest } = prev;
+                    return rest;
+                  });
+                }
+              }}
+              placeholder="Ange den från Transportstyrelsen registreringsbevis del 2"
+              className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoComplete="off"
+            />
+          </div>
+
+          {/* Issue Date */}
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Utfärdande datum
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={carDetails.issueDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCarDetails(prev => ({ ...prev, issueDate: value }));
+                  // Clear validation error when user starts typing
+                  if (validationErrors.issueDate) {
+                    setValidationErrors(prev => {
+                      const { issueDate, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                onBlur={validateCarDetails}
+                placeholder="På bilen som ska pantas"
+                className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
+                  validationErrors.issueDate ? 'ring-2 ring-red-500' : ''
+                }`}
+                autoComplete="off"
+              />
+              <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              {validationErrors.issueDate && (
+                <AlertCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+              )}
+            </div>
+            {validationErrors.issueDate && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationErrors.issueDate}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Helper Text */}
+        <p className="text-sm text-gray-600">
+          *Senaste registreringsbevis del 2
+        </p>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="mt-6 space-y-4">
+        <button
+          onClick={() => setActiveTab('pickup-info')}
+          disabled={
+            !carDetails.registrationNumber || 
+            carDetails.registrationNumber.length < 3 ||
+            !carDetails.controlNumber || 
+            carDetails.controlNumber.length < 3 ||
+            !carDetails.ownerConfirmation || 
+            Object.keys(validationErrors).length > 0
+          }
+          className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+            !carDetails.registrationNumber || 
+            carDetails.registrationNumber.length < 3 ||
+            !carDetails.controlNumber || 
+            carDetails.controlNumber.length < 3 ||
+            !carDetails.ownerConfirmation || 
+            Object.keys(validationErrors).length > 0
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gray-800 text-white hover:bg-gray-700"
+          }`}
+        >
+          NÄSTA
+        </button>
+        
+        <button
+          onClick={() => navigate('/')}
+          className="w-full text-center text-gray-600 underline text-base py-2"
+        >
+          Backa
+        </button>
+      </div>
+    </div>
+  </div>
+));
+
 const CustomerApp = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -108,14 +330,6 @@ const CustomerApp = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCarDetailsChange = (field: keyof CarDetails, value: any) => {
-    setCarDetails({ ...carDetails, [field]: value });
-    // Clear validation error when user starts typing
-    if (validationErrors[field as keyof typeof validationErrors]) {
-      setValidationErrors({ ...validationErrors, [field]: undefined });
-    }
-  };
-
   const [pickupInfo, setPickupInfo] = useState<PickupInfo>({
     ownerName: '',
     ownerAddress: '',
@@ -127,212 +341,6 @@ const CustomerApp = () => {
     carYear: new Date().getFullYear(),
     images: []
   });
-
-  // Car Details Form Component
-  const CarDetailsForm = () => (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 p-4">
-      {/* Header with navigation dots */}
-      <div className="flex items-center justify-between text-black text-sm mb-8 pt-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-black rounded-full"></div>
-          <span className="font-medium">Biluppgifter</span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-sm opacity-50">Om bilen</span>
-          <span className="text-sm opacity-50">Transport</span>
-          <span className="text-sm opacity-50">Betalnings info</span>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold text-black mb-6">BILUPPGIFTER</h1>
-        
-        <div className="bg-white rounded-2xl p-6 space-y-6">
-          {/* Registration Certificate Section */}
-          <div>
-            <h2 className="text-xl font-bold text-black mb-4">
-              Registreringsbevis*
-            </h2>
-            
-            <div className="flex items-start space-x-3 mb-4">
-              <input
-                type="checkbox"
-                id="owner-confirmation"
-                checked={carDetails.ownerConfirmation}
-                onChange={(e) => 
-                  setCarDetails({...carDetails, ownerConfirmation: e.target.checked})
-                }
-                className="mt-1 h-4 w-4 border-2 border-gray-400 rounded"
-              />
-              <label htmlFor="owner-confirmation" className="text-base font-medium text-black">
-                Jag äger bilen
-              </label>
-            </div>
-            
-            <p className="text-sm mb-6">
-              <span className="text-blue-500 underline cursor-pointer">Hitta information här</span>
-              <span className="text-gray-600"> om du inte äger bilen.</span>
-            </p>
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-4">
-            {/* Registration Number */}
-            <div>
-              <label className="block text-base font-semibold text-black mb-2">
-                Registreringsnummer
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={carDetails.registrationNumber}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setCarDetails(prev => ({ ...prev, registrationNumber: value }));
-                    
-                    if (value.length > 0 && value.length < 3) {
-                      setValidationErrors(prev => ({ 
-                        ...prev, 
-                        registrationNumber: 'Registreringsnummer måste vara minst 3 tecken' 
-                      }));
-                    } else {
-                      setValidationErrors(prev => {
-                        const { registrationNumber, ...rest } = prev;
-                        return rest;
-                      });
-                    }
-                  }}
-                  onBlur={validateCarDetails}
-                  placeholder="På bilen som ska pantas"
-                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.registrationNumber ? 'ring-2 ring-red-500' : ''
-                  }`}
-                  autoComplete="off"
-                />
-                {validationErrors.registrationNumber && (
-                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
-                )}
-              </div>
-              {validationErrors.registrationNumber && (
-                <p className="text-red-500 text-sm mt-1">
-                  {validationErrors.registrationNumber}
-                </p>
-              )}
-            </div>
-
-            {/* Control Number */}
-            <div>
-              <label className="block text-base font-semibold text-black mb-2">
-                Kontrollnummer
-              </label>
-              <input
-                type="text"
-                value={carDetails.controlNumber}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setCarDetails(prev => ({ ...prev, controlNumber: value }));
-                  
-                  if (value.length > 0 && value.length < 3) {
-                    setValidationErrors(prev => ({ 
-                      ...prev, 
-                      controlNumber: 'Kontrollnummer måste vara minst 3 tecken' 
-                    }));
-                  } else {
-                    setValidationErrors(prev => {
-                      const { controlNumber, ...rest } = prev;
-                      return rest;
-                    });
-                  }
-                }}
-                placeholder="Ange den från Transportstyrelsen registreringsbevis del 2"
-                className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                autoComplete="off"
-              />
-            </div>
-
-            {/* Issue Date */}
-            <div>
-              <label className="block text-base font-semibold text-black mb-2">
-                Utfärdande datum
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={carDetails.issueDate}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setCarDetails(prev => ({ ...prev, issueDate: value }));
-                    // Clear validation error when user starts typing
-                    if (validationErrors.issueDate) {
-                      setValidationErrors(prev => {
-                        const { issueDate, ...rest } = prev;
-                        return rest;
-                      });
-                    }
-                  }}
-                  onBlur={validateCarDetails}
-                  placeholder="På bilen som ska pantas"
-                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
-                    validationErrors.issueDate ? 'ring-2 ring-red-500' : ''
-                  }`}
-                  autoComplete="off"
-                />
-                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                {validationErrors.issueDate && (
-                  <AlertCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
-                )}
-              </div>
-              {validationErrors.issueDate && (
-                <p className="text-red-500 text-sm mt-1">
-                  {validationErrors.issueDate}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Helper Text */}
-          <p className="text-sm text-gray-600">
-            *Senaste registreringsbevis del 2
-          </p>
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="mt-6 space-y-4">
-          <button
-            onClick={() => setActiveTab('pickup-info')}
-            disabled={
-              !carDetails.registrationNumber || 
-              carDetails.registrationNumber.length < 3 ||
-              !carDetails.controlNumber || 
-              carDetails.controlNumber.length < 3 ||
-              !carDetails.ownerConfirmation || 
-              Object.keys(validationErrors).length > 0
-            }
-            className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
-              !carDetails.registrationNumber || 
-              carDetails.registrationNumber.length < 3 ||
-              !carDetails.controlNumber || 
-              carDetails.controlNumber.length < 3 ||
-              !carDetails.ownerConfirmation || 
-              Object.keys(validationErrors).length > 0
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-gray-800 text-white hover:bg-gray-700"
-            }`}
-          >
-            NÄSTA
-          </button>
-          
-          <button
-            onClick={() => navigate('/')}
-            className="w-full text-center text-gray-600 underline text-base py-2"
-          >
-            Backa
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   // Pickup Info Form Component (Updated to match Swedish style)
   const PickupInfoForm = () => (
@@ -567,7 +575,17 @@ const CustomerApp = () => {
   return (
     <div className="min-h-screen">
       {/* Show forms based on active tab */}
-      {activeTab === 'car-details' && <CarDetailsForm />}
+      {activeTab === 'car-details' && (
+        <CarDetailsForm 
+          carDetails={carDetails}
+          setCarDetails={setCarDetails}
+          validationErrors={validationErrors}
+          setValidationErrors={setValidationErrors}
+          validateCarDetails={validateCarDetails}
+          setActiveTab={setActiveTab}
+          navigate={navigate}
+        />
+      )}
       {activeTab === 'pickup-info' && <PickupInfoForm />}
       
       {/* Show traditional layout for other tabs */}
