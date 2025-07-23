@@ -47,6 +47,20 @@ interface CarDetailsFormProps {
   onBack: () => void;
 }
 
+interface PartsInfoScreenProps {
+  partsInfo: PartsInfo;
+  setPartsInfo: (info: PartsInfo | ((prev: PartsInfo) => PartsInfo)) => void;
+  onNext: () => void;
+  onBack: () => void;
+}
+
+interface TransportScreenProps {
+  transportMethod: string;
+  setTransportMethod: (method: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+}
+
 type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'bankid' | 'success';
 
 // Car Details Form Component - Moved outside to prevent re-renders
@@ -296,6 +310,314 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
   );
 });
 
+// Parts Info Screen (Om bilen) - Moved outside to prevent re-renders
+const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsInfo, onNext, onBack }) => {
+  const isNextEnabled = partsInfo.hasEngine || partsInfo.hasGearbox || partsInfo.hasCatalyticConverter || partsInfo.hasFourWheels || partsInfo.hasBattery;
+  
+  return (
+    <div className="min-h-screen theme-swedish mobile-container">
+      {/* Status Bar */}
+      <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
+        <span className="font-medium">12:30</span>
+        <div className="flex items-center space-x-1">
+          <div className="flex space-x-1">
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
+          </div>
+          <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
+            <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+            <path d="M18 2v12h2V2h-2z"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center justify-between text-black text-xs px-4 py-4">
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Biluppgifter</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-black rounded-full"></div>
+          <span className="font-medium">Om bilen</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Transport</span>
+          <span className="opacity-50">Betalnings info</span>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4">
+        <h1 className="text-2xl font-bold text-black mb-6">OM BILEN</h1>
+        
+        {/* White Card */}
+        <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-black mb-4">
+              Hur komplett är bilen?
+            </h2>
+            
+            <div className="space-y-4">
+              {/* Motor finns */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="has-engine"
+                  checked={partsInfo.hasEngine}
+                  onChange={(e) => 
+                    setPartsInfo(prev => ({...prev, hasEngine: e.target.checked}))
+                  }
+                  className="swedish-checkbox"
+                />
+                <label htmlFor="has-engine" className="text-base text-black">
+                  Motor finns
+                </label>
+              </div>
+
+              {/* Växellåda finns */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="has-gearbox"
+                  checked={partsInfo.hasGearbox}
+                  onChange={(e) => 
+                    setPartsInfo(prev => ({...prev, hasGearbox: e.target.checked}))
+                  }
+                  className="swedish-checkbox"
+                />
+                <label htmlFor="has-gearbox" className="text-base text-black">
+                  Växellåda finns
+                </label>
+              </div>
+
+              {/* Original-katalysator finns */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="has-catalytic-converter"
+                  checked={partsInfo.hasCatalyticConverter}
+                  onChange={(e) => 
+                    setPartsInfo(prev => ({...prev, hasCatalyticConverter: e.target.checked}))
+                  }
+                  className="swedish-checkbox"
+                />
+                <label htmlFor="has-catalytic-converter" className="text-base text-black">
+                  Original-katalysator finns
+                </label>
+              </div>
+
+              {/* 4 hjul monterat */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="has-four-wheels"
+                  checked={partsInfo.hasFourWheels}
+                  onChange={(e) => 
+                    setPartsInfo(prev => ({...prev, hasFourWheels: e.target.checked}))
+                  }
+                  className="swedish-checkbox"
+                />
+                <label htmlFor="has-four-wheels" className="text-base text-black">
+                  4 hjul monterat
+                </label>
+              </div>
+
+              {/* Batteri finns */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="has-battery"
+                  checked={partsInfo.hasBattery}
+                  onChange={(e) => 
+                    setPartsInfo(prev => ({...prev, hasBattery: e.target.checked}))
+                  }
+                  className="swedish-checkbox"
+                />
+                <label htmlFor="has-battery" className="text-base text-black">
+                  Batteri finns
+                </label>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 mt-4">
+              Osäker på vad som finns eller hur det påverkar priset?{' '}
+              <span className="text-blue-600 underline cursor-pointer">Läs mer här.</span>
+            </p>
+          </div>
+
+          {/* Additional Info */}
+          <div>
+            <label className="block text-base font-semibold text-black mb-2">
+              Annan info
+            </label>
+            <div className="relative">
+              <textarea
+                value={partsInfo.additionalInfo}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  console.log('Textarea onChange:', value, 'length:', value.length);
+                  if (value.length <= 240) {
+                    setPartsInfo(prev => ({ ...prev, additionalInfo: value }));
+                  }
+                }}
+                placeholder=""
+                className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
+                maxLength={240}
+              />
+              <div className="absolute bottom-3 right-3 text-sm text-gray-500">
+                {partsInfo.additionalInfo.length}/240
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="mt-6 space-y-4 pb-8">
+          <button
+            onClick={onNext}
+            disabled={!isNextEnabled}
+            className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+              isNextEnabled
+                ? "bg-gray-800 text-white hover:bg-gray-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            NÄSTA
+          </button>
+          
+          <button
+            onClick={onBack}
+            className="w-full text-center text-gray-600 underline text-base py-2"
+          >
+            Backa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Transport Screen - Moved outside to prevent re-renders
+const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
+  const isNextEnabled = transportMethod !== '';
+  
+  return (
+    <div className="min-h-screen theme-swedish mobile-container">
+      {/* Status Bar */}
+      <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
+        <span className="font-medium">12:30</span>
+        <div className="flex items-center space-x-1">
+          <div className="flex space-x-1">
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
+          </div>
+          <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
+            <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+            <path d="M18 2v12h2V2h-2z"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center justify-between text-black text-xs px-4 py-4">
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Biluppgifter</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Om bilen</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-black rounded-full"></div>
+          <span className="font-medium">Transport</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Betalnings info</span>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4">
+        <h1 className="text-2xl font-bold text-black mb-6">TRANSPORT</h1>
+        
+        {/* White Card */}
+        <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-black mb-4">
+              Vad passar bäst?
+            </h2>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              Lämna bilen på Ekenäsvägen 28, 863 37 Sundsvall och få{' '}
+              <span className="font-semibold text-black">500 kr extra.</span>{' '}
+              (Är inkluderat i det pris du får. Gäller endast om bilen är komplett.)
+            </p>
+            
+            <div className="space-y-4">
+              {/* Vi hämtar bilen */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  id="pickup"
+                  name="transport"
+                  value="pickup"
+                  checked={transportMethod === 'pickup'}
+                  onChange={(e) => setTransportMethod(e.target.value)}
+                  className="w-5 h-5 text-blue-600"
+                />
+                <label htmlFor="pickup" className="text-base text-black">
+                  Vi hämtar bilen
+                </label>
+              </div>
+
+              {/* Lämna bilen själv */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  id="dropoff"
+                  name="transport"
+                  value="dropoff"
+                  checked={transportMethod === 'dropoff'}
+                  onChange={(e) => setTransportMethod(e.target.value)}
+                  className="w-5 h-5 text-blue-600"
+                />
+                <label htmlFor="dropoff" className="text-base text-black">
+                  Lämna bilen själv
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="mt-6 space-y-4 pb-8">
+          <button
+            onClick={onNext}
+            disabled={!isNextEnabled}
+            className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+              isNextEnabled
+                ? "bg-gray-800 text-white hover:bg-gray-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            NÄSTA
+          </button>
+          
+          <button
+            onClick={onBack}
+            className="w-full text-center text-gray-600 underline text-base py-2"
+          >
+            Backa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const CustomerApp = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -384,313 +706,6 @@ const CustomerApp = () => {
     setCurrentView('car-details');
   };
 
-  // Parts Info Screen (Om bilen)
-  const PartsInfoScreen = () => {
-    const isNextEnabled = partsInfo.hasEngine || partsInfo.hasGearbox || partsInfo.hasCatalyticConverter || partsInfo.hasFourWheels || partsInfo.hasBattery;
-    
-    return (
-      <div className="min-h-screen theme-swedish mobile-container">
-        {/* Status Bar */}
-        <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
-          <span className="font-medium">12:30</span>
-          <div className="flex items-center space-x-1">
-            <div className="flex space-x-1">
-              <div className="w-1 h-3 bg-black rounded-full"></div>
-              <div className="w-1 h-3 bg-black rounded-full"></div>
-              <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
-              <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
-            </div>
-            <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
-              <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
-              <path d="M18 2v12h2V2h-2z"/>
-            </svg>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center justify-between text-black text-xs px-4 py-4">
-          <div className="flex items-center space-x-2">
-            <span className="opacity-50">Biluppgifter</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-black rounded-full"></div>
-            <span className="font-medium">Om bilen</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="opacity-50">Transport</span>
-            <span className="opacity-50">Betalnings info</span>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="px-4">
-          <h1 className="text-2xl font-bold text-black mb-6">OM BILEN</h1>
-          
-          {/* White Card */}
-          <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-black mb-4">
-                Hur komplett är bilen?
-              </h2>
-              
-              <div className="space-y-4">
-                {/* Motor finns */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="has-engine"
-                    checked={partsInfo.hasEngine}
-                    onChange={(e) => 
-                      setPartsInfo({...partsInfo, hasEngine: e.target.checked})
-                    }
-                    className="swedish-checkbox"
-                  />
-                  <label htmlFor="has-engine" className="text-base text-black">
-                    Motor finns
-                  </label>
-                </div>
-
-                {/* Växellåda finns */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="has-gearbox"
-                    checked={partsInfo.hasGearbox}
-                    onChange={(e) => 
-                      setPartsInfo({...partsInfo, hasGearbox: e.target.checked})
-                    }
-                    className="swedish-checkbox"
-                  />
-                  <label htmlFor="has-gearbox" className="text-base text-black">
-                    Växellåda finns
-                  </label>
-                </div>
-
-                {/* Original-katalysator finns */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="has-catalytic-converter"
-                    checked={partsInfo.hasCatalyticConverter}
-                    onChange={(e) => 
-                      setPartsInfo({...partsInfo, hasCatalyticConverter: e.target.checked})
-                    }
-                    className="swedish-checkbox"
-                  />
-                  <label htmlFor="has-catalytic-converter" className="text-base text-black">
-                    Original-katalysator finns
-                  </label>
-                </div>
-
-                {/* 4 hjul monterat */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="has-four-wheels"
-                    checked={partsInfo.hasFourWheels}
-                    onChange={(e) => 
-                      setPartsInfo({...partsInfo, hasFourWheels: e.target.checked})
-                    }
-                    className="swedish-checkbox"
-                  />
-                  <label htmlFor="has-four-wheels" className="text-base text-black">
-                    4 hjul monterat
-                  </label>
-                </div>
-
-                {/* Batteri finns */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="has-battery"
-                    checked={partsInfo.hasBattery}
-                    onChange={(e) => 
-                      setPartsInfo({...partsInfo, hasBattery: e.target.checked})
-                    }
-                    className="swedish-checkbox"
-                  />
-                  <label htmlFor="has-battery" className="text-base text-black">
-                    Batteri finns
-                  </label>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-600 mt-4">
-                Osäker på vad som finns eller hur det påverkar priset?{' '}
-                <span className="text-blue-600 underline cursor-pointer">Läs mer här.</span>
-              </p>
-            </div>
-
-            {/* Additional Info */}
-            <div>
-              <label className="block text-base font-semibold text-black mb-2">
-                Annan info
-              </label>
-              <div className="relative">
-                <textarea
-                  value={partsInfo.additionalInfo}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value.length <= 240) {
-                      setPartsInfo(prev => ({ ...prev, additionalInfo: value }));
-                    }
-                  }}
-                  placeholder=""
-                  className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
-                  maxLength={240}
-                />
-                <div className="absolute bottom-3 right-3 text-sm text-gray-500">
-                  {partsInfo.additionalInfo.length}/240
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="mt-6 space-y-4 pb-8">
-            <button
-              onClick={handlePartsNext}
-              disabled={!isNextEnabled}
-              className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
-                isNextEnabled
-                  ? "bg-gray-800 text-white hover:bg-gray-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              NÄSTA
-            </button>
-            
-            <button
-              onClick={handlePartsBack}
-              className="w-full text-center text-gray-600 underline text-base py-2"
-            >
-              Backa
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Transport Screen
-  const TransportScreen = () => {
-    const isNextEnabled = transportMethod !== '';
-    
-    return (
-      <div className="min-h-screen theme-swedish mobile-container">
-        {/* Status Bar */}
-        <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
-          <span className="font-medium">12:30</span>
-          <div className="flex items-center space-x-1">
-            <div className="flex space-x-1">
-              <div className="w-1 h-3 bg-black rounded-full"></div>
-              <div className="w-1 h-3 bg-black rounded-full"></div>
-              <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
-              <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
-            </div>
-            <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
-              <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
-              <path d="M18 2v12h2V2h-2z"/>
-            </svg>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center justify-between text-black text-xs px-4 py-4">
-          <div className="flex items-center space-x-2">
-            <span className="opacity-50">Biluppgifter</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="opacity-50">Om bilen</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-black rounded-full"></div>
-            <span className="font-medium">Transport</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="opacity-50">Betalnings info</span>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="px-4">
-          <h1 className="text-2xl font-bold text-black mb-6">TRANSPORT</h1>
-          
-          {/* White Card */}
-          <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-black mb-4">
-                Vad passar bäst?
-              </h2>
-              
-              <p className="text-sm text-gray-600 mb-6">
-                Lämna bilen på Ekenäsvägen 28, 863 37 Sundsvall och få{' '}
-                <span className="font-semibold text-black">500 kr extra.</span>{' '}
-                (Är inkluderat i det pris du får. Gäller endast om bilen är komplett.)
-              </p>
-              
-              <div className="space-y-4">
-                {/* Vi hämtar bilen */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    id="pickup"
-                    name="transport"
-                    value="pickup"
-                    checked={transportMethod === 'pickup'}
-                    onChange={(e) => setTransportMethod(e.target.value)}
-                    className="w-5 h-5 text-blue-600"
-                  />
-                  <label htmlFor="pickup" className="text-base text-black">
-                    Vi hämtar bilen
-                  </label>
-                </div>
-
-                {/* Lämna bilen själv */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    id="dropoff"
-                    name="transport"
-                    value="dropoff"
-                    checked={transportMethod === 'dropoff'}
-                    onChange={(e) => setTransportMethod(e.target.value)}
-                    className="w-5 h-5 text-blue-600"
-                  />
-                  <label htmlFor="dropoff" className="text-base text-black">
-                    Lämna bilen själv
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="mt-6 space-y-4 pb-8">
-            <button
-              onClick={handleTransportNext}
-              disabled={!isNextEnabled}
-              className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
-                isNextEnabled
-                  ? "bg-gray-800 text-white hover:bg-gray-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              NÄSTA
-            </button>
-            
-            <button
-              onClick={handleTransportBack}
-              className="w-full text-center text-gray-600 underline text-base py-2"
-            >
-              Backa
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // Success Screen
   const SuccessScreen = () => (
     <div className="min-h-screen theme-swedish mobile-container flex flex-col items-center justify-center p-4">
@@ -751,9 +766,23 @@ const CustomerApp = () => {
               />
             );
           case 'parts-info':
-            return <PartsInfoScreen />;
+            return (
+              <PartsInfoScreen
+                partsInfo={partsInfo}
+                setPartsInfo={setPartsInfo}
+                onNext={handlePartsNext}
+                onBack={handlePartsBack}
+              />
+            );
           case 'transport':
-            return <TransportScreen />;
+            return (
+              <TransportScreen
+                transportMethod={transportMethod}
+                setTransportMethod={setTransportMethod}
+                onNext={handleTransportNext}
+                onBack={handleTransportBack}
+              />
+            );
           case 'bankid':
             return <BankIDScreen onComplete={handleBankIDComplete} />;
           case 'success':
