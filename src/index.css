@@ -233,18 +233,18 @@
   }
   
   .swedish-checkbox:checked {
-    background-color: hsl(var(--navy-primary));
+    background-color: white;
     border-color: black;
   }
   
   .swedish-checkbox:checked::after {
-    content: '✓';
+    content: '×';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.75rem;
+    color: black;
+    font-size: 0.875rem;
     font-weight: bold;
   }
   
