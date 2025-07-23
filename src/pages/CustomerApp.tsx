@@ -69,15 +69,15 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center justify-between text-black text-sm px-4 py-6">
+      <div className="flex items-center justify-between text-black text-xs px-4 py-4">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-black rounded-full"></div>
           <span className="font-medium">Biluppgifter</span>
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-sm opacity-50">Om bilen</span>
-          <span className="text-sm opacity-50">Transport</span>
-          <span className="text-sm opacity-50">Betalnings Info</span>
+        <div className="flex items-center space-x-2">
+          <span className="opacity-50">Om bilen</span>
+          <span className="opacity-50">Transport</span>
+          <span className="opacity-50">Betalnings Info</span>
         </div>
       </div>
 
