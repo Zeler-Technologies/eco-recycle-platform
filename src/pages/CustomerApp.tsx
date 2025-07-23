@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CarDetails {
   registrationNumber: string;
@@ -62,12 +63,17 @@ interface TransportScreenProps {
   onBack: () => void;
 }
 
+interface PriceValueScreenProps {
+  onNext: () => void;
+  onBack: () => void;
+}
+
 interface PaymentInfoScreenProps {
   onNext: () => void;
   onBack: () => void;
 }
 
-type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'payment-info' | 'bankid' | 'success';
+type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
 
 // Car Details Form Component - Moved outside to prevent re-renders
 const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
@@ -908,6 +914,154 @@ const PaymentInfoScreen = React.memo<PaymentInfoScreenProps>(({ onNext, onBack }
   );
 });
 
+// Price Value Screen - New screen for price value and terms
+const PriceValueScreen = React.memo<PriceValueScreenProps>(({ onNext, onBack }) => {
+  const [agreements, setAgreements] = React.useState({
+    noTrash: false,
+    priceAccepted: false,
+    termsAccepted: false,
+    finalAgreement: false
+  });
+  
+  const handleAgreementChange = (key: keyof typeof agreements) => {
+    setAgreements(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+  
+  const allAgreementsChecked = Object.values(agreements).every(Boolean);
+  
+  return (
+    <div className="min-h-screen theme-swedish mobile-container">
+      {/* Status Bar */}
+      <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
+        <span className="font-medium">12:30</span>
+        <div className="flex items-center space-x-1">
+          <div className="flex space-x-1">
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+            <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
+          </div>
+          <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
+            <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+            <path d="M18 2v12h2V2h-2z"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4 pt-8">
+        <h1 className="text-2xl font-bold text-black mb-8">ERBJUDANDE</h1>
+        
+        {/* White Card */}
+        <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+          {/* Price Display */}
+          <div className="text-center mb-6">
+            <div className="text-5xl font-bold text-black mb-2">500 kr</div>
+          </div>
+          
+          {/* Payment Info */}
+          <div className="text-sm text-gray-600 mb-6">
+            <p>
+              Sundsvalls Bildemontering betalar <strong>(amount)</strong> kr för din bil, 
+              inklusive hämtning på <strong>(address)</strong>. Utbetalningen sker via 
+              Swish till <strong>(phone_number)</strong>. Kopplat till ditt 
+              personnummer <strong>(personal_number)</strong>, vill du veta mer?{' '}
+              <span className="text-blue-600 underline cursor-pointer">Klicka här.</span>
+            </p>
+          </div>
+
+          {/* Agreement Checkboxes */}
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="no-trash"
+                checked={agreements.noTrash}
+                onCheckedChange={() => handleAgreementChange('noTrash')}
+                className="mt-1"
+              />
+              <label htmlFor="no-trash" className="text-base text-black leading-tight">
+                Bilen är fri från sopor och grovavfall.
+              </label>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="price-accepted"
+                checked={agreements.priceAccepted}
+                onCheckedChange={() => handleAgreementChange('priceAccepted')}
+                className="mt-1"
+              />
+              <label htmlFor="price-accepted" className="text-base text-black leading-tight">
+                Jag godkänner att priset är baserat på de uppgifter jag lämnat.
+              </label>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="terms-accepted"
+                checked={agreements.termsAccepted}
+                onCheckedChange={() => handleAgreementChange('termsAccepted')}
+                className="mt-1"
+              />
+              <label htmlFor="terms-accepted" className="text-base text-black leading-tight">
+                Jag accepterar avtalet{' '}
+                <span className="text-blue-600 underline cursor-pointer">
+                  sundsvalls.com/allmännavillkor
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="final-agreement"
+                checked={agreements.finalAgreement}
+                onCheckedChange={() => handleAgreementChange('finalAgreement')}
+                className="mt-1"
+              />
+              <label htmlFor="final-agreement" className="text-base text-black leading-tight">
+                Jag förstår att avtalet inte kan ändras efter signering.
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-6 space-y-4 pb-8">
+          <button
+            onClick={onNext}
+            disabled={!allAgreementsChecked}
+            className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+              allAgreementsChecked
+                ? "bg-gray-800 text-white hover:bg-gray-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            Signera med BankID
+          </button>
+          
+          <button
+            disabled={!allAgreementsChecked}
+            className={`w-full py-4 text-lg font-semibold rounded-full border transition-colors ${
+              allAgreementsChecked
+                ? "border-gray-800 text-gray-800 hover:bg-gray-50"
+                : "border-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            Signera med BankID på annan enhet
+          </button>
+          
+          <button
+            onClick={onBack}
+            className="w-full text-center text-gray-600 underline text-base py-2"
+          >
+            Avbryta
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const CustomerApp = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -977,11 +1131,19 @@ const CustomerApp = () => {
   };
 
   const handleTransportNext = () => {
-    setCurrentView('payment-info');
+    setCurrentView('price-value');
   };
 
   const handleTransportBack = () => {
     setCurrentView('parts-info');
+  };
+
+  const handlePriceValueNext = () => {
+    setCurrentView('payment-info');
+  };
+
+  const handlePriceValueBack = () => {
+    setCurrentView('transport');
   };
 
   const handlePaymentNext = () => {
@@ -989,7 +1151,7 @@ const CustomerApp = () => {
   };
 
   const handlePaymentBack = () => {
-    setCurrentView('transport');
+    setCurrentView('price-value');
   };
 
   const handleBack = () => {
@@ -1079,6 +1241,13 @@ const CustomerApp = () => {
                 setTransportMethod={setTransportMethod}
                 onNext={handleTransportNext}
                 onBack={handleTransportBack}
+              />
+            );
+          case 'price-value':
+            return (
+              <PriceValueScreen
+                onNext={handlePriceValueNext}
+                onBack={handlePriceValueBack}
               />
             );
           case 'payment-info':
