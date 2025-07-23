@@ -251,22 +251,6 @@ const CustomerApp = () => {
           <p className="text-sm text-gray-600">
             *Senaste registreringsbevis del 2
           </p>
-
-          {/* Registration Document Image */}
-          <div className="space-y-4">
-            <img
-              src="/lovable-uploads/865c762e-e9e8-4e21-a6ab-d4b505f28680.png"
-              alt="Registreringsbevis exempel"
-              className="w-full rounded-lg"
-            />
-            
-            <p className="text-sm text-gray-600">
-              Hitta information på{" "}
-              <span className="text-blue-500 underline cursor-pointer">
-                Pantablens hemsida.
-              </span>
-            </p>
-          </div>
         </div>
 
         {/* Navigation Buttons */}
