@@ -526,8 +526,6 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
       <div className="flex items-center justify-between text-black text-xs px-4 py-4">
         <div className="flex items-center space-x-2">
           <span className="opacity-50">Biluppgifter</span>
-        </div>
-        <div className="flex items-center space-x-2">
           <span className="opacity-50">Om bilen</span>
         </div>
         <div className="flex items-center space-x-2">
@@ -535,7 +533,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
           <span className="font-medium">Transport</span>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="opacity-50">Betalnings info</span>
+          <span className="opacity-50">Betalnings Info</span>
         </div>
       </div>
 
