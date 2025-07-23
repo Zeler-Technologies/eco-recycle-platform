@@ -11,42 +11,34 @@ interface CarDetails {
   ownerConfirmation: boolean;
 }
 
+interface ValidationErrors {
+  registrationNumber?: string;
+  controlNumber?: string;
+  issueDate?: string;
+}
+
+interface CarDetailsFormProps {
+  carDetails: CarDetails;
+  setCarDetails: (details: CarDetails | ((prev: CarDetails) => CarDetails)) => void;
+  validationErrors: ValidationErrors;
+  setValidationErrors: (errors: ValidationErrors | ((prev: ValidationErrors) => ValidationErrors)) => void;
+  validateCarDetails: () => boolean;
+  onNext: () => void;
+  onBack: () => void;
+}
+
 type ViewType = 'car-details' | 'bankid' | 'success';
 
-const CustomerApp = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<ViewType>('car-details');
-
-  const [carDetails, setCarDetails] = useState<CarDetails>({
-    registrationNumber: '',
-    controlNumber: '',
-    issueDate: '',
-    ownerConfirmation: false
-  });
-
-  const [validationErrors, setValidationErrors] = useState<{
-    registrationNumber?: string;
-    controlNumber?: string;
-    issueDate?: string;
-  }>({});
-
-  const validateCarDetails = () => {
-    const errors: { registrationNumber?: string; controlNumber?: string; issueDate?: string } = {};
-    
-    // Mock validation - in real app this would be API calls
-    if (carDetails.registrationNumber === 'IIR387') {
-      errors.registrationNumber = 'Du är inte registrerad ägare. Kontrollera registreringsnumret och försök igen';
-    }
-    
-    if (carDetails.issueDate === '2005-10-07') {
-      errors.issueDate = 'Kontrollera utfärdandedatum och att du har det senaste registreringsbeviset.';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
+// Car Details Form Component - Moved outside to prevent re-renders
+const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
+  carDetails, 
+  setCarDetails, 
+  validationErrors, 
+  setValidationErrors, 
+  validateCarDetails, 
+  onNext,
+  onBack
+}) => {
   const isFormValid = () => {
     return (
       carDetails.registrationNumber.length >= 3 &&
@@ -57,18 +49,7 @@ const CustomerApp = () => {
     );
   };
 
-  const handleNext = () => {
-    if (isFormValid()) {
-      setCurrentView('bankid');
-    }
-  };
-
-  const handleBankIDComplete = () => {
-    setCurrentView('success');
-  };
-
-  // Car Details Form
-  const CarDetailsForm = () => (
+  return (
     <div className="min-h-screen theme-swedish mobile-container">
       {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
@@ -112,7 +93,6 @@ const CustomerApp = () => {
               Registreringsbevis*
             </h2>
             
-            {/* Checkbox */}
             <div className="flex items-start space-x-3 mb-4">
               <input
                 type="checkbox"
@@ -274,7 +254,7 @@ const CustomerApp = () => {
         {/* Navigation Buttons */}
         <div className="mt-6 space-y-4 pb-8">
           <button
-            onClick={handleNext}
+            onClick={onNext}
             disabled={!isFormValid()}
             className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
               isFormValid()
@@ -286,7 +266,7 @@ const CustomerApp = () => {
           </button>
           
           <button
-            onClick={() => navigate('/')}
+            onClick={onBack}
             className="w-full text-center text-gray-600 underline text-base py-2"
           >
             Backa
@@ -295,6 +275,59 @@ const CustomerApp = () => {
       </div>
     </div>
   );
+});
+
+const CustomerApp = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [currentView, setCurrentView] = useState<ViewType>('car-details');
+
+  const [carDetails, setCarDetails] = useState<CarDetails>({
+    registrationNumber: '',
+    controlNumber: '',
+    issueDate: '',
+    ownerConfirmation: false
+  });
+
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+
+  const validateCarDetails = () => {
+    const errors: ValidationErrors = {};
+    
+    // Mock validation - in real app this would be API calls
+    if (carDetails.registrationNumber === 'IIR387') {
+      errors.registrationNumber = 'Du är inte registrerad ägare. Kontrollera registreringsnumret och försök igen';
+    }
+    
+    if (carDetails.issueDate === '2005-10-07') {
+      errors.issueDate = 'Kontrollera utfärdandedatum och att du har det senaste registreringsbeviset.';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNext = () => {
+    const isValid = (
+      carDetails.registrationNumber.length >= 3 &&
+      carDetails.controlNumber.length >= 3 &&
+      carDetails.issueDate &&
+      carDetails.ownerConfirmation &&
+      Object.keys(validationErrors).length === 0
+    );
+    
+    if (isValid) {
+      setCurrentView('bankid');
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  const handleBankIDComplete = () => {
+    setCurrentView('success');
+  };
 
   // Success Screen
   const SuccessScreen = () => (
@@ -324,7 +357,17 @@ const CustomerApp = () => {
     case 'success':
       return <SuccessScreen />;
     default:
-      return <CarDetailsForm />;
+      return (
+        <CarDetailsForm
+          carDetails={carDetails}
+          setCarDetails={setCarDetails}
+          validationErrors={validationErrors}
+          setValidationErrors={setValidationErrors}
+          validateCarDetails={validateCarDetails}
+          onNext={handleNext}
+          onBack={handleBack}
+        />
+      );
   }
 };
 
