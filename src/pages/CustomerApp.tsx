@@ -211,14 +211,13 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
                   }}
                   onBlur={validateCarDetails}
                   placeholder="På bilen som ska pantas"
-                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
+                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     validationErrors.issueDate ? 'ring-2 ring-red-500' : ''
                   }`}
                   autoComplete="off"
                 />
-                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                 {validationErrors.issueDate && (
-                  <AlertCircle className="absolute right-10 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
                 )}
               </div>
               {validationErrors.issueDate && (
