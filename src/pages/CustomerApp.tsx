@@ -97,7 +97,7 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
   };
 
   return (
-    <div className="min-h-screen theme-swedish mobile-container">
+    <div className="min-h-screen bg-yellow-400 flex flex-col relative overflow-hidden">
       {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
         <span className="font-medium">12:30</span>
@@ -129,7 +129,7 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
       </div>
 
       {/* Main Content */}
-      <div className="px-4">
+      <div className="flex-1 px-4 mobile-container mx-auto">
         <h1 className="text-2xl font-bold text-black mb-6">BILUPPGIFTER</h1>
         
         {/* White Card */}
@@ -319,6 +319,11 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
           </button>
         </div>
       </div>
+
+      {/* Bottom Navigation Indicator */}
+      <div className="pb-8 flex justify-center">
+        <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
+      </div>
     </div>
   );
 });
@@ -328,7 +333,7 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
   const isNextEnabled = partsInfo.hasEngine || partsInfo.hasGearbox || partsInfo.hasCatalyticConverter || partsInfo.hasFourWheels || partsInfo.hasBattery;
   
   return (
-    <div className="min-h-screen theme-swedish mobile-container">
+    <div className="min-h-screen bg-yellow-400 flex flex-col relative overflow-hidden">
       {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
         <span className="font-medium">12:30</span>
@@ -362,7 +367,7 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
       </div>
 
       {/* Main Content */}
-      <div className="px-4">
+      <div className="flex-1 px-4 mobile-container mx-auto">
         <h1 className="text-2xl font-bold text-black mb-6">OM BILEN</h1>
         
         {/* White Card */}
@@ -508,6 +513,11 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
           </button>
         </div>
       </div>
+
+      {/* Bottom Navigation Indicator */}
+      <div className="pb-8 flex justify-center">
+        <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
+      </div>
     </div>
   );
 });
@@ -635,7 +645,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
   }, [transportMethod, googleMapsApiKey]);
   
   return (
-    <div className="min-h-screen theme-swedish mobile-container">
+    <div className="min-h-screen bg-yellow-400 flex flex-col relative overflow-hidden">
       {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
         <span className="font-medium">12:30</span>
@@ -669,7 +679,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
       </div>
 
       {/* Main Content */}
-      <div className="px-4">
+      <div className="flex-1 px-4 mobile-container mx-auto">
         <h1 className="text-2xl font-bold text-black mb-6">TRANSPORT</h1>
         
         {/* White Card */}
@@ -799,6 +809,11 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
           </button>
         </div>
       </div>
+
+      {/* Bottom Navigation Indicator */}
+      <div className="pb-8 flex justify-center">
+        <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
+      </div>
     </div>
   );
 });
@@ -811,7 +826,7 @@ const PaymentInfoScreen = React.memo<PaymentInfoScreenProps>(({ onNext, onBack }
   const isNextEnabled = mobileNumber.length >= 10 && email.includes('@');
   
   return (
-    <div className="min-h-screen theme-swedish mobile-container">
+    <div className="min-h-screen bg-yellow-400 flex flex-col relative overflow-hidden">
       {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
         <span className="font-medium">12:30</span>
@@ -843,7 +858,7 @@ const PaymentInfoScreen = React.memo<PaymentInfoScreenProps>(({ onNext, onBack }
       </div>
 
       {/* Main Content */}
-      <div className="px-4">
+      <div className="flex-1 px-4 mobile-container mx-auto">
         <h1 className="text-2xl font-bold text-black mb-6">BETALNINGS INFO</h1>
         
         {/* White Card */}
@@ -911,6 +926,11 @@ const PaymentInfoScreen = React.memo<PaymentInfoScreenProps>(({ onNext, onBack }
           </button>
         </div>
       </div>
+
+      {/* Bottom Navigation Indicator */}
+      <div className="pb-8 flex justify-center">
+        <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
+      </div>
     </div>
   );
 });
@@ -931,7 +951,7 @@ const PriceValueScreen = React.memo<PriceValueScreenProps>(({ onNext, onBack }) 
   const allAgreementsChecked = Object.values(agreements).every(Boolean);
   
   return (
-    <div className="min-h-screen theme-swedish mobile-container">
+    <div className="min-h-screen bg-yellow-400 flex flex-col relative overflow-hidden">
       {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
         <span className="font-medium">12:30</span>
@@ -950,7 +970,7 @@ const PriceValueScreen = React.memo<PriceValueScreenProps>(({ onNext, onBack }) 
       </div>
 
       {/* Main Content */}
-      <div className="px-4 pt-8">
+      <div className="flex-1 px-4 pt-8 mobile-container mx-auto">
         <h1 className="text-2xl font-bold text-black mb-8">ERBJUDANDE</h1>
         
         {/* White Card */}
@@ -1058,6 +1078,11 @@ const PriceValueScreen = React.memo<PriceValueScreenProps>(({ onNext, onBack }) 
             Avbryta
           </button>
         </div>
+      </div>
+
+      {/* Bottom Navigation Indicator */}
+      <div className="pb-8 flex justify-center">
+        <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
       </div>
     </div>
   );
