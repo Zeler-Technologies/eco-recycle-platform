@@ -15,80 +15,99 @@ const BankIDScreen: React.FC<BankIDScreenProps> = ({ onComplete }) => {
   }, [onComplete]);
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* BankID Logo */}
-      <div className="text-center mb-16 bankid-loading">
-        <div className="mb-4">
-          <svg
-            width="120"
-            height="80"
-            viewBox="0 0 240 160"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="mx-auto"
-          >
-            {/* BankID Logo Recreation */}
-            <rect width="80" height="120" fill="white" rx="8" />
-            <rect x="20" y="30" width="40" height="60" fill="black" rx="20" />
-            <circle cx="40" cy="45" r="8" fill="white" />
-            <circle cx="40" cy="75" r="8" fill="white" />
-            <rect x="90" y="30" width="130" height="90" fill="white" rx="45" />
-            <rect x="110" y="50" width="90" height="50" fill="black" rx="25" />
-            <text
-              x="120"
-              y="140"
-              fontSize="24"
-              fontWeight="bold"
-              fill="white"
-              fontFamily="Cairo, sans-serif"
-            >
-              BankID
-            </text>
+    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
+      {/* Status Bar */}
+      <div className="flex justify-between items-center text-white text-sm pt-2 px-4">
+        <span className="font-medium">12:30</span>
+        <div className="flex items-center space-x-1">
+          <div className="flex space-x-1">
+            <div className="w-1 h-3 bg-white rounded-full"></div>
+            <div className="w-1 h-3 bg-white rounded-full"></div>
+            <div className="w-1 h-3 bg-white rounded-full opacity-50"></div>
+            <div className="w-1 h-3 bg-white rounded-full opacity-30"></div>
+          </div>
+          <svg className="w-6 h-4 ml-2" fill="white" viewBox="0 0 24 16">
+            <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+            <path d="M18 2v12h2V2h-2z"/>
           </svg>
+        </div>
+      </div>
+
+      {/* BankID Logo - Centered */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center bankid-loading">
+          {/* BankID Logo */}
+          <div className="mb-8">
+            <svg
+              width="200"
+              height="120"
+              viewBox="0 0 200 120"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="mx-auto"
+            >
+              {/* Main logo shape */}
+              <path
+                d="M20 20 H60 V80 H20 Z"
+                fill="white"
+                rx="4"
+              />
+              {/* Left part with curves */}
+              <path
+                d="M30 35 Q45 25 45 40 Q45 55 30 45 Z"
+                fill="black"
+              />
+              <path
+                d="M30 55 Q45 65 45 50 Q45 35 30 45 Z"
+                fill="black"
+              />
+              
+              {/* Right part - large D shape */}
+              <path
+                d="M70 20 H120 Q150 20 150 50 Q150 80 120 80 H70 Z"
+                fill="white"
+              />
+              <path
+                d="M85 35 H115 Q130 35 130 50 Q130 65 115 65 H85 Z"
+                fill="black"
+              />
+            </svg>
+            
+            {/* BankID Text */}
+            <div className="text-white text-2xl font-bold mt-4 tracking-wide">
+              BankID
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Animated Curved Arrow */}
-      <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2">
-        <div className="curved-arrow">
+      <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 w-full h-32">
+        <div className="curved-arrow relative w-full h-full">
+          {/* Pink dot at start */}
+          <div className="absolute bottom-8 left-16 w-3 h-3 bg-pink-500 rounded-full"></div>
+          
+          {/* Curved dotted line */}
           <svg
-            width="60"
-            height="60"
-            viewBox="0 0 60 60"
+            className="absolute inset-0 w-full h-full"
+            viewBox="0 0 300 120"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M10 40 Q30 20 50 30"
+              d="M50 80 Q150 20 250 60"
               stroke="#EC4899"
               strokeWidth="3"
               strokeLinecap="round"
-              strokeDasharray="4 4"
+              strokeDasharray="6 6"
               fill="none"
             />
+            {/* Arrow head */}
             <polygon
-              points="46,26 54,30 46,34"
+              points="240,55 250,60 240,65"
               fill="#EC4899"
             />
           </svg>
-        </div>
-      </div>
-
-      {/* Loading indicator */}
-      <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2">
-        <div className="flex space-x-1">
-          <div
-            className="w-2 h-2 bg-pink-500 rounded-full animate-pulse"
-            style={{ animationDelay: '0ms' }}
-          ></div>
-          <div
-            className="w-2 h-2 bg-pink-500 rounded-full animate-pulse"
-            style={{ animationDelay: '200ms' }}
-          ></div>
-          <div
-            className="w-2 h-2 bg-pink-500 rounded-full animate-pulse"
-            style={{ animationDelay: '400ms' }}
-          ></div>
         </div>
       </div>
     </div>
