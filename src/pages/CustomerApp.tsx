@@ -12,6 +12,15 @@ interface CarDetails {
   ownerConfirmation: boolean;
 }
 
+interface PartsInfo {
+  hasEngine: boolean;
+  hasGearbox: boolean;
+  hasCatalyticConverter: boolean;
+  hasFourWheels: boolean;
+  hasBattery: boolean;
+  additionalInfo: string;
+}
+
 interface ValidationErrors {
   registrationNumber?: string;
   controlNumber?: string;
@@ -28,7 +37,7 @@ interface CarDetailsFormProps {
   onBack: () => void;
 }
 
-type ViewType = 'login' | 'car-details' | 'bankid' | 'success';
+type ViewType = 'login' | 'car-details' | 'parts-info' | 'bankid' | 'success';
 
 // Car Details Form Component - Moved outside to prevent re-renders
 const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
@@ -289,6 +298,15 @@ const CustomerApp = () => {
     ownerConfirmation: false
   });
 
+  const [partsInfo, setPartsInfo] = useState<PartsInfo>({
+    hasEngine: false,
+    hasGearbox: false,
+    hasCatalyticConverter: false,
+    hasFourWheels: false,
+    hasBattery: false,
+    additionalInfo: ''
+  });
+
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const validateCarDetails = () => {
@@ -317,8 +335,16 @@ const CustomerApp = () => {
     );
     
     if (isValid) {
-      setCurrentView('bankid');
+      setCurrentView('parts-info');
     }
+  };
+
+  const handlePartsNext = () => {
+    setCurrentView('bankid');
+  };
+
+  const handlePartsBack = () => {
+    setCurrentView('car-details');
   };
 
   const handleBack = () => {
@@ -331,6 +357,193 @@ const CustomerApp = () => {
 
   const handleLoginSuccess = () => {
     setCurrentView('car-details');
+  };
+
+  // Parts Info Screen (Om bilen)
+  const PartsInfoScreen = () => {
+    const isNextEnabled = partsInfo.hasEngine || partsInfo.hasGearbox || partsInfo.hasCatalyticConverter || partsInfo.hasFourWheels || partsInfo.hasBattery;
+    
+    return (
+      <div className="min-h-screen theme-swedish mobile-container">
+        {/* Status Bar */}
+        <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
+          <span className="font-medium">12:30</span>
+          <div className="flex items-center space-x-1">
+            <div className="flex space-x-1">
+              <div className="w-1 h-3 bg-black rounded-full"></div>
+              <div className="w-1 h-3 bg-black rounded-full"></div>
+              <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+              <div className="w-1 h-3 bg-black rounded-full opacity-30"></div>
+            </div>
+            <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
+              <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
+              <path d="M18 2v12h2V2h-2z"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex items-center justify-between text-black text-xs px-4 py-4">
+          <div className="flex items-center space-x-2">
+            <span className="opacity-50">Biluppgifter</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-black rounded-full"></div>
+            <span className="font-medium">Om bilen</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="opacity-50">Transport</span>
+            <span className="opacity-50">Betalnings info</span>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="px-4">
+          <h1 className="text-2xl font-bold text-black mb-6">OM BILEN</h1>
+          
+          {/* White Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-black mb-4">
+                Hur komplett är bilen?
+              </h2>
+              
+              <div className="space-y-4">
+                {/* Motor finns */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="has-engine"
+                    checked={partsInfo.hasEngine}
+                    onChange={(e) => 
+                      setPartsInfo({...partsInfo, hasEngine: e.target.checked})
+                    }
+                    className="swedish-checkbox"
+                  />
+                  <label htmlFor="has-engine" className="text-base text-black">
+                    Motor finns
+                  </label>
+                </div>
+
+                {/* Växellåda finns */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="has-gearbox"
+                    checked={partsInfo.hasGearbox}
+                    onChange={(e) => 
+                      setPartsInfo({...partsInfo, hasGearbox: e.target.checked})
+                    }
+                    className="swedish-checkbox"
+                  />
+                  <label htmlFor="has-gearbox" className="text-base text-black">
+                    Växellåda finns
+                  </label>
+                </div>
+
+                {/* Original-katalysator finns */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="has-catalytic-converter"
+                    checked={partsInfo.hasCatalyticConverter}
+                    onChange={(e) => 
+                      setPartsInfo({...partsInfo, hasCatalyticConverter: e.target.checked})
+                    }
+                    className="swedish-checkbox"
+                  />
+                  <label htmlFor="has-catalytic-converter" className="text-base text-black">
+                    Original-katalysator finns
+                  </label>
+                </div>
+
+                {/* 4 hjul monterat */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="has-four-wheels"
+                    checked={partsInfo.hasFourWheels}
+                    onChange={(e) => 
+                      setPartsInfo({...partsInfo, hasFourWheels: e.target.checked})
+                    }
+                    className="swedish-checkbox"
+                  />
+                  <label htmlFor="has-four-wheels" className="text-base text-black">
+                    4 hjul monterat
+                  </label>
+                </div>
+
+                {/* Batteri finns */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="has-battery"
+                    checked={partsInfo.hasBattery}
+                    onChange={(e) => 
+                      setPartsInfo({...partsInfo, hasBattery: e.target.checked})
+                    }
+                    className="swedish-checkbox"
+                  />
+                  <label htmlFor="has-battery" className="text-base text-black">
+                    Batteri finns
+                  </label>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mt-4">
+                Osäker på vad som finns eller hur det påverkar priset?{' '}
+                <span className="text-blue-600 underline cursor-pointer">Läs mer här.</span>
+              </p>
+            </div>
+
+            {/* Additional Info */}
+            <div>
+              <label className="block text-base font-semibold text-black mb-2">
+                Annan info
+              </label>
+              <div className="relative">
+                <textarea
+                  value={partsInfo.additionalInfo}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 240) {
+                      setPartsInfo({...partsInfo, additionalInfo: e.target.value})
+                    }
+                  }}
+                  placeholder=""
+                  className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
+                  maxLength={240}
+                />
+                <div className="absolute bottom-3 right-3 text-sm text-gray-500">
+                  {partsInfo.additionalInfo.length}/240
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="mt-6 space-y-4 pb-8">
+            <button
+              onClick={handlePartsNext}
+              disabled={!isNextEnabled}
+              className={`w-full py-4 text-lg font-semibold rounded-full transition-colors ${
+                isNextEnabled
+                  ? "bg-gray-800 text-white hover:bg-gray-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              NÄSTA
+            </button>
+            
+            <button
+              onClick={handlePartsBack}
+              className="w-full text-center text-gray-600 underline text-base py-2"
+            >
+              Backa
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Success Screen
@@ -370,6 +583,8 @@ const CustomerApp = () => {
           onBack={handleBack}
         />
       );
+    case 'parts-info':
+      return <PartsInfoScreen />;
     case 'bankid':
       return <BankIDScreen onComplete={handleBankIDComplete} />;
     case 'success':
