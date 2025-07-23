@@ -173,11 +173,117 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Cairo', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
   
   html {
     scroll-behavior: smooth;
+  }
+
+  /* Swedish Car Registration App Theme */
+  .theme-swedish {
+    /* Swedish Car Registration App Colors */
+    --yellow-primary: 48 96% 53%; /* #F5D916 - Golden yellow */
+    --navy-primary: 220 26% 23%; /* #1F2937 - Dark navy */
+    --navy-light: 220 20% 35%; /* Lighter navy for hover states */
+    --white: 0 0% 100%; /* Pure white */
+    --gray-light: 220 14% 96%; /* #F3F4F6 - Light gray */
+    --gray-medium: 220 9% 68%; /* #9CA3AF - Medium gray */
+    --gray-dark: 220 13% 46%; /* Darker gray */
+    --blue-info: 217 91% 60%; /* Blue for info links */
+    --red-error: 0 84% 60%; /* Error red */
+    --green-success: 142 76% 36%; /* Success green */
+    --black-bankid: 0 0% 0%; /* Pure black for BankID */
+    --pink-accent: 322 84% 65%; /* Pink for BankID animations */
+    
+    /* Override app colors for Swedish theme */
+    --background: var(--yellow-primary);
+    --foreground: var(--navy-primary);
+    --card: var(--white);
+    --card-foreground: var(--navy-primary);
+    --popover: var(--white);
+    --popover-foreground: var(--navy-primary);
+    --primary: var(--navy-primary);
+    --primary-foreground: var(--white);
+    --secondary: var(--gray-light);
+    --secondary-foreground: var(--navy-primary);
+    --muted: var(--gray-light);
+    --muted-foreground: var(--gray-medium);
+    --accent: var(--blue-info);
+    --accent-foreground: var(--white);
+    --destructive: var(--red-error);
+    --destructive-foreground: var(--white);
+    --border: var(--gray-medium);
+    --input: var(--gray-light);
+    --ring: var(--blue-info);
+    --radius: 0.75rem; /* 12px for cards */
+  }
+  
+  /* Custom checkbox styling for Swedish design */
+  .swedish-checkbox {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid hsl(var(--gray-medium));
+    border-radius: 0.25rem;
+    position: relative;
+    cursor: pointer;
+    background: white;
+  }
+  
+  .swedish-checkbox:checked {
+    background-color: hsl(var(--navy-primary));
+    border-color: hsl(var(--navy-primary));
+  }
+  
+  .swedish-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  
+  /* Mobile-first design constraints */
+  .mobile-container {
+    max-width: 360px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+  
+  /* BankID loading animation */
+  @keyframes bankid-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  
+  .bankid-loading {
+    animation: bankid-pulse 2s ease-in-out infinite;
+  }
+  
+  /* Curved arrow animation for BankID */
+  @keyframes curved-arrow {
+    0% { 
+      transform: translateX(-60px) translateY(40px) rotate(20deg); 
+      opacity: 0; 
+    }
+    20% { 
+      opacity: 1; 
+    }
+    80% { 
+      opacity: 1; 
+    }
+    100% { 
+      transform: translateX(60px) translateY(-40px) rotate(20deg); 
+      opacity: 0; 
+    }
+  }
+  
+  .curved-arrow {
+    animation: curved-arrow 3s ease-in-out infinite;
   }
 }
 
