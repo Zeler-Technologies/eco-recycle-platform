@@ -135,30 +135,6 @@ export default function MapsAutocomplete({
         </Label>
       )}
       
-      {/* Coordinates Input */}
-      <div className="relative">
-        <Label className="block text-xs font-medium text-muted-foreground mb-1">
-          Coordinates (optional)
-        </Label>
-        <div className="relative">
-          <Input
-            type="text"
-            value={ll}
-            onChange={handleLLChange}
-            className="text-xs pr-8"
-            placeholder="lat,lng (e.g., 59.3293,18.0686)"
-          />
-          {ll && (
-            <button
-              onClick={handleLLClear}
-              className="absolute top-1/2 right-2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs"
-              type="button"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* Main Search Input */}
       <div className="relative" ref={dropdownRef}>

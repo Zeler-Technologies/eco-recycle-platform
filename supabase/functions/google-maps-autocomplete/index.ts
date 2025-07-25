@@ -55,14 +55,17 @@ serve(async (req) => {
     const url = `https://serpapi.com/search.json?${params.toString()}`;
 
     console.log('Fetching Google Maps autocomplete suggestions for:', q);
+    console.log('SerpAPI URL:', url);
     
     const response = await fetch(url);
     
     if (!response.ok) {
+      console.error(`SerpAPI request failed with status ${response.status}`);
       throw new Error(`SerpAPI request failed with status ${response.status}`);
     }
     
     const data = await response.json();
+    console.log('SerpAPI response:', JSON.stringify(data, null, 2));
 
     if (data.error) {
       console.error('SerpAPI error:', data.error);
