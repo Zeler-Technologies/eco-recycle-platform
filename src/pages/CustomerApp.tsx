@@ -6,6 +6,7 @@ import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 import { Loader } from '@googlemaps/js-api-loader';
+import GoogleAutocomplete from '@/components/Common/GoogleAutocomplete';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -732,22 +733,14 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             {/* Address and Additional Info - shown only when "Ni hämtar bilen" is selected */}
             {transportMethod === 'pickup' && (
               <div className="space-y-4">
-                {/* Address Field with Google Maps Autocomplete */}
-                <div className="relative">
-                  <input
-                    id="address-input"
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-                    placeholder="Adress"
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                </div>
+                <GoogleAutocomplete
+                  placeholder="Adress"
+                  label=""
+                  onSelect={(suggestion) => {
+                    setAddress(suggestion.description);
+                  }}
+                  className="w-full"
+                />
                 
                 <p className="text-sm text-gray-600">
                   Hittar du inte adress? Välj närmaste och beskriv nedan.
