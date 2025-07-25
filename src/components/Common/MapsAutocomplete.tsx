@@ -47,6 +47,8 @@ export default function MapsAutocomplete({
   }, []);
 
   const fetchSuggestions = useCallback(async (searchQuery: string, coordinates?: string) => {
+    console.log("fetchSuggestions called with:", searchQuery, coordinates);
+    
     if (searchQuery.length < 3) {
       setSuggestions([]);
       setShowDropdown(false);
@@ -62,9 +64,13 @@ export default function MapsAutocomplete({
         requestBody.ll = coordinates;
       }
 
+      console.log("Calling supabase function with:", requestBody);
+      
       const { data, error } = await supabase.functions.invoke("google-maps-autocomplete", {
         body: requestBody,
       });
+
+      console.log("Supabase function response:", { data, error });
 
       if (error) {
         console.error("Error fetching autocomplete:", error);
@@ -73,8 +79,10 @@ export default function MapsAutocomplete({
         console.log("SerpAPI response:", data);
         // SerpAPI google_maps_autocomplete returns suggestions in 'suggestions' or 'places' array
         const suggestions = data.suggestions || data.places || [];
+        console.log("Extracted suggestions:", suggestions);
         setSuggestions(suggestions);
       } else {
+        console.log("No data received");
         setSuggestions([]);
       }
     } catch (error) {

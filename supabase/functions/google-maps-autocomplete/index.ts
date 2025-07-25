@@ -12,8 +12,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('Function called - method:', req.method);
+  
   try {
-    const { q, ll, gl = "se", hl = "sv" } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body parsed:', requestBody);
+    
+    const { q, ll, gl = "se", hl = "sv" } = requestBody;
     
     console.log('Request received:', { q, ll, gl, hl });
     
@@ -28,13 +33,19 @@ serve(async (req) => {
       );
     }
 
+    // Test if we can even get here
+    console.log('About to check for SerpAPI key...');
     const serpApiKey = Deno.env.get('SERPAPI_Googautocompl_KEY');
     console.log('SerpAPI key found:', !!serpApiKey);
+    console.log('Available env vars:', Object.keys(Deno.env.toObject()));
     
     if (!serpApiKey) {
       console.error('SERPAPI_Googautocompl_KEY not found in environment');
       return new Response(
-        JSON.stringify({ error: 'SERPAPI_Googautocompl_KEY not configured' }),
+        JSON.stringify({ 
+          error: 'SERPAPI_Googautocompl_KEY not configured',
+          availableKeys: Object.keys(Deno.env.toObject())
+        }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
