@@ -66,7 +66,7 @@ export default function MapsAutocomplete({
 
       console.log("Calling supabase function with:", requestBody);
       
-      const { data, error } = await supabase.functions.invoke("test-autocomplete", {
+      const { data, error } = await supabase.functions.invoke("google-maps-autocomplete", {
         body: requestBody,
       });
 
