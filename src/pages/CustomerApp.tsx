@@ -6,7 +6,7 @@ import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 import { Loader } from '@googlemaps/js-api-loader';
-import GoogleAutocomplete from '@/components/Common/GoogleAutocomplete';
+import MapsAutocomplete from '@/components/Common/MapsAutocomplete';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -733,11 +733,21 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             {/* Address and Additional Info - shown only when "Ni hämtar bilen" is selected */}
             {transportMethod === 'pickup' && (
               <div className="space-y-4">
-                <GoogleAutocomplete
+                <MapsAutocomplete
                   placeholder="Adress"
                   label=""
                   onSelect={(suggestion) => {
-                    setAddress(suggestion.description);
+                    setAddress(suggestion.formatted_address || suggestion.name);
+                    
+                    // If we have coordinates from SerpAPI, update map
+                    if (suggestion.gps_coordinates && mapInstanceRef.current && markerRef.current) {
+                      const lat = suggestion.gps_coordinates.latitude;
+                      const lng = suggestion.gps_coordinates.longitude;
+                      const position = { lat, lng };
+                      
+                      mapInstanceRef.current.setCenter(position);
+                      markerRef.current.setPosition(position);
+                    }
                   }}
                   className="w-full"
                 />

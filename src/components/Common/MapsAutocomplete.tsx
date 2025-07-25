@@ -7,6 +7,10 @@ interface MapsAutocompleteSuggestion {
   place_id: string;
   name: string;
   formatted_address?: string;
+  gps_coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 interface MapsAutocompleteProps {
