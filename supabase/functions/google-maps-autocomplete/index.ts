@@ -74,7 +74,7 @@ serve(async (req) => {
     if (data.error) {
       console.error('SerpAPI error:', data.error);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch autocomplete suggestions' }),
+        JSON.stringify({ error: 'Failed to fetch autocomplete suggestions', details: data.error }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -82,6 +82,9 @@ serve(async (req) => {
       );
     }
 
+    // Log the structure to understand SerpAPI response
+    console.log('SerpAPI response keys:', Object.keys(data));
+    
     // Return SerpAPI response as-is
     return new Response(
       JSON.stringify(data),

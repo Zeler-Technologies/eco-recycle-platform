@@ -69,8 +69,11 @@ export default function MapsAutocomplete({
       if (error) {
         console.error("Error fetching autocomplete:", error);
         setSuggestions([]);
-      } else if (data?.suggestions) {
-        setSuggestions(data.suggestions);
+      } else if (data) {
+        console.log("SerpAPI response:", data);
+        // SerpAPI google_maps_autocomplete returns suggestions in 'suggestions' or 'places' array
+        const suggestions = data.suggestions || data.places || [];
+        setSuggestions(suggestions);
       } else {
         setSuggestions([]);
       }
