@@ -24,19 +24,18 @@ serve(async (req) => {
     const serpApiKey = Deno.env.get('SERPAPI_Googautocompl_KEY');
     
     if (!serpApiKey) {
-      console.error('No SerpAPI key found');
       // Return test data if no key
       return new Response(
         JSON.stringify({
           suggestions: [
             {
               place_id: "1",
-              name: `${q} - Test Result 1`,
+              name: `${q} - Real Function Test 1`,
               formatted_address: `${q}, Test Address 1, Sweden`
             },
             {
               place_id: "2", 
-              name: `${q} - Test Result 2`,
+              name: `${q} - Real Function Test 2`,
               formatted_address: `${q}, Test Address 2, Sweden`
             }
           ]
@@ -77,7 +76,6 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
