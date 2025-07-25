@@ -25,12 +25,12 @@ serve(async (req) => {
       );
     }
 
-    const serpApiKey = Deno.env.get('SERPAPI_KEY');
+    const serpApiKey = Deno.env.get('SERPAPI_Googautocompl_KEY');
     
     if (!serpApiKey) {
-      console.error('SerpAPI key not found');
+      console.error('SERPAPI_Googautocompl_KEY not found');
       return new Response(
-        JSON.stringify({ error: 'SerpAPI key not configured' }),
+        JSON.stringify({ error: 'SERPAPI_Googautocompl_KEY not configured' }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
