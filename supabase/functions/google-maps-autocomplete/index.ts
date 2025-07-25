@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -7,78 +6,36 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("google-maps-autocomplete function called!");
-  console.log("Method:", req.method);
-  
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { q, ll, gl = "se", hl = "sv" } = await req.json();
+    const { q } = await req.json();
     
-    if (!q || q.length < 3) {
-      return new Response(
-        JSON.stringify({ error: 'Query too short' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const serpApiKey = Deno.env.get('SERPAPI_Googautocompl_KEY');
-    
-    if (!serpApiKey) {
-      // Return test data if no key
-      return new Response(
-        JSON.stringify({
-          suggestions: [
-            {
-              place_id: "1",
-              name: `${q} - Real Function Test 1`,
-              formatted_address: `${q}, Test Address 1, Sweden`
-            },
-            {
-              place_id: "2", 
-              name: `${q} - Real Function Test 2`,
-              formatted_address: `${q}, Test Address 2, Sweden`
-            }
-          ]
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Build SerpAPI request
-    const params = new URLSearchParams({
-      engine: 'google_maps_autocomplete',
-      q: q,
-      gl: gl,
-      hl: hl,
-      api_key: serpApiKey
-    });
-
-    if (ll) {
-      params.append('ll', ll);
-    }
-
-    const url = `https://serpapi.com/search.json?${params.toString()}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`SerpAPI failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(`SerpAPI error: ${data.error}`);
-    }
-
+    // Return simple test data
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({
+        suggestions: [
+          {
+            place_id: "1",
+            name: "Strandvägen 1, Stockholm",
+            formatted_address: "Strandvägen 1, 114 51 Stockholm, Sweden"
+          },
+          {
+            place_id: "2", 
+            name: "Strandvägen 2, Stockholm",
+            formatted_address: "Strandvägen 2, 114 51 Stockholm, Sweden"
+          },
+          {
+            place_id: "3",
+            name: `${q} - Test Location`,
+            formatted_address: `${q}, Sweden`
+          }
+        ]
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
