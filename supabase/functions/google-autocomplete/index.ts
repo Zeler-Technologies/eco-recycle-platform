@@ -22,12 +22,12 @@ serve(async (req) => {
       );
     }
 
-    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const serpApiKey = Deno.env.get('SERPAPI_KEY');
     
-    if (!googleMapsApiKey) {
-      console.error('Google Maps API key not found');
+    if (!serpApiKey) {
+      console.error('SerpAPI key not found');
       return new Response(
-        JSON.stringify({ error: 'Google Maps API key not configured' }),
+        JSON.stringify({ error: 'SerpAPI key not configured' }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -35,15 +35,15 @@ serve(async (req) => {
       );
     }
 
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${googleMapsApiKey}&language=sv&components=country:se&types=address`;
+    const url = `https://serpapi.com/search.json?engine=google_autocomplete&q=${encodeURIComponent(query)}&gl=se&hl=sv&client=toolbar&no_cache=true&api_key=${serpApiKey}`;
 
     console.log('Fetching autocomplete suggestions for:', query);
     
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.error('Google Places API error:', data);
+    if (data.error) {
+      console.error('SerpAPI error:', data.error);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch autocomplete suggestions' }),
         { 
@@ -53,8 +53,14 @@ serve(async (req) => {
       );
     }
 
+    // Transform SerpAPI response to match our expected format
+    const predictions = (data.suggestions || []).map((suggestion: any) => ({
+      place_id: suggestion.value || '',
+      description: suggestion.value || ''
+    }));
+
     return new Response(
-      JSON.stringify({ predictions: data.predictions || [] }),
+      JSON.stringify({ predictions }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
