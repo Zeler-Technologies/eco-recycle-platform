@@ -15,7 +15,10 @@ serve(async (req) => {
   try {
     const { q, ll, gl = "se", hl = "sv" } = await req.json();
     
+    console.log('Request received:', { q, ll, gl, hl });
+    
     if (!q || q.length < 3) {
+      console.log('Query too short or missing:', q);
       return new Response(
         JSON.stringify({ error: 'Query parameter "q" is required and must be at least 3 characters' }),
         { 
@@ -26,9 +29,10 @@ serve(async (req) => {
     }
 
     const serpApiKey = Deno.env.get('SERPAPI_Googautocompl_KEY');
+    console.log('SerpAPI key found:', !!serpApiKey);
     
     if (!serpApiKey) {
-      console.error('SERPAPI_Googautocompl_KEY not found');
+      console.error('SERPAPI_Googautocompl_KEY not found in environment');
       return new Response(
         JSON.stringify({ error: 'SERPAPI_Googautocompl_KEY not configured' }),
         { 
@@ -85,8 +89,16 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in google-maps-autocomplete function:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message 
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
