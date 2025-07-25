@@ -7,7 +7,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("google-maps-autocomplete function called!");
+  console.log("Method:", req.method);
+  
   if (req.method === 'OPTIONS') {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 

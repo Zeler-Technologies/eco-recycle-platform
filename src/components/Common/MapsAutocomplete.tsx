@@ -64,13 +64,16 @@ export default function MapsAutocomplete({
         requestBody.ll = coordinates;
       }
 
-      console.log("Calling supabase function with:", requestBody);
+      console.log("About to call supabase function: google-maps-autocomplete");
+      console.log("Request body:", requestBody);
       
       const { data, error } = await supabase.functions.invoke("google-maps-autocomplete", {
         body: requestBody,
       });
-
-      console.log("Supabase function response:", { data, error });
+      
+      console.log("Function response received:");
+      console.log("Data:", data);
+      console.log("Error:", error);
 
       if (error) {
         console.error("Error fetching autocomplete:", error);
