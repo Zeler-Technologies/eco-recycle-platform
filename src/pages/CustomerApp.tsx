@@ -524,7 +524,7 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
 
 // Transport Screen - Moved outside to prevent re-renders
 const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
-  const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge"); //GOOGLE MAPS HERE
+  const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge");
   const [additionalInfo, setAdditionalInfo] = React.useState<string>("");
   const [googleMapsApiKey, setGoogleMapsApiKey] = React.useState<string>("");
   const [isLoadingApiKey, setIsLoadingApiKey] = React.useState<boolean>(false);
@@ -708,7 +708,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                   className="w-5 h-5 text-blue-600"
                 />
                 <label htmlFor="pickup" className="text-base text-black">
-                  Ni hämtar bilen
+                  Ni hämtar bilen åt mig
                 </label>
               </div>
 
@@ -724,7 +724,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                   className="w-5 h-5 text-blue-600"
                 />
                 <label htmlFor="dropoff" className="text-base text-black">
-                  Lämna bilen själv
+                  Jag lämnar bilen själv
                 </label>
               </div>
             </div>
