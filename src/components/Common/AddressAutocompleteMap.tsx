@@ -30,80 +30,128 @@ export default function AddressAutocompleteMap({
     let timeoutId: NodeJS.Timeout;
     let attemptCount = 0;
     const maxAttempts = 10;
+    let isMounted = true;
+
+    const cleanupInstances = () => {
+      if (clickListenerRef.current) {
+        try {
+          window.google?.maps?.event?.removeListener(clickListenerRef.current);
+          clickListenerRef.current = null;
+        } catch (e) {
+          console.warn('Error removing click listener:', e);
+        }
+      }
+      if (markerInstance.current) {
+        try {
+          markerInstance.current.setMap(null);
+          markerInstance.current = null;
+        } catch (e) {
+          console.warn('Error removing marker:', e);
+        }
+      }
+      if (mapInstance.current && mapRef.current) {
+        try {
+          // Clear the map container without removing React-managed DOM
+          const mapContainer = mapRef.current;
+          if (mapContainer && mapContainer.firstChild) {
+            // Let Google Maps clean itself up
+            mapInstance.current = null;
+          }
+        } catch (e) {
+          console.warn('Error clearing map:', e);
+        }
+      }
+      isInitializingRef.current = false;
+    };
 
     const initializeMap = () => {
       // Prevent multiple initialization attempts
-      if (isInitializingRef.current || mapInstance.current) {
+      if (!isMounted || isInitializingRef.current || mapInstance.current || !mapRef.current) {
         return;
       }
 
       console.log('Checking Google Maps availability:', !!window.google);
       
-      if (window.google && window.google.maps && mapRef.current) {
+      if (window.google && window.google.maps) {
         console.log('Initializing Google Maps...');
         isInitializingRef.current = true;
         
         try {
-          mapInstance.current = new window.google.maps.Map(mapRef.current, {
-            center: coords,
-            zoom: 12,
-            styles: [
-              {
-                featureType: "all",
-                elementType: "geometry.fill",
-                stylers: [{ color: "#f5f5f5" }]
-              }
-            ]
-          });
+          // Ensure container is clean before initialization
+          const container = mapRef.current;
+          if (container && isMounted) {
+            mapInstance.current = new window.google.maps.Map(container, {
+              center: coords,
+              zoom: 12,
+              styles: [
+                {
+                  featureType: "all",
+                  elementType: "geometry.fill",
+                  stylers: [{ color: "#f5f5f5" }]
+                }
+              ]
+            });
 
-          markerInstance.current = new window.google.maps.Marker({
-            position: coords,
-            map: mapInstance.current,
-          });
-
-          // reverse geocode on click
-          clickListenerRef.current = mapInstance.current.addListener("click", async (e: google.maps.MapMouseEvent) => {
-            if (!e.latLng) return;
-            const lat = e.latLng.lat();
-            const lng = e.latLng.lng();
-
-            setCoords({ lat, lng });
-            if (markerInstance.current) {
-              markerInstance.current.setPosition({ lat, lng });
-            }
-
-            try {
-              const { data, error } = await supabase.functions.invoke("google-maps", {
-                body: {
-                  service: "reverse-geocode",
-                  params: { lat, lng, language: "sv" },
-                },
+            if (isMounted && mapInstance.current) {
+              markerInstance.current = new window.google.maps.Marker({
+                position: coords,
+                map: mapInstance.current,
               });
 
-              if (!error && data?.results?.[0]?.formatted_address) {
-                const addr = data.results[0].formatted_address;
-                setQuery(addr);
-                onAddressSelect?.(addr, { lat, lng });
-              }
-            } catch (error) {
-              console.error("Reverse geocode error:", error);
-            }
-          });
+              // reverse geocode on click
+              clickListenerRef.current = mapInstance.current.addListener("click", async (e: google.maps.MapMouseEvent) => {
+                if (!isMounted || !e.latLng) return;
+                const lat = e.latLng.lat();
+                const lng = e.latLng.lng();
 
-          setMapLoaded(true);
-          setGoogleMapsError(false);
+                setCoords({ lat, lng });
+                if (markerInstance.current && isMounted) {
+                  markerInstance.current.setPosition({ lat, lng });
+                }
+
+                if (isMounted) {
+                  try {
+                    const { data, error } = await supabase.functions.invoke("google-maps", {
+                      body: {
+                        service: "reverse-geocode",
+                        params: { lat, lng, language: "sv" },
+                      },
+                    });
+
+                    if (isMounted && !error && data?.results?.[0]?.formatted_address) {
+                      const addr = data.results[0].formatted_address;
+                      setQuery(addr);
+                      onAddressSelect?.(addr, { lat, lng });
+                    }
+                  } catch (error) {
+                    if (isMounted) {
+                      console.error("Reverse geocode error:", error);
+                    }
+                  }
+                }
+              });
+
+              if (isMounted) {
+                setMapLoaded(true);
+                setGoogleMapsError(false);
+              }
+            }
+          }
+          
           isInitializingRef.current = false;
           console.log('Google Maps initialized successfully');
         } catch (error) {
           console.error('Error initializing Google Maps:', error);
-          setGoogleMapsError(true);
+          if (isMounted) {
+            setGoogleMapsError(true);
+          }
           isInitializingRef.current = false;
         }
-      } else if (attemptCount < maxAttempts) {
+      } else if (attemptCount < maxAttempts && isMounted) {
         attemptCount++;
         console.log(`Google Maps API not loaded yet, attempt ${attemptCount}/${maxAttempts}...`);
         timeoutId = setTimeout(initializeMap, 1000);
-      } else {
+      } else if (isMounted) {
         console.error('Google Maps API failed to load after maximum attempts');
         setGoogleMapsError(true);
       }
@@ -113,29 +161,13 @@ export default function AddressAutocompleteMap({
     timeoutId = setTimeout(initializeMap, 100);
 
     return () => {
+      isMounted = false;
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      if (clickListenerRef.current) {
-        try {
-          clickListenerRef.current.remove();
-        } catch (e) {
-          console.warn('Error removing click listener:', e);
-        }
-      }
-      if (markerInstance.current) {
-        try {
-          markerInstance.current.setMap(null);
-        } catch (e) {
-          console.warn('Error removing marker:', e);
-        }
-      }
-      isInitializingRef.current = false;
-      mapInstance.current = null;
-      markerInstance.current = null;
-      clickListenerRef.current = null;
+      cleanupInstances();
     };
-  }, [onAddressSelect]);
+  }, []);
 
   // keep map/marker synced with coords
   useEffect(() => {
