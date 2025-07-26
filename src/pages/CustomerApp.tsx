@@ -79,6 +79,9 @@ interface PaymentInfoScreenProps {
 
 type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
 
+// Store the customer request ID globally to use in parts saving
+let currentCustomerRequestId: string | null = null;
+
 // Function to save car registration data to Supabase
 const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
@@ -116,6 +119,9 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       throw customerRequestError;
     }
 
+    // Store the customer request ID for later use
+    currentCustomerRequestId = customerRequestData.id;
+
     // Also save control number and issue date to car_metadata if we have a customer request
     if (customerRequestData) {
       const { error: metadataError } = await supabase
@@ -137,6 +143,45 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
   } catch (error) {
     console.error('Error saving car registration data:', error);
     toast.error('Fel vid sparning av biluppgifter. Försök igen.');
+    throw error;
+  }
+};
+
+// Function to save parts info to Supabase
+const savePartsInfo = async (partsInfo: PartsInfo) => {
+  try {
+    if (!currentCustomerRequestId) {
+      throw new Error('No customer request ID found. Please fill car details first.');
+    }
+
+    // Create parts list based on checkbox selections
+    const partsList = {
+      motor: partsInfo.hasEngine,
+      vaxellada: partsInfo.hasGearbox,
+      katalysator: partsInfo.hasCatalyticConverter,
+      fyra_hjul: partsInfo.hasFourWheels,
+      batteri: partsInfo.hasBattery,
+      annan_info: partsInfo.additionalInfo
+    };
+
+    // Update the existing car_metadata record with parts information
+    const { error: updateError } = await supabase
+      .from('car_metadata')
+      .update({
+        part_list: partsList
+      })
+      .eq('car_id', currentCustomerRequestId);
+
+    if (updateError) {
+      console.error('Error updating car metadata with parts info:', updateError);
+      throw updateError;
+    }
+
+    toast.success('Delinformation sparad framgångsrikt!');
+    return true;
+  } catch (error) {
+    console.error('Error saving parts info:', error);
+    toast.error('Fel vid sparning av delinformation. Försök igen.');
     throw error;
   }
 };
@@ -1085,8 +1130,14 @@ const CustomerApp = () => {
     }
   };
 
-  const handlePartsNext = () => {
-    setShowConfirmDialog(true);
+  const handlePartsNext = async () => {
+    try {
+      await savePartsInfo(partsInfo);
+      setShowConfirmDialog(true);
+    } catch (error) {
+      // Error handling is already done in savePartsInfo function
+      console.error('Failed to save parts info:', error);
+    }
   };
 
   const handleConfirmPartsNext = () => {
