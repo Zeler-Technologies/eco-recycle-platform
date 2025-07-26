@@ -1,16 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-
-interface Prediction {
-  place_id: string;
-  description: string;
-  structured_formatting: {
-    main_text: string;
-    secondary_text: string;
-  };
-}
 
 interface AddressAutocompleteMapProps {
   onAddressSelect?: (address: string, coordinates: { lat: number; lng: number }) => void;
@@ -22,35 +11,22 @@ export default function AddressAutocompleteMap({
   className = ""
 }: AddressAutocompleteMapProps) {
   const [query, setQuery] = useState("");
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [sessionToken, setSessionToken] = useState("");
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
-  
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
-  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ lat: 59.3293, lng: 18.0686 }); // Stockholm default
+  const sessionToken = useRef(crypto.randomUUID());
 
-  // Generate new session token
-  const generateSessionToken = useCallback(() => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  }, []);
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const markerInstance = useRef<google.maps.Marker | null>(null);
+  const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
 
-  // Initialize session token
+  // init map
   useEffect(() => {
-    setSessionToken(generateSessionToken());
-  }, [generateSessionToken]);
-
-  // Initialize Google Map
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    const initMap = () => {
-      const mapInstance = new google.maps.Map(mapRef.current!, {
-        center: { lat: 59.3293, lng: 18.0686 }, // Stockholm
+    if (window.google && mapRef.current && !mapInstance.current) {
+      mapInstance.current = new google.maps.Map(mapRef.current, {
+        center: coords,
         zoom: 12,
         styles: [
           {
@@ -61,262 +37,156 @@ export default function AddressAutocompleteMap({
         ]
       });
 
-      // Add click listener for reverse geocoding
-      mapInstance.addListener("click", async (event: google.maps.MapMouseEvent) => {
-        if (event.latLng) {
-          const lat = event.latLng.lat();
-          const lng = event.latLng.lng();
-          await handleReverseGeocode(lat, lng);
-          
-          // Update marker position
-          if (marker) {
-            marker.setPosition({ lat, lng });
-          } else {
-            const newMarker = new google.maps.Marker({
-              position: { lat, lng },
-              map: mapInstance,
-              title: "Selected location"
-            });
-            setMarker(newMarker);
-          }
-        }
+      markerInstance.current = new google.maps.Marker({
+        position: coords,
+        map: mapInstance.current,
       });
 
-      setMap(mapInstance);
-    };
+      // reverse geocode on click
+      clickListenerRef.current = mapInstance.current.addListener("click", async (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
 
-    // Load Google Maps API if not already loaded
-    if (window.google && window.google.maps) {
-      initMap();
-    } else {
-      // Load Google Maps JavaScript API
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY || ''}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initMap;
-      script.onerror = () => {
-        console.error('Failed to load Google Maps API');
-      };
-      document.head.appendChild(script);
+        setCoords({ lat, lng });
+        markerInstance.current?.setPosition({ lat, lng });
+
+        const { data, error } = await supabase.functions.invoke("google-maps", {
+          body: {
+            service: "reverse-geocode",
+            params: { lat, lng, language: "sv" },
+          },
+        });
+
+        if (!error) {
+          const addr = data?.results?.[0]?.formatted_address;
+          if (addr) {
+            setQuery(addr);
+            onAddressSelect?.(addr, { lat, lng });
+          }
+        } else {
+          console.error("Reverse geocode error:", error);
+        }
+      });
     }
-  }, []);
 
-  // Handle outside clicks
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
+    return () => {
+      clickListenerRef.current?.remove();
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch autocomplete suggestions
-  const fetchAutocomplete = useCallback(async (input: string) => {
-    if (input.length < 3) {
-      setPredictions([]);
-      setShowDropdown(false);
+  // keep map/marker synced with coords
+  useEffect(() => {
+    if (mapInstance.current && markerInstance.current) {
+      mapInstance.current.setCenter(coords);
+      markerInstance.current.setPosition(coords);
+    }
+  }, [coords]);
+
+  // debounce autocomplete
+  useEffect(() => {
+    if (query.length > 2) {
+      const t = setTimeout(fetchSuggestions, 300);
+      return () => clearTimeout(t);
+    } else {
+      setSuggestions([]);
+      setOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  const fetchSuggestions = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("google-maps", {
+      body: {
+        service: "autocomplete",
+        params: {
+          input: query,
+          language: "sv",
+          components: "country:se",
+          sessiontoken: sessionToken.current,
+        },
+      },
+    });
+    setLoading(false);
+
+    if (error) {
+      console.error("Autocomplete error:", error);
+      setSuggestions([]);
       return;
     }
 
-    setLoading(true);
-    setShowDropdown(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('google-maps', {
-        body: {
-          service: 'autocomplete',
-          params: {
-            input,
-            language: 'sv',
-            components: 'country:se',
-            sessiontoken: sessionToken
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Autocomplete error:', error);
-        setPredictions([]);
-        return;
-      }
-
-      if (data && data.predictions) {
-        setPredictions(data.predictions);
-      } else {
-        setPredictions([]);
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-      setPredictions([]);
-      toast({
-        title: "Error",
-        description: "Failed to fetch address suggestions",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionToken, toast]);
-
-  // Debounced fetch
-  const debouncedFetch = useCallback((input: string) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    
-    debounceRef.current = setTimeout(() => {
-      fetchAutocomplete(input);
-    }, 300);
-  }, [fetchAutocomplete]);
-
-  // Handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
-    debouncedFetch(value);
+    const predictions = data?.predictions ?? [];
+    setSuggestions(predictions);
+    setOpen(predictions.length > 0);
   };
 
-  // Handle prediction selection
-  const handlePredictionSelect = async (prediction: Prediction) => {
-    setQuery(prediction.description);
-    setPredictions([]);
-    setShowDropdown(false);
+  const handleSelect = async (description: string) => {
+    setQuery(description);
+    setOpen(false);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('google-maps', {
-        body: {
-          service: 'geocode',
-          params: {
-            address: prediction.description
-          }
-        }
-      });
+    const { data, error } = await supabase.functions.invoke("google-maps", {
+      body: {
+        service: "geocode",
+        params: { address: description },
+      },
+    });
 
-      if (error) {
-        console.error('Geocode error:', error);
-        toast({
-          title: "Error",
-          description: "Failed to get location coordinates",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (data && data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
-        const coordinates = { lat: location.lat, lng: location.lng };
-
-        // Update map center and marker
-        if (map) {
-          map.setCenter(coordinates);
-          map.setZoom(15);
-
-          if (marker) {
-            marker.setPosition(coordinates);
-          } else {
-            const newMarker = new google.maps.Marker({
-              position: coordinates,
-              map: map,
-              title: prediction.description
-            });
-            setMarker(newMarker);
-          }
-        }
-
-        // Reset session token after successful geocoding
-        setSessionToken(generateSessionToken());
-
-        // Call callback if provided
-        onAddressSelect?.(prediction.description, coordinates);
-      }
-    } catch (error) {
-      console.error('Geocoding failed:', error);
-      toast({
-        title: "Error",
-        description: "Failed to get location coordinates",
-        variant: "destructive"
-      });
+    if (error) {
+      console.error("Geocode error:", error);
+      return;
     }
-  };
 
-  // Handle reverse geocoding
-  const handleReverseGeocode = async (lat: number, lng: number) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('google-maps', {
-        body: {
-          service: 'reverse-geocode',
-          params: {
-            lat,
-            lng,
-            language: 'sv'
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Reverse geocode error:', error);
-        return;
-      }
-
-      if (data && data.results && data.results.length > 0) {
-        const address = data.results[0].formatted_address;
-        setQuery(address);
-        onAddressSelect?.(address, { lat, lng });
-      }
-    } catch (error) {
-      console.error('Reverse geocoding failed:', error);
+    const result = data?.results?.[0];
+    if (result?.geometry?.location) {
+      const newCoords = {
+        lat: result.geometry.location.lat,
+        lng: result.geometry.location.lng,
+      };
+      setCoords(newCoords);
+      onAddressSelect?.(description, newCoords);
+      // end session, start new one for next search
+      sessionToken.current = crypto.randomUUID();
     }
   };
 
   return (
     <div className={`w-full space-y-4 ${className}`}>
-      {/* Address Input */}
-      <div className="relative" ref={dropdownRef}>
-        <Input
+      <div className="relative">
+        <input
           type="text"
           value={query}
-          onChange={handleInputChange}
-          className="w-full"
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Sök adress..."
+          className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
         />
-        
         {loading && (
-          <div className="absolute top-1/2 right-3 transform -translate-y-1/2 text-muted-foreground text-sm">
-            ...
-          </div>
+          <p className="absolute top-3 right-3 text-muted-foreground text-sm">...</p>
         )}
-
-        {/* Predictions Dropdown */}
-        {showDropdown && predictions.length > 0 && (
-          <div className="absolute z-50 bg-popover border border-border rounded-lg mt-1 w-full shadow-lg max-h-60 overflow-auto">
-            {predictions.map((prediction) => (
-              <div
-                key={prediction.place_id}
+        {open && suggestions.length > 0 && (
+          <ul className="absolute z-50 bg-popover border border-border rounded-lg mt-1 w-full shadow-lg max-h-60 overflow-auto">
+            {suggestions.map((item, idx) => (
+              <li
+                key={idx}
                 className="p-3 hover:bg-accent cursor-pointer text-popover-foreground transition-colors duration-200 first:rounded-t-lg last:rounded-b-lg"
-                onClick={() => handlePredictionSelect(prediction)}
+                onClick={() => handleSelect(item.description)}
               >
                 <div className="font-medium text-sm">
-                  {prediction.structured_formatting.main_text}
+                  {item.structured_formatting?.main_text || item.description}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {prediction.structured_formatting.secondary_text}
-                </div>
-              </div>
+                {item.structured_formatting?.secondary_text && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {item.structured_formatting.secondary_text}
+                  </div>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
 
-      {/* Google Map */}
-      <div
-        ref={mapRef}
-        className="w-full h-64 rounded-lg border border-border"
-        style={{ minHeight: '256px' }}
-      />
+      <div ref={mapRef} className="w-full h-64 rounded-lg border border-border" />
     </div>
   );
 }
