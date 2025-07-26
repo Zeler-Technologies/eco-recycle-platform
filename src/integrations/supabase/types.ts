@@ -165,7 +165,7 @@ export type Database = {
       }
       car_metadata: {
         Row: {
-          car_id: string
+          customer_request_id: string
           id: string
           kontrollbes_galler_tom: string | null
           kontrollsiffror: string | null
@@ -174,7 +174,7 @@ export type Database = {
           regbevis: string | null
         }
         Insert: {
-          car_id: string
+          customer_request_id: string
           id?: string
           kontrollbes_galler_tom?: string | null
           kontrollsiffror?: string | null
@@ -183,7 +183,7 @@ export type Database = {
           regbevis?: string | null
         }
         Update: {
-          car_id?: string
+          customer_request_id?: string
           id?: string
           kontrollbes_galler_tom?: string | null
           kontrollsiffror?: string | null
@@ -191,15 +191,7 @@ export type Database = {
           part_list?: Json | null
           regbevis?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "car_metadata_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
-            referencedRelation: "cars"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       cars: {
         Row: {

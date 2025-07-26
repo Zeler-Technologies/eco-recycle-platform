@@ -127,7 +127,7 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       const { error: metadataError } = await supabase
         .from('car_metadata')
         .insert({
-          car_id: customerRequestData.id, // Using the customer request ID as car reference
+          customer_request_id: customerRequestData.id, // Using the customer request ID as car reference
           kontrollsiffror: carDetails.controlNumber,
           // The issue date can be stored in a custom field or we can add it to the schema
         });
@@ -170,7 +170,7 @@ const savePartsInfo = async (partsInfo: PartsInfo) => {
       .update({
         part_list: partsList
       })
-      .eq('car_id', currentCustomerRequestId);
+      .eq('customer_request_id', currentCustomerRequestId);
 
     if (updateError) {
       console.error('Error updating car metadata with parts info:', updateError);
