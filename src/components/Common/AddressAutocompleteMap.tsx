@@ -15,6 +15,7 @@ export default function AddressAutocompleteMap({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ lat: 59.3293, lng: 18.0686 }); // Stockholm default
+  const [mapLoaded, setMapLoaded] = useState(false);
   const sessionToken = useRef(crypto.randomUUID());
 
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -22,53 +23,72 @@ export default function AddressAutocompleteMap({
   const markerInstance = useRef<google.maps.Marker | null>(null);
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
 
-  // init map
+  // Check for Google Maps API availability and init map
   useEffect(() => {
-    if (window.google && mapRef.current && !mapInstance.current) {
-      mapInstance.current = new google.maps.Map(mapRef.current, {
-        center: coords,
-        zoom: 12,
-        styles: [
-          {
-            featureType: "all",
-            elementType: "geometry.fill",
-            stylers: [{ color: "#f5f5f5" }]
-          }
-        ]
-      });
+    const initializeMap = () => {
+      console.log('Checking Google Maps availability:', !!window.google);
+      
+      if (window.google && mapRef.current && !mapInstance.current) {
+        console.log('Initializing Google Maps...');
+        
+        try {
+          mapInstance.current = new google.maps.Map(mapRef.current, {
+            center: coords,
+            zoom: 12,
+            styles: [
+              {
+                featureType: "all",
+                elementType: "geometry.fill",
+                stylers: [{ color: "#f5f5f5" }]
+              }
+            ]
+          });
 
-      markerInstance.current = new google.maps.Marker({
-        position: coords,
-        map: mapInstance.current,
-      });
+          markerInstance.current = new google.maps.Marker({
+            position: coords,
+            map: mapInstance.current,
+          });
 
-      // reverse geocode on click
-      clickListenerRef.current = mapInstance.current.addListener("click", async (e: google.maps.MapMouseEvent) => {
-        if (!e.latLng) return;
-        const lat = e.latLng.lat();
-        const lng = e.latLng.lng();
+          // reverse geocode on click
+          clickListenerRef.current = mapInstance.current.addListener("click", async (e: google.maps.MapMouseEvent) => {
+            if (!e.latLng) return;
+            const lat = e.latLng.lat();
+            const lng = e.latLng.lng();
 
-        setCoords({ lat, lng });
-        markerInstance.current?.setPosition({ lat, lng });
+            setCoords({ lat, lng });
+            markerInstance.current?.setPosition({ lat, lng });
 
-        const { data, error } = await supabase.functions.invoke("google-maps", {
-          body: {
-            service: "reverse-geocode",
-            params: { lat, lng, language: "sv" },
-          },
-        });
+            const { data, error } = await supabase.functions.invoke("google-maps", {
+              body: {
+                service: "reverse-geocode",
+                params: { lat, lng, language: "sv" },
+              },
+            });
 
-        if (!error) {
-          const addr = data?.results?.[0]?.formatted_address;
-          if (addr) {
-            setQuery(addr);
-            onAddressSelect?.(addr, { lat, lng });
-          }
-        } else {
-          console.error("Reverse geocode error:", error);
+            if (!error) {
+              const addr = data?.results?.[0]?.formatted_address;
+              if (addr) {
+                setQuery(addr);
+                onAddressSelect?.(addr, { lat, lng });
+              }
+            } else {
+              console.error("Reverse geocode error:", error);
+            }
+          });
+
+          setMapLoaded(true);
+          console.log('Google Maps initialized successfully');
+        } catch (error) {
+          console.error('Error initializing Google Maps:', error);
         }
-      });
-    }
+      } else if (!window.google) {
+        console.log('Google Maps API not loaded yet, waiting...');
+        // Wait for Google Maps to load
+        setTimeout(initializeMap, 1000);
+      }
+    };
+
+    initializeMap();
 
     return () => {
       clickListenerRef.current?.remove();
@@ -200,7 +220,13 @@ export default function AddressAutocompleteMap({
         )}
       </div>
 
-      <div ref={mapRef} className="w-full h-64 rounded-lg border border-border" />
+      <div ref={mapRef} className="w-full h-64 rounded-lg border border-border relative">
+        {!mapLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted rounded-lg">
+            <p className="text-muted-foreground">Laddar karta...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
