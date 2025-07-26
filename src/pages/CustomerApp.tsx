@@ -6,7 +6,7 @@ import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 
-import AddressAutocompleteMap from '@/components/Common/AddressAutocompleteMap';
+import AddressPickerSimple from '@/components/Common/AddressPickerSimple';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -619,7 +619,7 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             {/* Address and Additional Info - shown only when "Ni hämtar bilen" is selected */}
             {transportMethod === 'pickup' && (
               <div className="space-y-4">
-                <AddressAutocompleteMap
+                <AddressPickerSimple
                   onAddressSelect={(address, coordinates) => {
                     setAddress(address);
                   }}
