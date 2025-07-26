@@ -97,18 +97,31 @@ export default function AddressAutocompleteMap({
   }, [query]);
 
   const fetchSuggestions = async () => {
+    console.log('=== Frontend: Starting autocomplete request ===');
+    console.log('Query:', query);
+    console.log('Session token:', sessionToken.current);
+    
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("google-maps", {
-      body: {
-        service: "autocomplete",
-        params: {
-          input: query,
-          language: "sv",
-          components: "country:se",
-          sessiontoken: sessionToken.current,
-        },
+    
+    const requestBody = {
+      service: "autocomplete",
+      params: {
+        input: query,
+        language: "sv",
+        components: "country:se",
+        sessiontoken: sessionToken.current,
       },
+    };
+    
+    console.log('Request body to send:', JSON.stringify(requestBody, null, 2));
+    
+    const { data, error } = await supabase.functions.invoke("google-maps", {
+      body: requestBody,
     });
+    
+    console.log('Supabase response - error:', error);
+    console.log('Supabase response - data:', JSON.stringify(data, null, 2));
+    
     setLoading(false);
 
     if (error) {
@@ -118,6 +131,7 @@ export default function AddressAutocompleteMap({
     }
 
     const predictions = data?.predictions ?? [];
+    console.log('Predictions extracted:', predictions.length, 'items');
     setSuggestions(predictions);
     setOpen(predictions.length > 0);
   };
