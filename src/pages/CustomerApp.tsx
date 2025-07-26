@@ -82,11 +82,20 @@ type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-va
 // Function to save car registration data to Supabase
 const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
-    // Get the current authenticated user ID
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // First check if user is authenticated, if not, sign in anonymously
+    let { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      throw new Error('User not authenticated');
+      // Sign in anonymously for customer app
+      const { data: signInData, error: signInError } = await supabase.auth.signInAnonymously();
+      if (signInError) {
+        throw new Error('Unable to authenticate user');
+      }
+      user = signInData.user;
+    }
+
+    if (!user) {
+      throw new Error('User authentication failed');
     }
 
     // Save to customer_requests table
