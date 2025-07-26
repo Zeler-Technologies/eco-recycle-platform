@@ -82,27 +82,14 @@ type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-va
 // Function to save car registration data to Supabase
 const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
-    // First check if user is authenticated, if not, sign in anonymously
-    let { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      // Sign in anonymously for customer app
-      const { data: signInData, error: signInError } = await supabase.auth.signInAnonymously();
-      if (signInError) {
-        throw new Error('Unable to authenticate user');
-      }
-      user = signInData.user;
-    }
+    // Generate a temporary customer ID for anonymous users
+    const tempCustomerId = crypto.randomUUID();
 
-    if (!user) {
-      throw new Error('User authentication failed');
-    }
-
-    // Save to customer_requests table
+    // Save to customer_requests table without requiring authentication
     const { data: customerRequestData, error: customerRequestError } = await supabase
       .from('customer_requests')
       .insert({
-        customer_id: user.id,
+        customer_id: tempCustomerId,
         car_registration_number: carDetails.registrationNumber,
         control_number: carDetails.controlNumber,
         car_brand: 'TBD', // Required field - will be filled later
