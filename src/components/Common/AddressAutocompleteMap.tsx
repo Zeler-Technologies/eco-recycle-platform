@@ -91,7 +91,16 @@ export default function AddressAutocompleteMap({
     initializeMap();
 
     return () => {
-      clickListenerRef.current?.remove();
+      if (clickListenerRef.current) {
+        clickListenerRef.current.remove();
+      }
+      if (markerInstance.current) {
+        markerInstance.current.setMap(null);
+      }
+      if (mapInstance.current) {
+        // Clean up map instance
+        mapInstance.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

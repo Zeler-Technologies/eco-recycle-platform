@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
-import { Loader } from '@googlemaps/js-api-loader';
+
 import AddressAutocompleteMap from '@/components/Common/AddressAutocompleteMap';
 import {
   AlertDialog,
@@ -527,123 +527,9 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
 const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
   const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge");
   const [additionalInfo, setAdditionalInfo] = React.useState<string>("");
-  const [googleMapsApiKey, setGoogleMapsApiKey] = React.useState<string>("");
-  const [isLoadingApiKey, setIsLoadingApiKey] = React.useState<boolean>(false);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
   
   const isNextEnabled = transportMethod !== '';
 
-  // Fetch Google Maps API key from Supabase on component mount
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      if (transportMethod === 'pickup') {
-        setIsLoadingApiKey(true);
-        try {
-          const response = await fetch('/functions/v1/get-google-maps-key', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setGoogleMapsApiKey(data.apiKey || '');
-          } else {
-            console.log('No Google Maps API key configured');
-          }
-        } catch (error) {
-          console.error('Failed to fetch Google Maps API key:', error);
-        } finally {
-          setIsLoadingApiKey(false);
-        }
-      }
-    };
-
-    fetchApiKey();
-  }, [transportMethod]);
-
-  // Initialize Google Maps
-  useEffect(() => {
-    if (transportMethod === 'pickup' && mapRef.current && googleMapsApiKey) {
-      const loader = new Loader({
-        apiKey: googleMapsApiKey,
-        version: 'weekly',
-        libraries: ['places']
-      });
-
-      loader.load().then(() => {
-        // Initialize map
-        const map = new google.maps.Map(mapRef.current!, {
-          center: { lat: 62.3908, lng: 17.3069 }, // Sundsvall coordinates
-          zoom: 13,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-        });
-        mapInstanceRef.current = map;
-
-        // Add marker
-        const marker = new google.maps.Marker({
-          position: { lat: 62.3908, lng: 17.3069 },
-          map: map,
-          draggable: true,
-          title: 'Pickup Location'
-        });
-        markerRef.current = marker;
-
-        // Update address when marker is dragged
-        marker.addListener('dragend', () => {
-          const position = marker.getPosition();
-          if (position) {
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ location: position }, (results, status) => {
-              if (status === 'OK' && results?.[0]) {
-                setAddress(results[0].formatted_address);
-              }
-            });
-          }
-        });
-      }).catch(console.error);
-    }
-  }, [transportMethod, googleMapsApiKey]);
-
-  // Initialize autocomplete
-  useEffect(() => {
-    if (transportMethod === 'pickup' && googleMapsApiKey) {
-      const loader = new Loader({
-        apiKey: googleMapsApiKey,
-        version: 'weekly',
-        libraries: ['places']
-      });
-
-      loader.load().then(() => {
-        const input = document.getElementById('address-input') as HTMLInputElement;
-        if (input) {
-          const autocomplete = new google.maps.places.Autocomplete(input, {
-            componentRestrictions: { country: 'se' }, // Restrict to Sweden
-            fields: ['formatted_address', 'geometry']
-          });
-          autocompleteRef.current = autocomplete;
-
-          autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (place.formatted_address && place.geometry?.location) {
-              setAddress(place.formatted_address);
-              
-              // Update map center and marker
-              if (mapInstanceRef.current && markerRef.current) {
-                mapInstanceRef.current.setCenter(place.geometry.location);
-                markerRef.current.setPosition(place.geometry.location);
-              }
-            }
-          });
-        }
-      }).catch(console.error);
-    }
-  }, [transportMethod, googleMapsApiKey]);
   
   return (
     <div className="min-h-screen bg-yellow-400 flex flex-col relative overflow-hidden">
