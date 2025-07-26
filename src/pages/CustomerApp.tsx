@@ -619,12 +619,21 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             {/* Address and Additional Info - shown only when "Ni hämtar bilen" is selected */}
             {transportMethod === 'pickup' && (
               <div className="space-y-4">
-                <AddressAutocompleteMap
-                  onAddressSelect={(address, coordinates) => {
-                    setAddress(address);
-                  }}
-                  className="w-full"
-                />
+                <div className="space-y-4">
+                  <label className="block text-base font-semibold text-black mb-2">
+                    Adress för hämtning
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Ange adress..."
+                    className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <p className="text-gray-500">Karta kommer snart</p>
+                  </div>
+                </div>
                 
                 <p className="text-sm text-gray-600">
                   Hittar du inte adress? Välj närmaste och beskriv nedan.
