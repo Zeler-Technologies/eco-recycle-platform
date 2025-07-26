@@ -89,9 +89,16 @@ export default function AddressAutocompleteMap({
     if (window.google && window.google.maps) {
       initMap();
     } else {
-      // For now, don't load the API to avoid key issues
-      // The component will work with just autocomplete functionality
-      console.log('Google Maps API not loaded - map functionality disabled');
+      // Load Google Maps JavaScript API
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY || ''}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initMap;
+      script.onerror = () => {
+        console.error('Failed to load Google Maps API');
+      };
+      document.head.appendChild(script);
     }
   }, []);
 
