@@ -82,10 +82,22 @@ type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-va
 // Function to save car registration data to Supabase
 const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
+    // First, ensure we have an anonymous session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // Sign in anonymously
+      const { error: authError } = await supabase.auth.signInAnonymously();
+      if (authError) {
+        console.error('Error signing in anonymously:', authError);
+        throw new Error('Authentication failed');
+      }
+    }
+
     // Generate a temporary customer ID for anonymous users
     const tempCustomerId = crypto.randomUUID();
 
-    // Save to customer_requests table without requiring authentication
+    // Save to customer_requests table
     const { data: customerRequestData, error: customerRequestError } = await supabase
       .from('customer_requests')
       .insert({
