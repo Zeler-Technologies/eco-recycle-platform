@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CalendarIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
@@ -47,7 +49,7 @@ interface CarDetailsFormProps {
   validationErrors: ValidationErrors;
   setValidationErrors: (errors: ValidationErrors | ((prev: ValidationErrors) => ValidationErrors)) => void;
   validateCarDetails: () => boolean;
-  onNext: () => void;
+  onNext: () => void | Promise<void>;
   onBack: () => void;
 }
 
@@ -76,6 +78,57 @@ interface PaymentInfoScreenProps {
 }
 
 type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
+
+// Function to save car registration data to Supabase
+const saveCarRegistrationData = async (carDetails: CarDetails, userId: string) => {
+  try {
+    // Save to customer_requests table
+    const { data: customerRequestData, error: customerRequestError } = await supabase
+      .from('customer_requests')
+      .insert({
+        customer_id: userId,
+        car_registration_number: carDetails.registrationNumber,
+        control_number: carDetails.controlNumber,
+        car_brand: 'TBD', // Required field - will be filled later
+        car_model: 'TBD', // Required field - will be filled later
+        owner_name: 'Customer',
+        owner_address: 'Address TBD',
+        owner_postal_code: '00000',
+        pickup_address: 'Pickup TBD',
+        pickup_postal_code: '00000'
+      })
+      .select()
+      .single();
+
+    if (customerRequestError) {
+      console.error('Error saving customer request:', customerRequestError);
+      throw customerRequestError;
+    }
+
+    // Also save control number and issue date to car_metadata if we have a customer request
+    if (customerRequestData) {
+      const { error: metadataError } = await supabase
+        .from('car_metadata')
+        .insert({
+          car_id: customerRequestData.id, // Using the customer request ID as car reference
+          kontrollsiffror: carDetails.controlNumber,
+          // The issue date can be stored in a custom field or we can add it to the schema
+        });
+
+      if (metadataError) {
+        console.error('Error saving car metadata:', metadataError);
+        // Don't throw here as customer request was saved successfully
+      }
+    }
+
+    toast.success('Biluppgifter sparade framgångsrikt!');
+    return customerRequestData;
+  } catch (error) {
+    console.error('Error saving car registration data:', error);
+    toast.error('Fel vid sparning av biluppgifter. Försök igen.');
+    throw error;
+  }
+};
 
 // Car Details Form Component - Moved outside to prevent re-renders
 const CarDetailsForm = React.memo<CarDetailsFormProps>(({ 
@@ -1001,7 +1054,7 @@ const CustomerApp = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const isValid = (
       carDetails.registrationNumber.length >= 3 &&
       carDetails.controlNumber.length >= 3 &&
@@ -1010,8 +1063,14 @@ const CustomerApp = () => {
       Object.keys(validationErrors).length === 0
     );
     
-    if (isValid) {
-      setCurrentView('parts-info');
+    if (isValid && user?.id) {
+      try {
+        await saveCarRegistrationData(carDetails, user.id);
+        setCurrentView('parts-info');
+      } catch (error) {
+        // Error handling is already done in saveCarRegistrationData function
+        console.error('Failed to save car registration data:', error);
+      }
     }
   };
 
