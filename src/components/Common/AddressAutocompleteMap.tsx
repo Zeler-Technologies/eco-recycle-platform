@@ -16,23 +16,35 @@ export default function AddressAutocompleteMap({
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ lat: 59.3293, lng: 18.0686 }); // Stockholm default
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [googleMapsError, setGoogleMapsError] = useState(false);
   const sessionToken = useRef(crypto.randomUUID());
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markerInstance = useRef<google.maps.Marker | null>(null);
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const isInitializingRef = useRef(false);
 
   // Check for Google Maps API availability and init map
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let attemptCount = 0;
+    const maxAttempts = 10;
+
     const initializeMap = () => {
+      // Prevent multiple initialization attempts
+      if (isInitializingRef.current || mapInstance.current) {
+        return;
+      }
+
       console.log('Checking Google Maps availability:', !!window.google);
       
-      if (window.google && mapRef.current && !mapInstance.current) {
+      if (window.google && window.google.maps && mapRef.current) {
         console.log('Initializing Google Maps...');
+        isInitializingRef.current = true;
         
         try {
-          mapInstance.current = new google.maps.Map(mapRef.current, {
+          mapInstance.current = new window.google.maps.Map(mapRef.current, {
             center: coords,
             zoom: 12,
             styles: [
@@ -44,7 +56,7 @@ export default function AddressAutocompleteMap({
             ]
           });
 
-          markerInstance.current = new google.maps.Marker({
+          markerInstance.current = new window.google.maps.Marker({
             position: coords,
             map: mapInstance.current,
           });
@@ -56,141 +68,170 @@ export default function AddressAutocompleteMap({
             const lng = e.latLng.lng();
 
             setCoords({ lat, lng });
-            markerInstance.current?.setPosition({ lat, lng });
+            if (markerInstance.current) {
+              markerInstance.current.setPosition({ lat, lng });
+            }
 
-            const { data, error } = await supabase.functions.invoke("google-maps", {
-              body: {
-                service: "reverse-geocode",
-                params: { lat, lng, language: "sv" },
-              },
-            });
+            try {
+              const { data, error } = await supabase.functions.invoke("google-maps", {
+                body: {
+                  service: "reverse-geocode",
+                  params: { lat, lng, language: "sv" },
+                },
+              });
 
-            if (!error) {
-              const addr = data?.results?.[0]?.formatted_address;
-              if (addr) {
+              if (!error && data?.results?.[0]?.formatted_address) {
+                const addr = data.results[0].formatted_address;
                 setQuery(addr);
                 onAddressSelect?.(addr, { lat, lng });
               }
-            } else {
+            } catch (error) {
               console.error("Reverse geocode error:", error);
             }
           });
 
           setMapLoaded(true);
+          setGoogleMapsError(false);
+          isInitializingRef.current = false;
           console.log('Google Maps initialized successfully');
         } catch (error) {
           console.error('Error initializing Google Maps:', error);
+          setGoogleMapsError(true);
+          isInitializingRef.current = false;
         }
-      } else if (!window.google) {
-        console.log('Google Maps API not loaded yet, waiting...');
-        // Wait for Google Maps to load
-        setTimeout(initializeMap, 1000);
+      } else if (attemptCount < maxAttempts) {
+        attemptCount++;
+        console.log(`Google Maps API not loaded yet, attempt ${attemptCount}/${maxAttempts}...`);
+        timeoutId = setTimeout(initializeMap, 1000);
+      } else {
+        console.error('Google Maps API failed to load after maximum attempts');
+        setGoogleMapsError(true);
       }
     };
 
-    initializeMap();
+    // Small delay to ensure DOM is ready
+    timeoutId = setTimeout(initializeMap, 100);
 
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (clickListenerRef.current) {
-        clickListenerRef.current.remove();
+        try {
+          clickListenerRef.current.remove();
+        } catch (e) {
+          console.warn('Error removing click listener:', e);
+        }
       }
       if (markerInstance.current) {
-        markerInstance.current.setMap(null);
+        try {
+          markerInstance.current.setMap(null);
+        } catch (e) {
+          console.warn('Error removing marker:', e);
+        }
       }
-      if (mapInstance.current) {
-        // Clean up map instance
-        mapInstance.current = null;
-      }
+      isInitializingRef.current = false;
+      mapInstance.current = null;
+      markerInstance.current = null;
+      clickListenerRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onAddressSelect]);
 
   // keep map/marker synced with coords
   useEffect(() => {
     if (mapInstance.current && markerInstance.current) {
-      mapInstance.current.setCenter(coords);
-      markerInstance.current.setPosition(coords);
+      try {
+        mapInstance.current.setCenter(coords);
+        markerInstance.current.setPosition(coords);
+      } catch (error) {
+        console.warn('Error updating map coords:', error);
+      }
     }
   }, [coords]);
 
   // debounce autocomplete
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     if (query.length > 2) {
-      const t = setTimeout(fetchSuggestions, 300);
-      return () => clearTimeout(t);
+      timeoutId = setTimeout(fetchSuggestions, 300);
     } else {
       setSuggestions([]);
       setOpen(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [query]);
 
   const fetchSuggestions = async () => {
+    if (!query || query.length <= 2) return;
+    
     console.log('=== Frontend: Starting autocomplete request ===');
     console.log('Query:', query);
-    console.log('Session token:', sessionToken.current);
     
     setLoading(true);
     
-    const requestBody = {
-      service: "autocomplete",
-      params: {
-        input: query,
-        language: "sv",
-        components: "country:se",
-        sessiontoken: sessionToken.current,
-      },
-    };
-    
-    console.log('Request body to send:', JSON.stringify(requestBody, null, 2));
-    
-    const { data, error } = await supabase.functions.invoke("google-maps", {
-      body: requestBody,
-    });
-    
-    console.log('Supabase response - error:', error);
-    console.log('Supabase response - data:', JSON.stringify(data, null, 2));
-    
-    setLoading(false);
-
-    if (error) {
-      console.error("Autocomplete error:", error);
+    try {
+      const requestBody = {
+        service: "autocomplete",
+        params: {
+          input: query,
+          language: "sv",
+          components: "country:se",
+          sessiontoken: sessionToken.current,
+        },
+      };
+      
+      const { data, error } = await supabase.functions.invoke("google-maps", {
+        body: requestBody,
+      });
+      
+      if (error) {
+        console.error("Autocomplete error:", error);
+        setSuggestions([]);
+      } else {
+        const predictions = data?.predictions ?? [];
+        console.log('Predictions extracted:', predictions.length, 'items');
+        setSuggestions(predictions);
+        setOpen(predictions.length > 0);
+      }
+    } catch (error) {
+      console.error("Autocomplete fetch error:", error);
       setSuggestions([]);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const predictions = data?.predictions ?? [];
-    console.log('Predictions extracted:', predictions.length, 'items');
-    setSuggestions(predictions);
-    setOpen(predictions.length > 0);
   };
 
   const handleSelect = async (description: string) => {
     setQuery(description);
     setOpen(false);
 
-    const { data, error } = await supabase.functions.invoke("google-maps", {
-      body: {
-        service: "geocode",
-        params: { address: description },
-      },
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke("google-maps", {
+        body: {
+          service: "geocode",
+          params: { address: description },
+        },
+      });
 
-    if (error) {
+      if (!error && data?.results?.[0]?.geometry?.location) {
+        const result = data.results[0];
+        const newCoords = {
+          lat: result.geometry.location.lat,
+          lng: result.geometry.location.lng,
+        };
+        setCoords(newCoords);
+        onAddressSelect?.(description, newCoords);
+        // end session, start new one for next search
+        sessionToken.current = crypto.randomUUID();
+      }
+    } catch (error) {
       console.error("Geocode error:", error);
-      return;
-    }
-
-    const result = data?.results?.[0];
-    if (result?.geometry?.location) {
-      const newCoords = {
-        lat: result.geometry.location.lat,
-        lng: result.geometry.location.lng,
-      };
-      setCoords(newCoords);
-      onAddressSelect?.(description, newCoords);
-      // end session, start new one for next search
-      sessionToken.current = crypto.randomUUID();
     }
   };
 
@@ -230,11 +271,15 @@ export default function AddressAutocompleteMap({
       </div>
 
       <div ref={mapRef} className="w-full h-64 rounded-lg border border-border relative">
-        {!mapLoaded && (
+        {googleMapsError ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted rounded-lg">
+            <p className="text-destructive">Kunde inte ladda karta</p>
+          </div>
+        ) : !mapLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center bg-muted rounded-lg">
             <p className="text-muted-foreground">Laddar karta...</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
