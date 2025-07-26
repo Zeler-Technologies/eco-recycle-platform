@@ -80,13 +80,20 @@ interface PaymentInfoScreenProps {
 type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
 
 // Function to save car registration data to Supabase
-const saveCarRegistrationData = async (carDetails: CarDetails, userId: string) => {
+const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
+    // Get the current authenticated user ID
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
     // Save to customer_requests table
     const { data: customerRequestData, error: customerRequestError } = await supabase
       .from('customer_requests')
       .insert({
-        customer_id: userId,
+        customer_id: user.id,
         car_registration_number: carDetails.registrationNumber,
         control_number: carDetails.controlNumber,
         car_brand: 'TBD', // Required field - will be filled later
@@ -1063,9 +1070,9 @@ const CustomerApp = () => {
       Object.keys(validationErrors).length === 0
     );
     
-    if (isValid && user?.id) {
+    if (isValid) {
       try {
-        await saveCarRegistrationData(carDetails, user.id);
+        await saveCarRegistrationData(carDetails);
         setCurrentView('parts-info');
       } catch (error) {
         // Error handling is already done in saveCarRegistrationData function
