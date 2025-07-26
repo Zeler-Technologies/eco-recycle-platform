@@ -94,14 +94,10 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       }
     }
 
-    // Generate a temporary customer ID for anonymous users
-    const tempCustomerId = crypto.randomUUID();
-
-    // Save to customer_requests table
+    // Save to customer_requests table without customer_id for anonymous users
     const { data: customerRequestData, error: customerRequestError } = await supabase
       .from('customer_requests')
       .insert({
-        customer_id: tempCustomerId,
         car_registration_number: carDetails.registrationNumber,
         control_number: carDetails.controlNumber,
         car_brand: 'TBD', // Required field - will be filled later
