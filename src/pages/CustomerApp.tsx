@@ -6,7 +6,7 @@ import BankIDScreen from '@/components/BankID/BankIDScreen';
 import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 import { Loader } from '@googlemaps/js-api-loader';
-import MapsAutocomplete from '@/components/Common/MapsAutocomplete';
+import AddressAutocompleteMap from '@/components/Common/AddressAutocompleteMap';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -733,21 +733,9 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             {/* Address and Additional Info - shown only when "Ni hämtar bilen" is selected */}
             {transportMethod === 'pickup' && (
               <div className="space-y-4">
-                <MapsAutocomplete
-                  placeholder="Adress"
-                  label=""
-                  onSelect={(suggestion) => {
-                    setAddress(suggestion.formatted_address || suggestion.name);
-                    
-                    // If we have coordinates from SerpAPI, update map
-                    if (suggestion.gps_coordinates && mapInstanceRef.current && markerRef.current) {
-                      const lat = suggestion.gps_coordinates.latitude;
-                      const lng = suggestion.gps_coordinates.longitude;
-                      const position = { lat, lng };
-                      
-                      mapInstanceRef.current.setCenter(position);
-                      markerRef.current.setPosition(position);
-                    }
+                <AddressAutocompleteMap
+                  onAddressSelect={(address, coordinates) => {
+                    setAddress(address);
                   }}
                   className="w-full"
                 />
@@ -755,11 +743,6 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
                 <p className="text-sm text-gray-600">
                   Hittar du inte adress? Välj närmaste och beskriv nedan.
                 </p>
-
-                {/* Small Map */}
-                <div className="h-48 w-full bg-gray-200 rounded-lg overflow-hidden">
-                  <div ref={mapRef} className="w-full h-full"></div>
-                </div>
 
                 {/* Additional Info */}
                 <div>
