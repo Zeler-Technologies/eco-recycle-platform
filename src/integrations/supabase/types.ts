@@ -19,6 +19,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          pnr_num: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id: number | null
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          pnr_num?: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id?: number | null
         }
@@ -33,6 +35,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          pnr_num?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: number | null
         }
@@ -142,16 +145,19 @@ export type Database = {
           car_id: string
           id: string
           image_url: string
+          pnr_num: number
         }
         Insert: {
           car_id: string
           id?: string
           image_url: string
+          pnr_num: number
         }
         Update: {
           car_id?: string
           id?: string
           image_url?: string
+          pnr_num?: number
         }
         Relationships: [
           {
@@ -165,6 +171,8 @@ export type Database = {
       }
       car_metadata: {
         Row: {
+          car_year: number | null
+          control_number: string | null
           customer_request_id: string
           id: string
           kontrollbes_galler_tom: string | null
@@ -174,6 +182,8 @@ export type Database = {
           regbevis: string | null
         }
         Insert: {
+          car_year?: number | null
+          control_number?: string | null
           customer_request_id: string
           id?: string
           kontrollbes_galler_tom?: string | null
@@ -183,6 +193,8 @@ export type Database = {
           regbevis?: string | null
         }
         Update: {
+          car_year?: number | null
+          control_number?: string | null
           customer_request_id?: string
           id?: string
           kontrollbes_galler_tom?: string | null
@@ -190,6 +202,116 @@ export type Database = {
           missing_parts?: Json | null
           part_list?: Json | null
           regbevis?: string | null
+        }
+        Relationships: []
+      }
+      car_pricing: {
+        Row: {
+          base_price: number
+          brand: string
+          created_at: string | null
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          model: string
+          price_per_kg: number | null
+          tenant_id: number
+          updated_at: string | null
+          updated_by: string | null
+          year_from: number | null
+          year_to: number | null
+        }
+        Insert: {
+          base_price: number
+          brand: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          model: string
+          price_per_kg?: number | null
+          tenant_id: number
+          updated_at?: string | null
+          updated_by?: string | null
+          year_from?: number | null
+          year_to?: number | null
+        }
+        Update: {
+          base_price?: number
+          brand?: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          model?: string
+          price_per_kg?: number | null
+          tenant_id?: number
+          updated_at?: string | null
+          updated_by?: string | null
+          year_from?: number | null
+          year_to?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_pricing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      car_pricing_backup: {
+        Row: {
+          base_price: number | null
+          brand: string | null
+          created_at: string | null
+          created_by: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string | null
+          model: string | null
+          price_per_kg: number | null
+          tenant_id: number | null
+          updated_at: string | null
+          updated_by: string | null
+          year_from: number | null
+          year_to: number | null
+        }
+        Insert: {
+          base_price?: number | null
+          brand?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          model?: string | null
+          price_per_kg?: number | null
+          tenant_id?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+          year_from?: number | null
+          year_to?: number | null
+        }
+        Update: {
+          base_price?: number | null
+          brand?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          model?: string | null
+          price_per_kg?: number | null
+          tenant_id?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+          year_from?: number | null
+          year_to?: number | null
         }
         Relationships: []
       }
@@ -211,6 +333,7 @@ export type Database = {
           price_offered: number | null
           price_payed: number | null
           price_updated: number | null
+          scrapyard_id: number | null
           status: Database["public"]["Enums"]["car_status"]
           tenant_id: number
           treatment_type: Database["public"]["Enums"]["treatment_type"]
@@ -232,6 +355,7 @@ export type Database = {
           price_offered?: number | null
           price_payed?: number | null
           price_updated?: number | null
+          scrapyard_id?: number | null
           status?: Database["public"]["Enums"]["car_status"]
           tenant_id: number
           treatment_type: Database["public"]["Enums"]["treatment_type"]
@@ -253,11 +377,26 @@ export type Database = {
           price_offered?: number | null
           price_payed?: number | null
           price_updated?: number | null
+          scrapyard_id?: number | null
           status?: Database["public"]["Enums"]["car_status"]
           tenant_id?: number
           treatment_type?: Database["public"]["Enums"]["treatment_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "cars_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cars_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cars_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -317,7 +456,9 @@ export type Database = {
           pickup_latitude: number | null
           pickup_longitude: number | null
           pickup_postal_code: string
+          pnr_num: string | null
           quote_amount: number | null
+          scrapyard_id: number | null
           status: string | null
           tenant_id: number | null
           updated_at: string
@@ -338,7 +479,9 @@ export type Database = {
           pickup_latitude?: number | null
           pickup_longitude?: number | null
           pickup_postal_code: string
+          pnr_num?: string | null
           quote_amount?: number | null
+          scrapyard_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
@@ -359,12 +502,28 @@ export type Database = {
           pickup_latitude?: number | null
           pickup_longitude?: number | null
           pickup_postal_code?: string
+          pnr_num?: string | null
           quote_amount?: number | null
+          scrapyard_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_requests_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -382,6 +541,8 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          pnr_num: number
+          scrapyard_id: number | null
         }
         Insert: {
           car_id: string
@@ -390,6 +551,8 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          pnr_num: number
+          scrapyard_id?: number | null
         }
         Update: {
           car_id?: string
@@ -398,6 +561,8 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          pnr_num?: number
+          scrapyard_id?: number | null
         }
         Relationships: [
           {
@@ -405,6 +570,20 @@ export type Database = {
             columns: ["car_id"]
             isOneToOne: false
             referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
             referencedColumns: ["id"]
           },
         ]
@@ -642,6 +821,75 @@ export type Database = {
           },
         ]
       }
+      scrapyards: {
+        Row: {
+          address: string | null
+          city: string | null
+          closing_time: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string
+          id: number
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          materials_accepted: Json | null
+          max_capacity: number | null
+          name: string
+          opening_time: string | null
+          operating_days: string[] | null
+          postal_code: string | null
+          services: Json | null
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          closing_time?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: never
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          materials_accepted?: Json | null
+          max_capacity?: number | null
+          name: string
+          opening_time?: string | null
+          operating_days?: string[] | null
+          postal_code?: string | null
+          services?: Json | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          closing_time?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: never
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          materials_accepted?: Json | null
+          max_capacity?: number | null
+          name?: string
+          opening_time?: string | null
+          operating_days?: string[] | null
+          postal_code?: string | null
+          services?: Json | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           base_address: string | null
@@ -710,17 +958,313 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: number
+          role: string
+          scrapyard_id: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          role: string
+          scrapyard_id?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          role?: string
+          scrapyard_id?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      available_scrapyards: {
+        Row: {
+          active_requests: number | null
+          address: string | null
+          availability_status: string | null
+          city: string | null
+          closing_time: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          id: number | null
+          latitude: number | null
+          longitude: number | null
+          materials_accepted: Json | null
+          max_capacity: number | null
+          name: string | null
+          opening_time: string | null
+          operating_days: string[] | null
+          postal_code: string | null
+          remaining_capacity: number | null
+          services: Json | null
+          tenant_name: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      assign_user_to_scrapyard: {
+        Args: { p_user_id: string; p_scrapyard_id: number; p_role: string }
+        Returns: undefined
+      }
+      belongs_to_scrapyard: {
+        Args: { scrapyard_id: number }
+        Returns: boolean
+      }
+      calculate_distance: {
+        Args:
+          | { lat1: number; lon1: number; lat2: number; lon2: number }
+          | { lat1: number; lon1: number; lat2: number; lon2: number }
+        Returns: number
+      }
+      connect_customer_to_scrapyard: {
+        Args: { p_customer_request_id: string; p_scrapyard_id: number }
+        Returns: boolean
+      }
+      create_customer_request: {
+        Args: {
+          p_customer_name: string
+          p_customer_email: string
+          p_customer_phone: string
+          p_request_details: string
+          p_latitude: number
+          p_longitude: number
+          p_address?: string
+          p_postal_code?: string
+          p_city?: string
+        }
+        Returns: string
+      }
+      create_scrapyard_with_admin: {
+        Args: {
+          p_name: string
+          p_address: string
+          p_postal_code: string
+          p_city: string
+          p_contact_person: string
+          p_contact_email: string
+          p_contact_phone: string
+          p_admin_user_id: string
+        }
+        Returns: number
+      }
+      ensure_car_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      find_nearby_scrapyards: {
+        Args:
+          | { lat: number; lon: number; radius: number }
+          | { lat: number; lon: number; radius: number; material_name: string }
+          | { p_latitude: number; p_longitude: number; p_max_distance?: number }
+          | { p_latitude: number; p_longitude: number; p_max_distance?: number }
+        Returns: {
+          id: number
+          name: string
+          address: string
+          city: string
+          state: string
+          zip_code: string
+          phone: string
+          email: string
+          website: string
+          description: string
+          latitude: number
+          longitude: number
+          created_at: string
+          updated_at: string
+          tenant_id: number
+          is_active: boolean
+          logo_url: string
+          banner_url: string
+          business_hours: Json
+          accepted_materials: Json
+          rating: number
+          total_reviews: number
+          distance: number
+        }[]
+      }
+      find_scrapyards_by_material: {
+        Args:
+          | { material_name: string }
+          | {
+              p_material: string
+              p_latitude?: number
+              p_longitude?: number
+              p_max_distance?: number
+            }
+        Returns: {
+          id: number
+          name: string
+          address: string
+          city: string
+          state: string
+          zip_code: string
+          phone: string
+          email: string
+          website: string
+          description: string
+          latitude: number
+          longitude: number
+          created_at: string
+          updated_at: string
+          tenant_id: number
+          is_active: boolean
+          logo_url: string
+          banner_url: string
+          business_hours: Json
+          accepted_materials: Json
+          rating: number
+          total_reviews: number
+        }[]
+      }
+      get_accessible_scrapyards: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: number
+          name: string
+          address: string
+          postal_code: string
+          city: string
+          contact_person: string
+          contact_email: string
+          contact_phone: string
+          created_at: string
+          updated_at: string
+          role: string
+        }[]
+      }
       get_current_user_info: {
         Args: Record<PropertyKey, never>
         Returns: {
           user_role: Database["public"]["Enums"]["user_role"]
           tenant_id: number
         }[]
+      }
+      get_scrapyard_analytics: {
+        Args:
+          | { p_tenant_id?: number; p_start_date?: string; p_end_date?: string }
+          | { scrapyard_id_param: number }
+          | {
+              scrapyard_id_param: number
+              start_date_param: string
+              end_date_param: string
+            }
+        Returns: {
+          scrapyard_id: number
+          scrapyard_name: string
+          tenant_id: number
+          tenant_name: string
+          total_requests: number
+          completed_requests: number
+          cancelled_requests: number
+          in_progress_requests: number
+          completion_rate: number
+          avg_processing_time_hours: number
+          total_revenue: number
+          most_common_material: string
+          busiest_day_of_week: string
+          busiest_hour_of_day: number
+        }[]
+      }
+      get_scrapyard_details: {
+        Args: { p_scrapyard_id: number }
+        Returns: {
+          id: number
+          name: string
+          address: string
+          postal_code: string
+          city: string
+          contact_person: string
+          contact_email: string
+          contact_phone: string
+          latitude: number
+          longitude: number
+          tenant_name: string
+          active_requests: number
+          availability_status: string
+          max_capacity: number
+          remaining_capacity: number
+          opening_time: string
+          closing_time: string
+          operating_days: string[]
+          services: Json
+          materials_accepted: Json
+          rating: number
+          review_count: number
+        }[]
+      }
+      get_scrapyard_details_extended: {
+        Args: { p_scrapyard_id: number }
+        Returns: {
+          id: number
+          name: string
+          address: string
+          postal_code: string
+          city: string
+          contact_person: string
+          contact_email: string
+          contact_phone: string
+          latitude: number
+          longitude: number
+          tenant_name: string
+          active_requests: number
+          availability_status: string
+          max_capacity: number
+          remaining_capacity: number
+          opening_time: string
+          closing_time: string
+          operating_days: string[]
+          services: Json
+          materials_accepted: Json
+        }[]
+      }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_scrapyard_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: number[]
+      }
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      migrate_customer_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      validate_swedish_pnr: {
+        Args: { pnr: string }
+        Returns: boolean
       }
     }
     Enums: {
