@@ -14,6 +14,7 @@ export const useTransportMessage = (tenantId: number | null, carDetails?: any): 
 
   useEffect(() => {
     if (!tenantId) {
+      setMessage('Lämna bilen på vår anläggning och få extra ersättning. (Är inkluderat i det pris du får. Gäller endast om bilen är komplett.)');
       setLoading(false);
       return;
     }
