@@ -264,57 +264,6 @@ export type Database = {
           },
         ]
       }
-      car_pricing_backup: {
-        Row: {
-          base_price: number | null
-          brand: string | null
-          created_at: string | null
-          created_by: string | null
-          effective_from: string | null
-          effective_to: string | null
-          id: string | null
-          model: string | null
-          price_per_kg: number | null
-          tenant_id: number | null
-          updated_at: string | null
-          updated_by: string | null
-          year_from: number | null
-          year_to: number | null
-        }
-        Insert: {
-          base_price?: number | null
-          brand?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          effective_from?: string | null
-          effective_to?: string | null
-          id?: string | null
-          model?: string | null
-          price_per_kg?: number | null
-          tenant_id?: number | null
-          updated_at?: string | null
-          updated_by?: string | null
-          year_from?: number | null
-          year_to?: number | null
-        }
-        Update: {
-          base_price?: number | null
-          brand?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          effective_from?: string | null
-          effective_to?: string | null
-          id?: string | null
-          model?: string | null
-          price_per_kg?: number | null
-          tenant_id?: number | null
-          updated_at?: string | null
-          updated_by?: string | null
-          year_from?: number | null
-          year_to?: number | null
-        }
-        Relationships: []
-      }
       cars: {
         Row: {
           age: string | null
@@ -890,6 +839,60 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_bidding: {
+        Row: {
+          bid_amount: number
+          created_at: string | null
+          end_date: string
+          id: number
+          is_active: boolean
+          position_rank: number | null
+          region_code: string | null
+          scrapyard_id: number
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          bid_amount: number
+          created_at?: string | null
+          end_date: string
+          id?: never
+          is_active?: boolean
+          position_rank?: number | null
+          region_code?: string | null
+          scrapyard_id: number
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          bid_amount?: number
+          created_at?: string | null
+          end_date?: string
+          id?: never
+          is_active?: boolean
+          position_rank?: number | null
+          region_code?: string | null
+          scrapyard_id?: number
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           base_address: string | null
@@ -1159,6 +1162,17 @@ export type Database = {
           created_at: string
           updated_at: string
           role: string
+        }[]
+      }
+      get_active_tenant_bids: {
+        Args: { region_filter?: string }
+        Returns: {
+          scrapyard_id: number
+          scrapyard_name: string
+          bid_amount: number
+          position_rank: number
+          region_code: string
+          end_date: string
         }[]
       }
       get_current_user_info: {
