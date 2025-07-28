@@ -10,6 +10,7 @@ import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 
 import AddressPickerSimple from '@/components/Common/AddressPickerSimple';
 import { useTransportMessage } from '@/hooks/useTransportMessage';
+import { ScrapyardListScreen } from '@/components/Customer/ScrapyardListScreen';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,7 +89,14 @@ interface PaymentInfoScreenProps {
   onBack: () => void;
 }
 
-type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
+interface ScrapyardListScreenProps {
+  registrationNumber: string;
+  onScrapyardSelect: (scrapyard: any) => void;
+  onNext: () => void;
+  onBack: () => void;
+}
+
+type ViewType = 'login' | 'car-details' | 'scrapyard-list' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
 
 // Store the customer request ID globally to use in parts saving
 let currentCustomerRequestId: string | null = null;
@@ -1284,6 +1292,7 @@ const CustomerApp = () => {
   const [currentView, setCurrentView] = useState<ViewType>('login');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
+  const [selectedScrapyard, setSelectedScrapyard] = useState<any>(null);
   const [transportMethod, setTransportMethod] = useState('');
 
   const [carDetails, setCarDetails] = useState<CarDetails>({
@@ -1337,7 +1346,7 @@ const CustomerApp = () => {
     if (isValid) {
       try {
         await saveCarRegistrationData(carDetails);
-        setCurrentView('parts-info');
+        setCurrentView('scrapyard-list');
       } catch (error) {
         // Error handling is already done in saveCarRegistrationData function
         console.error('Failed to save car registration data:', error);
@@ -1355,13 +1364,28 @@ const CustomerApp = () => {
     }
   };
 
+  const handleScrapyardSelect = (scrapyard: any) => {
+    setSelectedScrapyard(scrapyard);
+    setSelectedTenantId(scrapyard.id);
+  };
+
+  const handleScrapyardNext = () => {
+    if (selectedScrapyard) {
+      setCurrentView('parts-info');
+    }
+  };
+
+  const handleScrapyardBack = () => {
+    setCurrentView('car-details');
+  };
+
   const handleConfirmPartsNext = () => {
     setShowConfirmDialog(false);
     setCurrentView('transport');
   };
 
   const handlePartsBack = () => {
-    setCurrentView('car-details');
+    setCurrentView('scrapyard-list');
   };
 
   const handleTransportNext = () => {
@@ -1461,6 +1485,15 @@ const CustomerApp = () => {
                 validateCarDetails={validateCarDetails}
                 onNext={handleNext}
                 onBack={handleBack}
+              />
+            );
+          case 'scrapyard-list':
+            return (
+              <ScrapyardListScreen
+                registrationNumber={carDetails.registrationNumber}
+                onScrapyardSelect={handleScrapyardSelect}
+                onNext={handleScrapyardNext}
+                onBack={handleScrapyardBack}
               />
             );
           case 'parts-info':
