@@ -129,11 +129,11 @@ const generateQuote = async (requestId: string): Promise<any> => {
 // Function to save car registration data to Supabase
 const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
-    // First, validate PNR
-    const pnrValidation = await validateSwedishPNR(carDetails.pnr);
-    if (!pnrValidation.valid) {
-      throw new Error(pnrValidation.error || 'Invalid Swedish Personal Number');
-    }
+    // TODO: Re-enable PNR validation when Edge Function is created
+    // const pnrValidation = await validateSwedishPNR(carDetails.pnr);
+    // if (!pnrValidation.valid) {
+    //   throw new Error(pnrValidation.error || 'Invalid Swedish Personal Number');
+    // }
 
     // First, ensure we have an anonymous session
     const { data: { session } } = await supabase.auth.getSession();
@@ -1280,10 +1280,11 @@ const CustomerApp = () => {
     controlNumber: '',
     issueDate: '',
     ownerConfirmation: false,
-    pnr: '',
-    carBrand: '',
-    carModel: '',
-    carYear: new Date().getFullYear()
+    // TODO: Remove dummy data when testing is complete
+    pnr: '199001011234', // Dummy Swedish PNR
+    carBrand: 'Volvo', // Dummy car brand
+    carModel: 'V70', // Dummy car model
+    carYear: 2015 // Dummy car year
   });
 
   const [partsInfo, setPartsInfo] = useState<PartsInfo>({
