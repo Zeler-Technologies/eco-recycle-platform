@@ -1083,35 +1083,26 @@ export type Database = {
         Returns: undefined
       }
       find_nearby_scrapyards: {
-        Args:
-          | { lat: number; lon: number; radius: number }
-          | { lat: number; lon: number; radius: number; material_name: string }
-          | { p_latitude: number; p_longitude: number; p_max_distance?: number }
-          | { p_latitude: number; p_longitude: number; p_max_distance?: number }
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_max_distance?: number
+        }
         Returns: {
           id: number
           name: string
           address: string
+          postal_code: string
           city: string
-          state: string
-          zip_code: string
-          phone: string
-          email: string
-          website: string
-          description: string
           latitude: number
           longitude: number
-          created_at: string
-          updated_at: string
-          tenant_id: number
-          is_active: boolean
-          logo_url: string
-          banner_url: string
-          business_hours: Json
-          accepted_materials: Json
-          rating: number
-          total_reviews: number
-          distance: number
+          distance_km: number
+          max_capacity: number
+          active_requests: number
+          availability_status: string
+          opening_time: string
+          closing_time: string
+          operating_days: string[]
         }[]
       }
       find_scrapyards_by_material: {
