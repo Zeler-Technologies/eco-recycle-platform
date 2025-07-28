@@ -26,6 +26,10 @@ interface CarDetails {
   controlNumber: string;
   issueDate: string;
   ownerConfirmation: boolean;
+  pnr: string;
+  carBrand: string;
+  carModel: string;
+  carYear: number;
 }
 
 interface PartsInfo {
@@ -41,6 +45,10 @@ interface ValidationErrors {
   registrationNumber?: string;
   controlNumber?: string;
   issueDate?: string;
+  pnr?: string;
+  carBrand?: string;
+  carModel?: string;
+  carYear?: string;
 }
 
 interface CarDetailsFormProps {
@@ -82,9 +90,51 @@ type ViewType = 'login' | 'car-details' | 'parts-info' | 'transport' | 'price-va
 // Store the customer request ID globally to use in parts saving
 let currentCustomerRequestId: string | null = null;
 
+// Function to validate Swedish PNR
+const validateSwedishPNR = async (pnr: string): Promise<{ valid: boolean; error?: string }> => {
+  try {
+    const response = await supabase.functions.invoke('validate-swedish-pnr', {
+      body: { pnr }
+    });
+
+    if (response.error) {
+      throw response.error;
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('PNR validation error:', error);
+    return { valid: false, error: 'Failed to validate PNR' };
+  }
+};
+
+// Function to generate quote
+const generateQuote = async (requestId: string): Promise<any> => {
+  try {
+    const response = await supabase.functions.invoke('generate-comprehensive-quote', {
+      body: { requestId }
+    });
+
+    if (response.error) {
+      throw response.error;
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Quote generation error:', error);
+    throw error;
+  }
+};
+
 // Function to save car registration data to Supabase
 const saveCarRegistrationData = async (carDetails: CarDetails) => {
   try {
+    // First, validate PNR
+    const pnrValidation = await validateSwedishPNR(carDetails.pnr);
+    if (!pnrValidation.valid) {
+      throw new Error(pnrValidation.error || 'Invalid Swedish Personal Number');
+    }
+
     // First, ensure we have an anonymous session
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -103,13 +153,15 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       .insert({
         car_registration_number: carDetails.registrationNumber,
         control_number: carDetails.controlNumber,
-        car_brand: 'TBD', // Required field - will be filled later
-        car_model: 'TBD', // Required field - will be filled later
+        car_brand: carDetails.carBrand,
+        car_model: carDetails.carModel,
+        car_year: carDetails.carYear,
         owner_name: 'Customer',
         owner_address: 'Address TBD',
         owner_postal_code: '00000',
         pickup_address: 'Pickup TBD',
-        pickup_postal_code: '00000'
+        pickup_postal_code: '00000',
+        pnr_num: carDetails.pnr
       })
       .select()
       .single();
@@ -127,9 +179,10 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       const { error: metadataError } = await supabase
         .from('car_metadata')
         .insert({
-          customer_request_id: customerRequestData.id, // Using the customer request ID as car reference
+          customer_request_id: customerRequestData.id,
           kontrollsiffror: carDetails.controlNumber,
-          // The issue date can be stored in a custom field or we can add it to the schema
+          car_year: carDetails.carYear,
+          control_number: carDetails.controlNumber
         });
 
       if (metadataError) {
@@ -138,8 +191,16 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       }
     }
 
-    toast.success('Biluppgifter sparade framgångsrikt!');
-    return customerRequestData;
+    // Generate quote automatically
+    try {
+      const quoteData = await generateQuote(customerRequestData.id);
+      toast.success(`Biluppgifter sparade! Uppskattat värde: ${quoteData.quoteAmount} SEK`);
+      return { ...customerRequestData, quote: quoteData };
+    } catch (quoteError) {
+      console.error('Failed to generate quote:', quoteError);
+      toast.success('Biluppgifter sparade framgångsrikt!');
+      return customerRequestData;
+    }
   } catch (error) {
     console.error('Error saving car registration data:', error);
     toast.error('Fel vid sparning av biluppgifter. Försök igen.');
@@ -201,6 +262,10 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
       carDetails.registrationNumber.length >= 3 &&
       carDetails.controlNumber.length >= 3 &&
       carDetails.issueDate &&
+      carDetails.pnr.length >= 10 &&
+      carDetails.carBrand.length >= 2 &&
+      carDetails.carModel.length >= 2 &&
+      carDetails.carYear >= 1900 &&
       carDetails.ownerConfirmation &&
       Object.keys(validationErrors).length === 0
     );
@@ -382,6 +447,140 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
                   {validationErrors.issueDate}
                 </p>
               )}
+            </div>
+
+            {/* Personal Number */}
+            <div>
+              <label className="block text-base font-semibold text-black mb-2">
+                Personnummer
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={carDetails.pnr}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9-]/g, '');
+                    setCarDetails(prev => ({ ...prev, pnr: value }));
+                    
+                    if (value.length > 0 && value.length < 10) {
+                      setValidationErrors(prev => ({ 
+                        ...prev, 
+                        pnr: 'Personnummer måste vara minst 10 siffror' 
+                      }));
+                    } else {
+                      setValidationErrors(prev => {
+                        const { pnr, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
+                  placeholder="YYYYMMDD-XXXX"
+                  className={`w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.pnr ? 'ring-2 ring-red-500' : ''
+                  }`}
+                  autoComplete="off"
+                />
+                {validationErrors.pnr && (
+                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+                )}
+              </div>
+              {validationErrors.pnr && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.pnr}
+                </p>
+              )}
+            </div>
+
+            {/* Car Brand */}
+            <div>
+              <label className="block text-base font-semibold text-black mb-2">
+                Bilmärke
+              </label>
+              <input
+                type="text"
+                value={carDetails.carBrand}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCarDetails(prev => ({ ...prev, carBrand: value }));
+                  
+                  if (value.length > 0 && value.length < 2) {
+                    setValidationErrors(prev => ({ 
+                      ...prev, 
+                      carBrand: 'Bilmärke måste vara minst 2 tecken' 
+                    }));
+                  } else {
+                    setValidationErrors(prev => {
+                      const { carBrand, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                placeholder="t.ex. Volvo, BMW, Audi"
+                className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="off"
+              />
+            </div>
+
+            {/* Car Model */}
+            <div>
+              <label className="block text-base font-semibold text-black mb-2">
+                Bilmodell
+              </label>
+              <input
+                type="text"
+                value={carDetails.carModel}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCarDetails(prev => ({ ...prev, carModel: value }));
+                  
+                  if (value.length > 0 && value.length < 2) {
+                    setValidationErrors(prev => ({ 
+                      ...prev, 
+                      carModel: 'Bilmodell måste vara minst 2 tecken' 
+                    }));
+                  } else {
+                    setValidationErrors(prev => {
+                      const { carModel, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                placeholder="t.ex. V70, X5, A4"
+                className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="off"
+              />
+            </div>
+
+            {/* Car Year */}
+            <div>
+              <label className="block text-base font-semibold text-black mb-2">
+                Årsmodell
+              </label>
+              <input
+                type="number"
+                value={carDetails.carYear || ''}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setCarDetails(prev => ({ ...prev, carYear: value }));
+                  
+                  if (value > 0 && (value < 1900 || value > new Date().getFullYear())) {
+                    setValidationErrors(prev => ({ 
+                      ...prev, 
+                      carYear: 'Ange ett giltigt år mellan 1900 och i år' 
+                    }));
+                  } else {
+                    setValidationErrors(prev => {
+                      const { carYear, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                placeholder="t.ex. 2015"
+                min="1900"
+                max={new Date().getFullYear()}
+                className="w-full bg-gray-100 border-0 rounded-lg px-4 py-3 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="off"
+              />
             </div>
           </div>
 
@@ -1080,7 +1279,11 @@ const CustomerApp = () => {
     registrationNumber: '',
     controlNumber: '',
     issueDate: '',
-    ownerConfirmation: false
+    ownerConfirmation: false,
+    pnr: '',
+    carBrand: '',
+    carModel: '',
+    carYear: new Date().getFullYear()
   });
 
   const [partsInfo, setPartsInfo] = useState<PartsInfo>({
