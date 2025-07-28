@@ -60,7 +60,7 @@ interface MessageLog {
 interface CustomMessageTemplate {
   id: string;
   tenant_id: number;
-  template_type: 'initial_owner' | 'initial_non_owner' | 'pickup_confirmed';
+  template_type: 'initial_owner' | 'initial_non_owner' | 'pickup_confirmed' | 'transport_message';
   template_name: string;
   content: string;
   is_active: boolean;
@@ -352,7 +352,9 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       .replace(/\[namn\]/g, previewData.namn)
       .replace(/\[registreringsnummer\]/g, previewData.registreringsnummer)
       .replace(/\[kontrollnummer\]/g, previewData.kontrollnummer)
-      .replace(/\[datum\]/g, previewData.datum);
+      .replace(/\[datum\]/g, previewData.datum)
+      .replace(/\[basadress\]/g, 'Ekenäsvägen 28, 863 37 Sundsvall')
+      .replace(/\[bonusbelopp\]/g, '500');
   };
 
   const getTemplateTypeDisplayName = (type: string): string => {
@@ -360,6 +362,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       case 'initial_owner': return 'Initial förfrågan - Bilägare';
       case 'initial_non_owner': return 'Initial förfrågan - Ej bilägare';
       case 'pickup_confirmed': return 'Hämtning bekräftad';
+      case 'transport_message': return 'Transportmeddelande';
       default: return type;
     }
   };

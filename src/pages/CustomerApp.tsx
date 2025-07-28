@@ -9,6 +9,7 @@ import BankIDLogin from '@/components/BankID/BankIDLogin';
 import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 
 import AddressPickerSimple from '@/components/Common/AddressPickerSimple';
+import { useTransportMessage } from '@/hooks/useTransportMessage';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,8 @@ interface TransportScreenProps {
   setTransportMethod: (method: string) => void;
   onNext: () => void;
   onBack: () => void;
+  selectedTenantId?: number;
+  carDetails?: CarDetails;
 }
 
 interface PriceValueScreenProps {
@@ -834,9 +837,12 @@ const PartsInfoScreen = React.memo<PartsInfoScreenProps>(({ partsInfo, setPartsI
 });
 
 // Transport Screen - Moved outside to prevent re-renders
-const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack }) => {
+const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, setTransportMethod, onNext, onBack, selectedTenantId, carDetails }) => {
   const [address, setAddress] = React.useState<string>("Vallenrenen 1, Sörberge");
   const [additionalInfo, setAdditionalInfo] = React.useState<string>("");
+  
+  // Fetch transport message from the selected tenant
+  const { message: transportMessage, loading: messageLoading } = useTransportMessage(selectedTenantId || null, carDetails);
   
   const isNextEnabled = transportMethod !== '';
 
@@ -887,9 +893,11 @@ const TransportScreen = React.memo<TransportScreenProps>(({ transportMethod, set
             </h2>
             
             <p className="text-sm text-gray-600 mb-6">
-              Lämna bilen på Ekenäsvägen 28, 863 37 Sundsvall och få{' '}
-              <span className="font-semibold text-black">500 kr extra.</span>{' '}
-              (Är inkluderat i det pris du får. Gäller endast om bilen är komplett.)
+              {messageLoading ? (
+                <span className="animate-pulse">Laddar transportinformation...</span>
+              ) : (
+                transportMessage
+              )}
             </p>
             
             <div className="space-y-4 mb-6">
@@ -1275,6 +1283,7 @@ const CustomerApp = () => {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<ViewType>('login');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [transportMethod, setTransportMethod] = useState('');
 
   const [carDetails, setCarDetails] = useState<CarDetails>({
@@ -1470,6 +1479,8 @@ const CustomerApp = () => {
                 setTransportMethod={setTransportMethod}
                 onNext={handleTransportNext}
                 onBack={handleTransportBack}
+                selectedTenantId={selectedTenantId}
+                carDetails={carDetails}
               />
             );
           case 'price-value':
