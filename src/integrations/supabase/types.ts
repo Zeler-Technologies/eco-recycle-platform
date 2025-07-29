@@ -1293,6 +1293,7 @@ export type Database = {
           country: string
           created_at: string
           date: string
+          invoice_email: string | null
           latitude: number | null
           longitude: number | null
           name: string
@@ -1304,6 +1305,7 @@ export type Database = {
           country: string
           created_at?: string
           date: string
+          invoice_email?: string | null
           latitude?: number | null
           longitude?: number | null
           name: string
@@ -1315,6 +1317,7 @@ export type Database = {
           country?: string
           created_at?: string
           date?: string
+          invoice_email?: string | null
           latitude?: number | null
           longitude?: number | null
           name?: string
@@ -1655,6 +1658,17 @@ export type Database = {
       }
       create_tenant_complete: {
         Args:
+          | {
+              p_name: string
+              p_country: string
+              p_admin_name: string
+              p_admin_email: string
+              p_invoice_email?: string
+              p_service_type?: string
+              p_address?: string
+              p_postal_code?: string
+              p_city?: string
+            }
           | {
               p_name: string
               p_country: string

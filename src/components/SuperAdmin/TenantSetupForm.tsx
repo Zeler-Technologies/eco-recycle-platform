@@ -36,6 +36,7 @@ const tenantFormSchema = z.object({
   city: z.string().optional(),
   adminName: z.string().min(2, 'Administrator name is required'),
   adminEmail: z.string().email('Please enter a valid email address'),
+  invoiceEmail: z.string().email('Please enter a valid invoice email address'),
 });
 
 type TenantFormData = z.infer<typeof tenantFormSchema>;
@@ -65,6 +66,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
       city: '',
       adminName: '',
       adminEmail: '',
+      invoiceEmail: '',
     },
   });
 
@@ -79,6 +81,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
         p_country: data.country,
         p_admin_name: data.adminName,
         p_admin_email: data.adminEmail,
+        p_invoice_email: data.invoiceEmail,
         p_service_type: data.serviceType || null,
         p_address: data.address || null,
         p_postal_code: data.postalCode || null,
@@ -327,6 +330,33 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                   The admin will be able to change it after first login.
                 </p>
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Invoice Information Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">Invoice Information</h3>
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="invoiceEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Email *</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="billing@company.com" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Email address where invoices will be sent to the financial department
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">

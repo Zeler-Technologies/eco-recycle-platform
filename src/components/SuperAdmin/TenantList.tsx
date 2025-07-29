@@ -30,6 +30,7 @@ interface Tenant {
   country: string;
   service_type: string | null;
   base_address: string | null;
+  invoice_email: string | null;
   created_at: string;
   updated_at?: string;
 }
