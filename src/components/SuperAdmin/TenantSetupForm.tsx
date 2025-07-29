@@ -21,94 +21,123 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Building2, MapPin, User, Receipt } from 'lucide-react';
+import { Plus, Building2, MapPin, User, Globe, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const tenantFormSchema = z.object({
-  // Company Information
   companyName: z.string().min(2, 'Company name must be at least 2 characters'),
-  organisationNumber: z.string().min(3, 'Organisation number is required'),
-  vatNumber: z.string().optional(),
-  
-  // Company Address
-  address: z.string().min(5, 'Address is required'),
-  postalCode: z.string().min(3, 'Postal code is required'),
-  city: z.string().min(2, 'City is required'),
-  
-  // Administrator Information
+  country: z.string().min(1, 'Country is required'),
+  serviceType: z.string().optional(),
+  address: z.string().optional(),
+  postalCode: z.string().optional(),
+  city: z.string().optional(),
   adminName: z.string().min(2, 'Administrator name is required'),
   adminEmail: z.string().email('Please enter a valid email address'),
-  
-  // Invoice Information
-  invoiceEmail: z.string().email('Please enter a valid invoice email'),
-  useDifferentInvoiceAddress: z.boolean().default(false),
-  
-  // Conditional Invoice Address
-  invoiceAddress: z.string().optional(),
-  invoicePostalCode: z.string().optional(),
-  invoiceCity: z.string().optional(),
-}).refine((data) => {
-  if (data.useDifferentInvoiceAddress) {
-    return data.invoiceAddress && data.invoicePostalCode && data.invoiceCity;
-  }
-  return true;
-}, {
-  message: "Invoice address fields are required when using different address",
-  path: ["invoiceAddress"],
 });
 
 type TenantFormData = z.infer<typeof tenantFormSchema>;
 
 interface TenantSetupFormProps {
-  onTenantCreated?: (tenant: TenantFormData) => void;
+  onTenantCreated?: (tenant: any) => void;
 }
+
+const countries = [
+  'Sweden', 'Norway', 'Denmark', 'Finland', 'Germany', 'Netherlands', 
+  'Belgium', 'France', 'United Kingdom', 'Spain', 'Italy', 'Poland'
+];
 
 export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<TenantFormData>({
     resolver: zodResolver(tenantFormSchema),
     defaultValues: {
       companyName: '',
-      organisationNumber: '',
-      vatNumber: '',
+      country: '',
+      serviceType: '',
       address: '',
       postalCode: '',
       city: '',
       adminName: '',
       adminEmail: '',
-      invoiceEmail: '',
-      useDifferentInvoiceAddress: false,
-      invoiceAddress: '',
-      invoicePostalCode: '',
-      invoiceCity: '',
     },
   });
 
-  const watchUseDifferentAddress = form.watch('useDifferentInvoiceAddress');
-
   const onSubmit = async (data: TenantFormData) => {
+    setLoading(true);
     try {
-      // Here you would typically send the data to your backend
-      console.log('Creating tenant:', data);
+      console.log('Creating tenant with data:', data);
       
+      // Step 1: Create the tenant and scrapyard using the database function
+      const { data: tenantResult, error: tenantError } = await supabase.rpc('create_tenant_complete', {
+        p_name: data.companyName,
+        p_country: data.country,
+        p_admin_name: data.adminName,
+        p_admin_email: data.adminEmail,
+        p_service_type: data.serviceType || null,
+        p_address: data.address || null,
+        p_postal_code: data.postalCode || null,
+        p_city: data.city || null,
+      });
+
+      if (tenantError) {
+        throw new Error(tenantError.message || 'Failed to create tenant');
+      }
+
+      // Type assertion for the result
+      const result = tenantResult as any;
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to create tenant');
+      }
+
+      console.log('Tenant created successfully:', result);
+
+      // Step 2: Create the tenant admin user via Edge Function
+      const { data: userResult, error: userError } = await supabase.functions.invoke('create-tenant-admin', {
+        body: {
+          tenantId: result.tenant_id,
+          scrapyardId: result.scrapyard_id,
+          adminEmail: result.admin_email,
+          adminName: result.admin_name,
+          password: result.generated_password,
+        },
+      });
+
+      if (userError) {
+        console.error('Edge function error:', userError);
+        throw new Error(userError.message || 'Failed to create tenant admin user');
+      }
+
+      // Type assertion for the user result
+      const userRes = userResult as any;
+      if (!userRes?.success) {
+        throw new Error(userRes?.error || 'Failed to create tenant admin user');
+      }
+
+      console.log('Admin user created successfully:', userRes);
+
       toast({
         title: "Tenant Created Successfully",
-        description: `${data.companyName} has been added to the system.`,
+        description: `${data.companyName} has been added to the system. Admin login details: ${data.adminEmail} with password: ${result.generated_password}`,
       });
       
-      onTenantCreated?.(data);
+      onTenantCreated?.(result);
       setOpen(false);
       form.reset();
     } catch (error) {
+      console.error('Error creating tenant:', error);
       toast({
         title: "Error Creating Tenant",
-        description: "There was an error creating the tenant. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error creating the tenant. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,7 +156,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
             Add New Tenant
           </DialogTitle>
           <DialogDescription>
-            Create a new tenant account with company and billing information.
+            Create a new tenant account with company information and administrator access.
           </DialogDescription>
         </DialogHeader>
 
@@ -157,13 +186,24 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                 
                 <FormField
                   control={form.control}
-                  name="organisationNumber"
+                  name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Organisation Number *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123456789" {...field} />
-                      </FormControl>
+                      <FormLabel>Country *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country} value={country}>
+                              {country}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -172,15 +212,15 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
               
               <FormField
                 control={form.control}
-                name="vatNumber"
+                name="serviceType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>VAT Number</FormLabel>
+                    <FormLabel>Service Type</FormLabel>
                     <FormControl>
-                      <Input placeholder="SE123456789001" {...field} />
+                      <Input placeholder="e.g., Car Recycling, Metal Processing" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Optional - Enter if the company is VAT registered
+                      Optional - Description of the main service provided
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -194,7 +234,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Company Address</h3>
+                <h3 className="text-lg font-semibold">Company Address (Optional)</h3>
               </div>
               
               <FormField
@@ -202,7 +242,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address *</FormLabel>
+                    <FormLabel>Address</FormLabel>
                     <FormControl>
                       <Input placeholder="123 Main Street" {...field} />
                     </FormControl>
@@ -217,7 +257,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                   name="postalCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Postal Code *</FormLabel>
+                      <FormLabel>Postal Code</FormLabel>
                       <FormControl>
                         <Input placeholder="12345" {...field} />
                       </FormControl>
@@ -231,7 +271,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City *</FormLabel>
+                      <FormLabel>City</FormLabel>
                       <FormControl>
                         <Input placeholder="Stockholm" {...field} />
                       </FormControl>
@@ -280,113 +320,32 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                   )}
                 />
               </div>
-            </div>
-
-            <Separator />
-
-            {/* Smart Invoice Address Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Invoice Information</h3>
+              
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  A secure password will be automatically generated for the administrator account. 
+                  The admin will be able to change it after first login.
+                </p>
               </div>
-              
-              <FormField
-                control={form.control}
-                name="invoiceEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Invoice Email *</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="billing@company.com" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Email address where invoices will be sent
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="useDifferentInvoiceAddress"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Use different address for invoicing</FormLabel>
-                      <FormDescription>
-                        {!watchUseDifferentAddress 
-                          ? "Invoice address will be the same as company address"
-                          : "Provide a different address for invoicing"
-                        }
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-              
-              {watchUseDifferentAddress && (
-                <div className="space-y-4 pl-6 border-l-2 border-muted">
-                  <FormField
-                    control={form.control}
-                    name="invoiceAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Invoice Address *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="456 Billing Street" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="invoicePostalCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice Postal Code *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="54321" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="invoiceCity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice City *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Gothenburg" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                Create Tenant
+              <Button 
+                type="submit" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Tenant'
+                )}
               </Button>
             </div>
           </form>
