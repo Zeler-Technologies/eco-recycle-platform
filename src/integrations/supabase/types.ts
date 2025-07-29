@@ -44,6 +44,13 @@ export type Database = {
             foreignKeyName: "auth_users_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "auth_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
           },
@@ -84,6 +91,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bidding_system_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
           {
             foreignKeyName: "bidding_system_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -131,6 +145,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bonus_offers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
           {
             foreignKeyName: "bonus_offers_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -259,6 +280,13 @@ export type Database = {
             foreignKeyName: "car_pricing_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "car_pricing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
           },
@@ -343,8 +371,36 @@ export type Database = {
             foreignKeyName: "cars_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "cars_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "cars_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "cars_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cars_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "cars_tenant_id_fkey"
@@ -470,8 +526,36 @@ export type Database = {
             foreignKeyName: "customer_requests_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "customer_requests_tenant_id_fkey"
@@ -527,6 +611,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "available_scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
           },
           {
             foreignKeyName: "customers_scrapyard_id_fkey"
@@ -599,8 +704,73 @@ export type Database = {
             foreignKeyName: "distance_rules_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "distance_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      invoice_cancellations: {
+        Row: {
+          cancelled_at: string
+          cancelled_by: string | null
+          created_at: string
+          id: number
+          invoice_amount: number
+          invoice_id: number
+          previous_status: string
+          reason: string
+          scrapyard_id: number
+        }
+        Insert: {
+          cancelled_at?: string
+          cancelled_by?: string | null
+          created_at?: string
+          id?: never
+          invoice_amount: number
+          invoice_id: number
+          previous_status: string
+          reason: string
+          scrapyard_id: number
+        }
+        Update: {
+          cancelled_at?: string
+          cancelled_by?: string | null
+          created_at?: string
+          id?: never
+          invoice_amount?: number
+          invoice_id?: number
+          previous_status?: string
+          reason?: string
+          scrapyard_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_cancellations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_cancellations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_cancellations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoices"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -691,6 +861,13 @@ export type Database = {
             foreignKeyName: "pickup_orders_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
           },
@@ -765,6 +942,202 @@ export type Database = {
             foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      scrapyard_invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: number
+          invoice_id: number
+          item_type: string
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          tax_amount: number
+          tax_rate: number
+          total_price: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: never
+          invoice_id: number
+          item_type?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          tax_amount?: number
+          tax_rate?: number
+          total_price: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: never
+          invoice_id?: number
+          item_type?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          tax_amount?: number
+          tax_rate?: number
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrapyard_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scrapyard_invoices: {
+        Row: {
+          billing_address: string | null
+          billing_city: string | null
+          billing_postal_code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string
+          id: number
+          invoice_date: string
+          invoice_items: Json | null
+          invoice_number: string
+          payment_date: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          scrapyard_id: number
+          status: string
+          tax_amount: number
+          tenant_id: number | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_postal_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date: string
+          id?: never
+          invoice_date?: string
+          invoice_items?: Json | null
+          invoice_number: string
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          scrapyard_id: number
+          status?: string
+          tax_amount?: number
+          tenant_id?: number | null
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_postal_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string
+          id?: never
+          invoice_date?: string
+          invoice_items?: Json | null
+          invoice_number?: string
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          scrapyard_id?: number
+          status?: string
+          tax_amount?: number
+          tenant_id?: number | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
           },
@@ -888,6 +1261,27 @@ export type Database = {
             foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
           },
@@ -956,6 +1350,13 @@ export type Database = {
             foreignKeyName: "user_tenant_id_fkey"
             columns: ["tenants_id"]
             isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "user_tenant_id_fkey"
+            columns: ["tenants_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
           },
@@ -998,6 +1399,27 @@ export type Database = {
             foreignKeyName: "user_roles_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "user_roles_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "user_roles_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "user_roles_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
           },
@@ -1031,8 +1453,133 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_cancelled_invoices: {
+        Row: {
+          avg_days_before_cancellation: number | null
+          cancellation_reasons: Json | null
+          month: string | null
+          scrapyard_id: number | null
+          scrapyard_name: string | null
+          total_cancelled_amount: number | null
+          total_cancelled_invoices: number | null
+        }
+        Relationships: []
+      }
+      monthly_invoice_stats: {
+        Row: {
+          avg_days_to_payment: number | null
+          month: string | null
+          overdue_amount: number | null
+          overdue_invoices: number | null
+          paid_amount: number | null
+          paid_invoices: number | null
+          pending_amount: number | null
+          pending_invoices: number | null
+          scrapyard_id: number | null
+          scrapyard_name: string | null
+          total_amount: number | null
+          total_invoices: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scrapyard_invoice_reports: {
+        Row: {
+          billing_address: string | null
+          billing_city: string | null
+          billing_postal_code: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string | null
+          created_by_email: string | null
+          due_date: string | null
+          invoice_date: string | null
+          invoice_description: string | null
+          invoice_id: number | null
+          invoice_number: string | null
+          items: Json | null
+          payment_date: string | null
+          payment_method: string | null
+          scrapyard_address: string | null
+          scrapyard_city: string | null
+          scrapyard_id: number | null
+          scrapyard_name: string | null
+          scrapyard_postal_code: string | null
+          status: string | null
+          tax_amount: number | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      scrapyard_invoice_summaries: {
+        Row: {
+          created_at: string | null
+          created_by_email: string | null
+          due_date: string | null
+          due_soon: boolean | null
+          id: number | null
+          invoice_date: string | null
+          invoice_number: string | null
+          is_overdue: boolean | null
+          item_count: number | null
+          payment_date: string | null
+          payment_method: string | null
+          scrapyard_id: number | null
+          scrapyard_name: string | null
+          status: string | null
+          tax_amount: number | null
+          tenant_id: number | null
+          tenant_name: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      assign_tenant_admin_role: {
+        Args:
+          | { p_user_id: string; p_tenant_id: number }
+          | { p_user_id: string; p_tenant_id: number; p_scrapyard_id: number }
+        Returns: Json
+      }
       assign_user_to_scrapyard: {
         Args: { p_user_id: string; p_scrapyard_id: number; p_role: string }
         Returns: undefined
@@ -1046,6 +1593,34 @@ export type Database = {
           | { lat1: number; lon1: number; lat2: number; lon2: number }
           | { lat1: number; lon1: number; lat2: number; lon2: number }
         Returns: number
+      }
+      calculate_invoice_totals: {
+        Args: { p_invoice_id: number }
+        Returns: {
+          total_amount: number
+          tax_amount: number
+        }[]
+      }
+      can_cancel_invoice: {
+        Args: { p_invoice_id: number }
+        Returns: {
+          can_cancel: boolean
+          reason: string
+          invoice_number: string
+          invoice_date: string
+          invoice_status: string
+          invoice_amount: number
+          scrapyard_name: string
+          days_since_creation: number
+        }[]
+      }
+      cancel_invoice: {
+        Args: {
+          p_invoice_id: number
+          p_cancellation_reason: string
+          p_cancelled_by?: string
+        }
+        Returns: boolean
       }
       connect_customer_to_scrapyard: {
         Args: { p_customer_request_id: string; p_scrapyard_id: number }
@@ -1077,6 +1652,21 @@ export type Database = {
           p_admin_user_id: string
         }
         Returns: number
+      }
+      create_tenant_complete: {
+        Args:
+          | {
+              p_name: string
+              p_country: string
+              p_admin_name: string
+              p_admin_email: string
+              p_service_type?: string
+              p_address?: string
+              p_postal_code?: string
+              p_city?: string
+            }
+          | { tenant_name: string; admin_email: string; admin_password: string }
+        Returns: Json
       }
       ensure_car_metadata: {
         Args: Record<PropertyKey, never>
@@ -1139,6 +1729,16 @@ export type Database = {
           total_reviews: number
         }[]
       }
+      generate_invoice_number: {
+        Args:
+          | { p_scrapyard_id: number }
+          | { p_scrapyard_id: number; p_tenant_id: number }
+        Returns: string
+      }
+      generate_secure_password: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_accessible_scrapyards: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1166,11 +1766,41 @@ export type Database = {
           end_date: string
         }[]
       }
+      get_cancelled_invoices_report: {
+        Args: {
+          p_scrapyard_id?: number
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: {
+          scrapyard_id: number
+          scrapyard_name: string
+          total_cancelled_invoices: number
+          total_cancelled_amount: number
+          cancellation_reasons: Json
+          cancelled_by_users: Json
+          most_common_reason: string
+          avg_days_before_cancellation: number
+        }[]
+      }
       get_current_user_info: {
         Args: Record<PropertyKey, never>
         Returns: {
           user_role: Database["public"]["Enums"]["user_role"]
           tenant_id: number
+        }[]
+      }
+      get_invoice_cancellation_history: {
+        Args: { p_invoice_id: number }
+        Returns: {
+          cancellation_id: number
+          invoice_id: number
+          cancelled_at: string
+          cancelled_by_email: string
+          reason: string
+          previous_status: string
+          scrapyard_name: string
+          invoice_amount: number
         }[]
       }
       get_scrapyard_analytics: {
@@ -1251,6 +1881,24 @@ export type Database = {
           materials_accepted: Json
         }[]
       }
+      get_scrapyard_invoice_stats: {
+        Args: {
+          p_scrapyard_id: number
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: {
+          total_invoices: number
+          total_amount: number
+          paid_invoices: number
+          paid_amount: number
+          pending_invoices: number
+          pending_amount: number
+          overdue_invoices: number
+          overdue_amount: number
+          avg_days_to_payment: number
+        }[]
+      }
       get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1263,9 +1911,31 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      mark_overdue_invoices: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       migrate_customer_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      record_invoice_payment: {
+        Args: {
+          p_invoice_id: number
+          p_payment_date?: string
+          p_payment_method?: string
+          p_payment_reference?: string
+          p_updated_by?: string
+        }
+        Returns: boolean
+      }
+      restore_cancelled_invoice: {
+        Args: {
+          p_invoice_id: number
+          p_restoration_reason: string
+          p_restored_by?: string
+        }
+        Returns: boolean
       }
       validate_swedish_pnr: {
         Args: { pnr: string }
