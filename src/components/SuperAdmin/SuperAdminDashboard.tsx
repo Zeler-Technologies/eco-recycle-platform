@@ -158,6 +158,18 @@ const SuperAdminDashboard = () => {
     alert(JSON.stringify(data, null, 2));
   };
 
+  // Debug function to test tenant creation
+  const debugTenant = async () => {
+    const { data, error } = await supabase.rpc('create_tenant_debug', {
+      p_name: 'Debug Test',
+      p_country: 'Sweden', 
+      p_admin_name: 'Test Admin',
+      p_admin_email: 'test@example.com'
+    });
+    console.log('Debug tenant result:', data);
+    alert(JSON.stringify(data, null, 2));
+  };
+
   return (
     <div className="theme-admin min-h-screen bg-admin-muted">
       {/* Header */}
@@ -296,6 +308,10 @@ const SuperAdminDashboard = () => {
               <Button variant="outline" className="w-full justify-start" onClick={debugUser}>
                 <Bug className="h-4 w-4 mr-2" />
                 Debug User Info
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={debugTenant}>
+                <Plus className="h-4 w-4 mr-2" />
+                Debug Tenant Creation
               </Button>
             </CardContent>
           </Card>

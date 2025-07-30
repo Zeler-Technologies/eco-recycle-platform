@@ -1696,6 +1696,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_tenant_debug: {
+        Args: {
+          p_name: string
+          p_country: string
+          p_admin_name: string
+          p_admin_email: string
+        }
+        Returns: Json
+      }
       create_tenant_no_auth_check: {
         Args: {
           p_name: string
