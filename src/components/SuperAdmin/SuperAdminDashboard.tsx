@@ -22,6 +22,15 @@ interface Tenant {
   created_at: string;
 }
 
+interface ActivityItem {
+  id: string;
+  action: string;
+  entity: string;
+  time: string;
+  timestamp: Date;
+  type: 'tenant' | 'request' | 'payment' | 'user';
+}
+
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
   const [showAPIConnections, setShowAPIConnections] = useState(false);
@@ -31,10 +40,13 @@ const SuperAdminDashboard = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
 
-  // Fetch tenants data
+  // Fetch data on component mount
   useEffect(() => {
     fetchTenants();
+    fetchRecentActivity();
   }, []);
 
   const fetchTenants = async () => {
@@ -56,6 +68,111 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const fetchRecentActivity = async () => {
+    try {
+      setActivitiesLoading(true);
+      const activities: ActivityItem[] = [];
+
+      // Fetch recent tenants
+      const { data: recentTenants } = await supabase
+        .from('tenants')
+        .select('tenants_id, name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (recentTenants) {
+        recentTenants.forEach(tenant => {
+          activities.push({
+            id: `tenant-${tenant.tenants_id}`,
+            action: 'New tenant registered',
+            entity: tenant.name,
+            time: formatTimeAgo(tenant.created_at),
+            timestamp: new Date(tenant.created_at),
+            type: 'tenant'
+          });
+        });
+      }
+
+      // Fetch recent customer requests
+      const { data: recentRequests } = await supabase
+        .from('customer_requests')
+        .select('id, owner_name, created_at, status')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (recentRequests) {
+        recentRequests.forEach(request => {
+          activities.push({
+            id: `request-${request.id}`,
+            action: `Customer request ${request.status}`,
+            entity: request.owner_name,
+            time: formatTimeAgo(request.created_at),
+            timestamp: new Date(request.created_at),
+            type: 'request'
+          });
+        });
+      }
+
+      // Fetch recent invoices/payments
+      const { data: recentInvoices } = await supabase
+        .from('scrapyard_invoices')
+        .select('id, invoice_number, payment_date, created_at, scrapyard_id')
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      if (recentInvoices) {
+        recentInvoices.forEach(invoice => {
+          if (invoice.payment_date) {
+            activities.push({
+              id: `payment-${invoice.id}`,
+              action: 'Payment processed',
+              entity: `Invoice ${invoice.invoice_number}`,
+              time: formatTimeAgo(invoice.payment_date),
+              timestamp: new Date(invoice.payment_date),
+              type: 'payment'
+            });
+          } else {
+            activities.push({
+              id: `invoice-${invoice.id}`,
+              action: 'Invoice created',
+              entity: `Invoice ${invoice.invoice_number}`,
+              time: formatTimeAgo(invoice.created_at),
+              timestamp: new Date(invoice.created_at),
+              type: 'payment'
+            });
+          }
+        });
+      }
+
+      // Sort all activities by timestamp (most recent first)
+      activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      
+      // Take only the 6 most recent activities
+      setActivities(activities.slice(0, 6));
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      return `${diffInMinutes} minutes ago`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours} hours ago`;
+    } else {
+      return `${diffInDays} days ago`;
+    }
+  };
+
   const handleTenantClick = (tenantId: number) => {
     setSelectedTenantId(tenantId);
     setShowTenantManagement(true);
@@ -64,6 +181,7 @@ const SuperAdminDashboard = () => {
   const handleTenantCreated = (tenant: any) => {
     console.log('New tenant created:', tenant);
     fetchTenants(); // Refresh the tenant list
+    fetchRecentActivity(); // Refresh activity feed
   };
   if (showAPIConnections) {
     return (
@@ -375,20 +493,21 @@ const SuperAdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { action: 'New tenant registered', entity: 'Malmö Scrap Co.', time: '2 hours ago' },
-                { action: 'Payment processed', entity: 'Panta Bilen Stockholm', time: '4 hours ago' },
-                { action: 'User account created', entity: 'admin@oslo-scrap.no', time: '6 hours ago' },
-                { action: 'System backup completed', entity: 'Automated backup', time: '8 hours ago' }
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-admin-accent/20 rounded-lg">
-                  <div>
-                    <p className="font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">{activity.entity}</p>
+              {activitiesLoading ? (
+                <div className="text-center py-4">Loading activities...</div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">No recent activity</div>
+              ) : (
+                activities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 bg-admin-accent/20 rounded-lg">
+                    <div>
+                      <p className="font-medium">{activity.action}</p>
+                      <p className="text-sm text-muted-foreground">{activity.entity}</p>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{activity.time}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">{activity.time}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
