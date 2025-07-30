@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,55 @@ import APIConnectionsPanel from './API/APIConnectionsPanel';
 import TenantManagement from './TenantManagement';
 import UserManagement from './UserManagement';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface Tenant {
+  tenants_id: number;
+  name: string;
+  country: string;
+  service_type: string;
+  base_address: string;
+  invoice_email: string;
+  created_at: string;
+}
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
-  const [showAPIConnections, setShowAPIConnections] = React.useState(false);
-  const [showTenantManagement, setShowTenantManagement] = React.useState(false);
-  const [showUserManagement, setShowUserManagement] = React.useState(false);
-  const [showTenantList, setShowTenantList] = React.useState(false);
+  const [showAPIConnections, setShowAPIConnections] = useState(false);
+  const [showTenantManagement, setShowTenantManagement] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showTenantList, setShowTenantList] = useState(false);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch tenants data
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  const fetchTenants = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(4); // Only get the 4 most recent for the dashboard
+
+      if (error) throw error;
+      setTenants(data || []);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
+      toast.error('Failed to load tenants');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTenantCreated = (tenant: any) => {
+    console.log('New tenant created:', tenant);
+    fetchTenants(); // Refresh the tenant list
+  };
   if (showAPIConnections) {
     return (
       <div className="theme-admin min-h-screen bg-admin-muted">
@@ -107,7 +148,7 @@ const SuperAdminDashboard = () => {
   const stats = [
     {
       title: 'Total Tenants',
-      value: '24',
+      value: tenants.length.toString(),
       change: '+3 this month',
       icon: Building2,
       color: 'bg-admin-primary'
@@ -135,13 +176,6 @@ const SuperAdminDashboard = () => {
     }
   ];
 
-  const recentTenants = [
-    { name: 'Panta Bilen Stockholm', status: 'Active', plan: 'Premium', revenue: '€2,450' },
-    { name: 'Oslo Scrap Yard', status: 'Pending', plan: 'Starter', revenue: '€890' },
-    { name: 'Copenhagen Metals', status: 'Active', plan: 'Enterprise', revenue: '€4,200' },
-    { name: 'Göteborg Recycling', status: 'Active', plan: 'Premium', revenue: '€3,100' }
-  ];
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active': return 'bg-status-completed text-white';
@@ -150,6 +184,7 @@ const SuperAdminDashboard = () => {
       default: return 'bg-muted';
     }
   };
+
 
   // Debug function to check current user info
   const debugUser = async () => {
@@ -236,36 +271,39 @@ const SuperAdminDashboard = () => {
                   <CardTitle className="text-admin-primary">Tenant Management</CardTitle>
                   <CardDescription>Manage scrap yard tenants and their subscriptions</CardDescription>
                 </div>
-                <TenantSetupForm onTenantCreated={(tenant) => {
-                  console.log('New tenant created:', tenant);
-                  // You can refresh the tenant list here
-                }} />
+                <TenantSetupForm onTenantCreated={handleTenantCreated} />
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentTenants.map((tenant, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-admin-accent rounded-full">
-                        <Building2 className="h-4 w-4 text-admin-primary" />
+                {loading ? (
+                  <div className="text-center py-4">Loading tenants...</div>
+                ) : tenants.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">No tenants found</div>
+                ) : (
+                  tenants.map((tenant) => (
+                    <div key={tenant.tenants_id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/30 transition-colors cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-admin-accent rounded-full">
+                          <Building2 className="h-4 w-4 text-admin-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">{tenant.name}</h4>
+                          <p className="text-sm text-muted-foreground">{tenant.country} • {tenant.service_type || 'Service'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold">{tenant.name}</h4>
-                        <p className="text-sm text-muted-foreground">{tenant.plan} Plan</p>
+                      <div className="flex items-center gap-3">
+                        <Badge className={getStatusColor('Active')}>
+                          Active
+                        </Badge>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">{tenant.base_address || 'No address'}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(tenant.created_at).toLocaleDateString()}</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge className={getStatusColor(tenant.status)}>
-                        {tenant.status}
-                      </Badge>
-                      <div className="text-right">
-                        <p className="font-semibold">{tenant.revenue}</p>
-                        <p className="text-sm text-muted-foreground">Monthly</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
