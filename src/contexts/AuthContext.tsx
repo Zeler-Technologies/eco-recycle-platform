@@ -38,7 +38,7 @@ export const useAuth = () => {
 // Mock user data for development
 const mockUsers: User[] = [
   {
-    id: '1',
+    id: '00000000-0000-0000-0000-000000000001',
     email: 'admin@superadmin.com',
     name: 'Super Admin',
     role: 'super_admin',
