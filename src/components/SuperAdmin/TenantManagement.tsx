@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -35,56 +37,63 @@ interface TenantManagementProps {
   onBack: () => void;
 }
 
+interface Tenant {
+  tenants_id: number;
+  name: string;
+  country: string;
+  service_type: string;
+  base_address: string;
+  invoice_email: string;
+  created_at: string;
+  status?: string;
+  plan?: string;
+  revenue?: string;
+  users?: number;
+  apiConnections?: number;
+}
+
 const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
-  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for tenants
-  const tenants = [
-    { 
-      id: '1', 
-      name: 'Panta Bilen Stockholm', 
-      status: 'Active', 
-      plan: 'Premium', 
-      revenue: '€2,450',
-      orgNumber: '556123-4567',
-      vatNumber: 'SE556123456701',
-      address: 'Storgatan 1, 111 22 Stockholm, Sweden',
-      adminName: 'Lars Andersson',
-      adminEmail: 'lars@pantabilen.se',
-      users: 12,
-      apiConnections: 8
-    },
-    { 
-      id: '2', 
-      name: 'Oslo Scrap Yard', 
-      status: 'Pending', 
-      plan: 'Starter', 
-      revenue: '€890',
-      orgNumber: '923456789',
-      vatNumber: 'NO923456789MVA',
-      address: 'Hovedgata 15, 0150 Oslo, Norway',
-      adminName: 'Erik Hansen',
-      adminEmail: 'erik@osloscrap.no',
-      users: 5,
-      apiConnections: 3
-    },
-    { 
-      id: '3', 
-      name: 'Copenhagen Metals', 
-      status: 'Active', 
-      plan: 'Enterprise', 
-      revenue: '€4,200',
-      orgNumber: '12345678',
-      vatNumber: 'DK12345678',
-      address: 'Nyhavn 12, 1051 Copenhagen, Denmark',
-      adminName: 'Niels Petersen',
-      adminEmail: 'niels@copenhagenmetal.dk',
-      users: 25,
-      apiConnections: 15
+  // Fetch tenants from database
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  const fetchTenants = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform data to include default values for UI
+      const transformedTenants = data.map(tenant => ({
+        ...tenant,
+        status: 'Active', // Default status
+        plan: 'Premium', // Default plan
+        revenue: '€0', // Default revenue
+        users: 0, // Default users count
+        apiConnections: 0 // Default API connections
+      }));
+
+      setTenants(transformedTenants);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
+      setError('Failed to load tenants');
+      toast.error('Failed to load tenants');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   // Mock data for users per tenant
   const getMockUsers = (tenantId: string) => {
@@ -155,21 +164,20 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
     }
   };
 
-  const selectedTenantData = tenants.find(t => t.id === selectedTenant);
+  const selectedTenantData = tenants.find(t => t.tenants_id === selectedTenant);
 
   // Update form data when selected tenant changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedTenantData) {
       setFormData({
         companyName: selectedTenantData.name,
-        orgNumber: selectedTenantData.orgNumber,
-        vatNumber: selectedTenantData.vatNumber,
-        address: selectedTenantData.address,
-        adminName: selectedTenantData.adminName,
-        adminEmail: selectedTenantData.adminEmail,
-        plan: selectedTenantData.plan.toLowerCase(),
-        monthlyRevenue: selectedTenantData.revenue,
-        invoiceEmail: selectedTenantData.adminEmail
+        country: selectedTenantData.country,
+        serviceType: selectedTenantData.service_type,
+        address: selectedTenantData.base_address,
+        invoiceEmail: selectedTenantData.invoice_email,
+        plan: selectedTenantData.plan?.toLowerCase() || 'premium',
+        monthlyRevenue: selectedTenantData.revenue || '€0',
+        createdAt: selectedTenantData.created_at
       });
     } else {
       // Reset form data when no tenant is selected
@@ -177,7 +185,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
     }
   }, [selectedTenantData]);
 
-  const handleSelectTenant = (tenantId: string) => {
+  const handleSelectTenant = (tenantId: number) => {
     setSelectedTenant(tenantId);
     setEditingSection(null); // Reset editing state when selecting new tenant
   };
@@ -190,9 +198,11 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
     
     // Update the tenant data in the tenants array for real-time reflection
     if (selectedTenant && field === 'plan') {
-      const tenantIndex = tenants.findIndex(t => t.id === selectedTenant);
+      const tenantIndex = tenants.findIndex(t => t.tenants_id === selectedTenant);
       if (tenantIndex !== -1) {
-        tenants[tenantIndex].plan = value.charAt(0).toUpperCase() + value.slice(1);
+        const updatedTenants = [...tenants];
+        updatedTenants[tenantIndex].plan = value.charAt(0).toUpperCase() + value.slice(1);
+        setTenants(updatedTenants);
       }
     }
   };
@@ -231,38 +241,46 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
               <CardDescription>Select a tenant to manage</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {tenants.map((tenant) => (
-                <div
-                  key={tenant.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                    selectedTenant === tenant.id 
-                      ? 'border-admin-primary bg-admin-accent/30' 
-                      : 'hover:bg-admin-accent/10'
-                  }`}
-                  onClick={() => handleSelectTenant(tenant.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-sm">{tenant.name}</h4>
-                      <p className="text-xs text-muted-foreground">{tenant.plan} Plan</p>
+              {loading ? (
+                <div className="text-center py-4">Loading tenants...</div>
+              ) : error ? (
+                <div className="text-center py-4 text-red-500">{error}</div>
+              ) : tenants.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">No tenants found</div>
+              ) : (
+                tenants.map((tenant) => (
+                  <div
+                    key={tenant.tenants_id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      selectedTenant === tenant.tenants_id 
+                        ? 'border-admin-primary bg-admin-accent/30' 
+                        : 'hover:bg-admin-accent/10'
+                    }`}
+                    onClick={() => handleSelectTenant(tenant.tenants_id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-sm">{tenant.name}</h4>
+                        <p className="text-xs text-muted-foreground">{tenant.country} • {tenant.service_type || 'Service'}</p>
+                      </div>
+                      <Badge className={getStatusColor(tenant.status || 'Active')}>
+                        {getStatusIcon(tenant.status || 'Active')}
+                        {tenant.status || 'Active'}
+                      </Badge>
                     </div>
-                    <Badge className={getStatusColor(tenant.status)}>
-                      {getStatusIcon(tenant.status)}
-                      {tenant.status}
-                    </Badge>
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {tenant.base_address || 'No address'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {tenant.invoice_email}
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {tenant.users} users
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Globe className="h-3 w-3" />
-                      {tenant.apiConnections} APIs
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
 
@@ -312,21 +330,30 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="orgNumber">Organization Number</Label>
+                            <Label htmlFor="country">Country</Label>
                             <Input
-                              id="orgNumber"
-              value={formData.orgNumber || ''}
-                              onChange={(e) => handleInputChange('orgNumber', e.target.value)}
+                              id="country"
+                              value={formData.country || ''}
+                              onChange={(e) => handleInputChange('country', e.target.value)}
                               disabled={editingSection !== 'company'}
                             />
                           </div>
                           <div>
-                            <Label htmlFor="vatNumber">VAT Number</Label>
+                            <Label htmlFor="serviceType">Service Type</Label>
                             <Input
-                              id="vatNumber"
-                              value={formData.vatNumber || ''}
-                              onChange={(e) => handleInputChange('vatNumber', e.target.value)}
+                              id="serviceType"
+                              value={formData.serviceType || ''}
+                              onChange={(e) => handleInputChange('serviceType', e.target.value)}
                               disabled={editingSection !== 'company'}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="createdAt">Created Date</Label>
+                            <Input
+                              id="createdAt"
+                              value={formData.createdAt ? new Date(formData.createdAt).toLocaleDateString() : ''}
+                              disabled={true}
+                              className="bg-muted"
                             />
                           </div>
                         </div>
@@ -349,14 +376,26 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                             {editingSection === 'address' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                           </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="address">Legal Address</Label>
-                          <Textarea
-                            id="address"
-                            value={formData.address || ''}
-                            onChange={(e) => handleInputChange('address', e.target.value)}
-                            disabled={editingSection !== 'address'}
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="address">Base Address</Label>
+                            <Textarea
+                              id="address"
+                              value={formData.address || ''}
+                              onChange={(e) => handleInputChange('address', e.target.value)}
+                              disabled={editingSection !== 'address'}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="invoiceEmail">Invoice Email</Label>
+                            <Input
+                              id="invoiceEmail"
+                              type="email"
+                              value={formData.invoiceEmail || ''}
+                              onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
+                              disabled={editingSection !== 'address'}
+                            />
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Switch disabled={editingSection !== 'address'} />
@@ -366,42 +405,50 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
 
                       <Separator />
 
-                      {/* Administrator Information */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Administrator Information
-                          </h4>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingSection(editingSection === 'admin' ? null : 'admin')}
-                          >
-                            {editingSection === 'admin' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="adminName">Administrator Name</Label>
-                            <Input
-                              id="adminName"
-                              value={formData.adminName || ''}
-                              onChange={(e) => handleInputChange('adminName', e.target.value)}
-                              disabled={editingSection !== 'admin'}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="adminEmail">Administrator Email</Label>
-                            <Input
-                              id="adminEmail"
-                              value={formData.adminEmail || ''}
-                              onChange={(e) => handleInputChange('adminEmail', e.target.value)}
-                              disabled={editingSection !== 'admin'}
-                            />
-                          </div>
-                        </div>
-                      </div>
+                       {/* Plan Information */}
+                       <div className="space-y-4">
+                         <div className="flex items-center justify-between">
+                           <h4 className="font-semibold flex items-center gap-2">
+                             <CreditCard className="h-4 w-4" />
+                             Plan Information
+                           </h4>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => setEditingSection(editingSection === 'plan' ? null : 'plan')}
+                           >
+                             {editingSection === 'plan' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                           </Button>
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                           <div>
+                             <Label htmlFor="plan">Current Plan</Label>
+                             <Select
+                               value={formData.plan || 'premium'}
+                               onValueChange={(value) => handleInputChange('plan', value)}
+                               disabled={editingSection !== 'plan'}
+                             >
+                               <SelectTrigger>
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 <SelectItem value="starter">Starter</SelectItem>
+                                 <SelectItem value="premium">Premium</SelectItem>
+                                 <SelectItem value="enterprise">Enterprise</SelectItem>
+                               </SelectContent>
+                             </Select>
+                           </div>
+                           <div>
+                             <Label htmlFor="monthlyRevenue">Monthly Revenue</Label>
+                             <Input
+                               id="monthlyRevenue"
+                               value={formData.monthlyRevenue || ''}
+                               onChange={(e) => handleInputChange('monthlyRevenue', e.target.value)}
+                               disabled={editingSection !== 'plan'}
+                             />
+                           </div>
+                         </div>
+                       </div>
 
                       {editingSection && (
                         <div className="flex gap-2 pt-4">
@@ -434,8 +481,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {getMockUsers(selectedTenant || '').map((user) => (
+                       <div className="space-y-4">
+                         {getMockUsers(selectedTenant?.toString() || '').map((user) => (
                           <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-admin-accent rounded-full">
@@ -473,8 +520,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
                       <CardDescription>Configure tenant-specific API connections</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {getMockApiServices(selectedTenant || '').map((service, index) => (
+                       <div className="space-y-4">
+                         {getMockApiServices(selectedTenant?.toString() || '').map((service, index) => (
                           <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-admin-accent rounded-full">
