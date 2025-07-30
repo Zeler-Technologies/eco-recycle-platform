@@ -1682,6 +1682,29 @@ export type Database = {
           | { tenant_name: string; admin_email: string; admin_password: string }
         Returns: Json
       }
+      create_tenant_complete_fixed: {
+        Args: {
+          p_name: string
+          p_country: string
+          p_admin_name: string
+          p_admin_email: string
+          p_invoice_email?: string
+          p_service_type?: string
+          p_address?: string
+          p_postal_code?: string
+          p_city?: string
+        }
+        Returns: Json
+      }
+      create_tenant_no_auth_check: {
+        Args: {
+          p_name: string
+          p_country: string
+          p_admin_name: string
+          p_admin_email: string
+        }
+        Returns: Json
+      }
       ensure_car_metadata: {
         Args: Record<PropertyKey, never>
         Returns: undefined
