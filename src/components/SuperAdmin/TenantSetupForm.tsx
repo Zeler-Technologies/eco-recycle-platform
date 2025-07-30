@@ -86,7 +86,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
       p_address: data.address || null,
       p_postal_code: data.postalCode || null,
       p_city: data.city || null,
-    });
+    }) as { data: any; error: any };
 
     if (error) {
       throw new Error(error.message || 'Failed to create tenant');
