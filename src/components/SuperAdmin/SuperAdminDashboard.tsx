@@ -3,12 +3,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp, Globe } from 'lucide-react';
+import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp, Globe, Bug } from 'lucide-react';
 import { TenantSetupForm } from './TenantSetupForm';
 import { TenantList } from './TenantList';
 import APIConnectionsPanel from './API/APIConnectionsPanel';
 import TenantManagement from './TenantManagement';
 import UserManagement from './UserManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -150,6 +151,13 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  // Debug function to check current user info
+  const debugUser = async () => {
+    const { data, error } = await supabase.rpc('debug_lovable_user');
+    console.log('Lovable user debug:', data);
+    alert(JSON.stringify(data, null, 2));
+  };
+
   return (
     <div className="theme-admin min-h-screen bg-admin-muted">
       {/* Header */}
@@ -284,6 +292,10 @@ const SuperAdminDashboard = () => {
               <Button variant="outline" className="w-full justify-start">
                 <Settings className="h-4 w-4 mr-2" />
                 System Settings
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={debugUser}>
+                <Bug className="h-4 w-4 mr-2" />
+                Debug User Info
               </Button>
             </CardContent>
           </Card>

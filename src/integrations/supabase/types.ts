@@ -1705,6 +1705,10 @@ export type Database = {
         }
         Returns: Json
       }
+      debug_lovable_user: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       ensure_car_metadata: {
         Args: Record<PropertyKey, never>
         Returns: undefined
