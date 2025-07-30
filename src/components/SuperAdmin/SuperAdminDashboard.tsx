@@ -28,6 +28,7 @@ const SuperAdminDashboard = () => {
   const [showTenantManagement, setShowTenantManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showTenantList, setShowTenantList] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +54,11 @@ const SuperAdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTenantClick = (tenantId: number) => {
+    setSelectedTenantId(tenantId);
+    setShowTenantManagement(true);
   };
 
   const handleTenantCreated = (tenant: any) => {
@@ -98,7 +104,13 @@ const SuperAdminDashboard = () => {
   }
 
   if (showTenantManagement) {
-    return <TenantManagement onBack={() => setShowTenantManagement(false)} />;
+    return <TenantManagement 
+      onBack={() => {
+        setShowTenantManagement(false);
+        setSelectedTenantId(null);
+      }} 
+      selectedTenantId={selectedTenantId}
+    />;
   }
 
   if (showUserManagement) {
@@ -282,7 +294,7 @@ const SuperAdminDashboard = () => {
                   <div className="text-center py-4 text-muted-foreground">No tenants found</div>
                 ) : (
                   tenants.map((tenant) => (
-                    <div key={tenant.tenants_id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/30 transition-colors cursor-pointer">
+                    <div key={tenant.tenants_id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/30 transition-colors cursor-pointer" onClick={() => handleTenantClick(tenant.tenants_id)}>
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-admin-accent rounded-full">
                           <Building2 className="h-4 w-4 text-admin-primary" />

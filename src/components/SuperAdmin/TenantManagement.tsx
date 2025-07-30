@@ -35,6 +35,7 @@ import {
 
 interface TenantManagementProps {
   onBack: () => void;
+  selectedTenantId?: number | null;
 }
 
 interface Tenant {
@@ -52,13 +53,20 @@ interface Tenant {
   apiConnections?: number;
 }
 
-const TenantManagement: React.FC<TenantManagementProps> = ({ onBack }) => {
-  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
+const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTenantId }) => {
+  const [selectedTenant, setSelectedTenant] = useState<number | null>(selectedTenantId || null);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Set selected tenant when prop changes
+  useEffect(() => {
+    if (selectedTenantId) {
+      setSelectedTenant(selectedTenantId);
+    }
+  }, [selectedTenantId]);
 
   // Fetch tenants from database
   useEffect(() => {
