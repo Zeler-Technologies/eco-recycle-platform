@@ -71,78 +71,54 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
   });
 
   const onSubmit = async (data: TenantFormData) => {
-    setLoading(true);
-    try {
-      console.log('Creating tenant with data:', data);
-      
-      // Step 1: Create the tenant and scrapyard using the database function
-      const { data: tenantResult, error: tenantError } = await supabase.rpc('create_tenant_complete', {
-        p_name: data.companyName,
-        p_country: data.country,
-        p_admin_name: data.adminName,
-        p_admin_email: data.adminEmail,
-        p_invoice_email: data.invoiceEmail,
-        p_service_type: data.serviceType || null,
-        p_address: data.address || null,
-        p_postal_code: data.postalCode || null,
-        p_city: data.city || null,
-      });
+  setLoading(true);
+  try {
+    console.log('Creating tenant with data:', data);
+    
+    // Single call - creates tenant and scrapyard (our working function)
+    const { data: result, error } = await supabase.rpc('create_tenant_complete', {
+      p_name: data.companyName,
+      p_country: data.country,
+      p_admin_name: data.adminName,
+      p_admin_email: data.adminEmail,
+      p_invoice_email: data.invoiceEmail,
+      p_service_type: data.serviceType || null,
+      p_address: data.address || null,
+      p_postal_code: data.postalCode || null,
+      p_city: data.city || null,
+    });
 
-      if (tenantError) {
-        throw new Error(tenantError.message || 'Failed to create tenant');
-      }
-
-      // Type assertion for the result
-      const result = tenantResult as any;
-      if (!result?.success) {
-        throw new Error(result?.error || 'Failed to create tenant');
-      }
-
-      console.log('Tenant created successfully:', result);
-
-      // Step 2: Create the tenant admin user via Edge Function
-      const { data: userResult, error: userError } = await supabase.functions.invoke('create-tenant-admin', {
-        body: {
-          tenantId: result.tenant_id,
-          scrapyardId: result.scrapyard_id,
-          adminEmail: result.admin_email,
-          adminName: result.admin_name,
-          password: result.generated_password,
-        },
-      });
-
-      if (userError) {
-        console.error('Edge function error:', userError);
-        throw new Error(userError.message || 'Failed to create tenant admin user');
-      }
-
-      // Type assertion for the user result
-      const userRes = userResult as any;
-      if (!userRes?.success) {
-        throw new Error(userRes?.error || 'Failed to create tenant admin user');
-      }
-
-      console.log('Admin user created successfully:', userRes);
-
-      toast({
-        title: "Tenant Created Successfully",
-        description: `${data.companyName} has been added to the system. Admin login details: ${data.adminEmail} with password: ${result.generated_password}`,
-      });
-      
-      onTenantCreated?.(result);
-      setOpen(false);
-      form.reset();
-    } catch (error) {
-      console.error('Error creating tenant:', error);
-      toast({
-        title: "Error Creating Tenant",
-        description: error instanceof Error ? error.message : "There was an error creating the tenant. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    if (error) {
+      throw new Error(error.message || 'Failed to create tenant');
     }
-  };
+
+    // Check if the function returned an error
+    if (!result?.success) {
+      throw new Error(result?.error || 'Failed to create tenant');
+    }
+
+    console.log('Tenant and scrapyard created successfully:', result);
+
+    toast({
+      title: "Tenant Created Successfully",
+      description: `${data.companyName} has been added to the system. Generated password: ${result.generated_password}`,
+    });
+    
+    onTenantCreated?.(result);
+    setOpen(false);
+    form.reset();
+
+  } catch (error) {
+    console.error('Error creating tenant:', error);
+    toast({
+      title: "Error Creating Tenant",
+      description: error instanceof Error ? error.message : "There was an error creating the tenant. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
