@@ -51,7 +51,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack }) => {
   const fetchDrivers = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('drivers').select('*');
+      let query = supabase.from('drivers' as any).select('*');
       
       // If not super admin, filter by user's tenant
       if (user?.role !== 'super_admin' && user?.tenant_id) {
@@ -63,7 +63,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack }) => {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDrivers(data || []);
+      setDrivers((data as any) || []);
     } catch (error) {
       console.error('Error fetching drivers:', error);
       toast.error('Failed to load drivers');
@@ -77,7 +77,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack }) => {
 
     try {
       const { error } = await supabase
-        .from('drivers')
+        .from('drivers' as any)
         .delete()
         .eq('id', driverId);
 
@@ -94,7 +94,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack }) => {
   const handleToggleActiveStatus = async (driver: Driver) => {
     try {
       const { error } = await supabase
-        .from('drivers')
+        .from('drivers' as any)
         .update({ is_active: !driver.is_active })
         .eq('id', driver.id);
 

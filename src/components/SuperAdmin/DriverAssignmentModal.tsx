@@ -67,7 +67,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     try {
       // Create driver assignment
       const { error: assignmentError } = await supabase
-        .from('driver_assignments')
+        .from('driver_assignments' as any)
         .insert([{
           driver_id: driver.id,
           customer_request_id: requestId,

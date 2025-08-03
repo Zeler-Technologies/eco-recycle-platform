@@ -74,7 +74,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       if (driver) {
         // Update existing driver
         const { error } = await supabase
-          .from('drivers')
+          .from('drivers' as any)
           .update(formData)
           .eq('id', driver.id);
 
@@ -83,7 +83,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       } else {
         // Create new driver
         const { error } = await supabase
-          .from('drivers')
+          .from('drivers' as any)
           .insert([formData]);
 
         if (error) throw error;
