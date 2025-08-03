@@ -1643,6 +1643,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_scrapyard_user: {
+        Args: { p_email: string; p_role: string; p_scrapyard_id?: number }
+        Returns: Json
+      }
       create_scrapyard_with_admin: {
         Args: {
           p_name: string
@@ -1832,6 +1836,10 @@ export type Database = {
           end_date: string
         }[]
       }
+      get_all_tenants: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_cancelled_invoices_report: {
         Args: {
           p_scrapyard_id?: number
@@ -1869,6 +1877,14 @@ export type Database = {
           invoice_amount: number
         }[]
       }
+      get_my_requests: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_platform_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_scrapyard_analytics: {
         Args:
           | { p_tenant_id?: number; p_start_date?: string; p_end_date?: string }
@@ -1894,6 +1910,10 @@ export type Database = {
           busiest_day_of_week: string
           busiest_hour_of_day: number
         }[]
+      }
+      get_scrapyard_dashboard: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_scrapyard_details: {
         Args: { p_scrapyard_id: number }
@@ -1965,6 +1985,26 @@ export type Database = {
           avg_days_to_payment: number
         }[]
       }
+      get_scrapyard_requests: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_scrapyard_users: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_user_context: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          role: string
+          scrapyard_id: number
+          is_super_admin: boolean
+          is_scrapyard_admin: boolean
+          is_driver: boolean
+          is_customer: boolean
+        }[]
+      }
       get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -2006,6 +2046,18 @@ export type Database = {
           p_restored_by?: string
         }
         Returns: boolean
+      }
+      submit_customer_request: {
+        Args: {
+          p_car_registration_number: string
+          p_car_brand: string
+          p_car_model: string
+          p_owner_name: string
+          p_owner_address: string
+          p_pickup_address: string
+          p_pickup_postal_code: string
+        }
+        Returns: Json
       }
       validate_swedish_pnr: {
         Args: { pnr: string }
