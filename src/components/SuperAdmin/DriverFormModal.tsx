@@ -1,0 +1,259 @@
+
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { X, User, Phone, Mail, Car } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface Driver {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  email?: string;
+  vehicle_registration?: string;
+  vehicle_type?: string;
+  is_active: boolean;
+  tenant_id: number;
+  max_capacity_kg?: number;
+}
+
+interface DriverFormModalProps {
+  driver?: Driver | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    full_name: '',
+    phone_number: '',
+    email: '',
+    vehicle_registration: '',
+    vehicle_type: '',
+    max_capacity_kg: 1000,
+    is_active: true,
+    tenant_id: 1
+  });
+  const [loading, setLoading] = useState(false);
+  const [tenants, setTenants] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchTenants();
+    if (driver) {
+      setFormData({
+        full_name: driver.full_name,
+        phone_number: driver.phone_number,
+        email: driver.email || '',
+        vehicle_registration: driver.vehicle_registration || '',
+        vehicle_type: driver.vehicle_type || '',
+        max_capacity_kg: driver.max_capacity_kg || 1000,
+        is_active: driver.is_active,
+        tenant_id: driver.tenant_id
+      });
+    }
+  }, [driver]);
+
+  const fetchTenants = async () => {
+    try {
+      const { data, error } = await supabase.from('tenants').select('tenants_id, name');
+      if (error) throw error;
+      setTenants(data || []);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (driver) {
+        // Update existing driver
+        const { error } = await supabase
+          .from('drivers')
+          .update(formData)
+          .eq('id', driver.id);
+
+        if (error) throw error;
+        toast.success('Driver updated successfully');
+      } else {
+        // Create new driver
+        const { error } = await supabase
+          .from('drivers')
+          .insert([formData]);
+
+        if (error) throw error;
+        toast.success('Driver created successfully');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Error saving driver:', error);
+      toast.error(`Failed to ${driver ? 'update' : 'create'} driver`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-admin-primary">
+            {driver ? 'Edit Driver' : 'Add New Driver'}
+          </CardTitle>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Full Name *</Label>
+                  <Input
+                    id="full_name"
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    placeholder="Enter driver's full name"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone_number">Phone Number *</Label>
+                  <Input
+                    id="phone_number"
+                    value={formData.phone_number}
+                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Enter email address"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="tenant_id">Tenant</Label>
+                  <select
+                    id="tenant_id"
+                    value={formData.tenant_id}
+                    onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  >
+                    <option value="">Select tenant</option>
+                    {tenants.map((tenant) => (
+                      <option key={tenant.tenants_id} value={tenant.tenants_id}>
+                        {tenant.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Vehicle Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Car className="h-5 w-5" />
+                Vehicle Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle_registration">Registration Number</Label>
+                  <Input
+                    id="vehicle_registration"
+                    value={formData.vehicle_registration}
+                    onChange={(e) => setFormData({ ...formData, vehicle_registration: e.target.value })}
+                    placeholder="e.g. ABC123"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle_type">Vehicle Type</Label>
+                  <select
+                    id="vehicle_type"
+                    value={formData.vehicle_type}
+                    onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Select vehicle type</option>
+                    <option value="truck">Truck</option>
+                    <option value="van">Van</option>
+                    <option value="pickup">Pickup</option>
+                    <option value="trailer">Trailer</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="max_capacity_kg">Max Capacity (kg)</Label>
+                  <Input
+                    id="max_capacity_kg"
+                    type="number"
+                    value={formData.max_capacity_kg}
+                    onChange={(e) => setFormData({ ...formData, max_capacity_kg: Number(e.target.value) })}
+                    placeholder="1000"
+                    min="100"
+                    max="50000"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="is_active">Status</Label>
+                  <select
+                    id="is_active"
+                    value={formData.is_active.toString()}
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="bg-admin-primary hover:bg-admin-primary/90"
+              >
+                {loading ? 'Saving...' : (driver ? 'Update Driver' : 'Create Driver')}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default DriverFormModal;

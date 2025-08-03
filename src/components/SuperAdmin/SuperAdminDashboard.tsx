@@ -3,12 +3,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp, Globe, Bug } from 'lucide-react';
+import { Building2, Users, CreditCard, BarChart3, Settings, LogOut, Plus, TrendingUp, Globe, Bug, Truck, Navigation, UserCheck } from 'lucide-react';
 import { TenantSetupForm } from './TenantSetupForm';
 import { TenantList } from './TenantList';
 import APIConnectionsPanel from './API/APIConnectionsPanel';
 import TenantManagement from './TenantManagement';
 import UserManagement from './UserManagement';
+import DriverManagement from './DriverManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -36,6 +37,7 @@ const SuperAdminDashboard = () => {
   const [showAPIConnections, setShowAPIConnections] = useState(false);
   const [showTenantManagement, setShowTenantManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showDriverManagement, setShowDriverManagement] = useState(false);
   const [showTenantList, setShowTenantList] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -183,6 +185,7 @@ const SuperAdminDashboard = () => {
     fetchTenants(); // Refresh the tenant list
     fetchRecentActivity(); // Refresh activity feed
   };
+
   if (showAPIConnections) {
     return (
       <div className="theme-admin min-h-screen bg-admin-muted">
@@ -235,6 +238,10 @@ const SuperAdminDashboard = () => {
     return <UserManagement onBack={() => setShowUserManagement(false)} />;
   }
 
+  if (showDriverManagement) {
+    return <DriverManagement onBack={() => setShowDriverManagement(false)} />;
+  }
+
   if (showTenantList) {
     return (
       <div className="theme-admin min-h-screen bg-admin-muted">
@@ -284,17 +291,17 @@ const SuperAdminDashboard = () => {
       color: 'bg-admin-primary'
     },
     {
-      title: 'Active Users',
-      value: '156',
-      change: '+12 this week',
-      icon: Users,
+      title: 'Active Drivers',
+      value: '24',
+      change: '+4 this week',
+      icon: Truck,
       color: 'bg-status-completed'
     },
     {
-      title: 'Monthly Revenue',
-      value: '€24,500',
-      change: '+18% vs last month',
-      icon: CreditCard,
+      title: 'Fleet Utilization',
+      value: '78%',
+      change: '+5% vs last month',
+      icon: Navigation,
       color: 'bg-status-processing'
     },
     {
@@ -314,7 +321,6 @@ const SuperAdminDashboard = () => {
       default: return 'bg-muted';
     }
   };
-
 
   // Debug function to check current user info
   const debugUser = async () => {
@@ -452,6 +458,10 @@ const SuperAdminDashboard = () => {
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowTenantManagement(true)}>
                 <Building2 className="h-4 w-4 mr-2" />
                 Manage Tenants
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => setShowDriverManagement(true)}>
+                <Truck className="h-4 w-4 mr-2" />
+                Fleet Management
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowUserManagement(true)}>
                 <Users className="h-4 w-4 mr-2" />
