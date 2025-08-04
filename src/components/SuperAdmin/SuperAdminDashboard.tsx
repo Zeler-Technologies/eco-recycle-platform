@@ -37,7 +37,6 @@ const SuperAdminDashboard = () => {
   const [showAPIConnections, setShowAPIConnections] = useState(false);
   const [showTenantManagement, setShowTenantManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
-  const [showDriverManagement, setShowDriverManagement] = useState(false);
   const [showTenantList, setShowTenantList] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -236,10 +235,6 @@ const SuperAdminDashboard = () => {
 
   if (showUserManagement) {
     return <UserManagement onBack={() => setShowUserManagement(false)} />;
-  }
-
-  if (showDriverManagement) {
-    return <DriverManagement onBack={() => setShowDriverManagement(false)} />;
   }
 
   if (showTenantList) {
@@ -458,10 +453,6 @@ const SuperAdminDashboard = () => {
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowTenantManagement(true)}>
                 <Building2 className="h-4 w-4 mr-2" />
                 Manage Tenants
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => setShowDriverManagement(true)}>
-                <Truck className="h-4 w-4 mr-2" />
-                Fleet Management
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowUserManagement(true)}>
                 <Users className="h-4 w-4 mr-2" />

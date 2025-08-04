@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, Plus, Edit, Trash2, ArrowLeft, Settings } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, Plus, Edit, Trash2, ArrowLeft, Settings, Truck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import DriverManagement from './DriverManagement';
 
 interface User {
   id: string;
@@ -25,6 +27,7 @@ interface UserManagementProps {
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
+  const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<User[]>([
     {
       id: '1',
@@ -166,9 +169,30 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                 </div>
                 <div>
                   <CardTitle className="text-purple-800">Hantera Förare</CardTitle>
-                  <p className="text-purple-600 text-sm">Hantera alla användare kopplade till skrotkontot</p>
+                  <p className="text-purple-600 text-sm">Hantera användare och flotta för skrotkontot</p>
                 </div>
               </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="users" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Användare
+                </TabsTrigger>
+                <TabsTrigger value="fleet" className="flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Flotthantering
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="users" className="mt-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-purple-800">Användarhantering</h3>
+                    <p className="text-purple-600 text-sm">Hantera alla användare kopplade till skrotkontot</p>
+                  </div>
               <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -235,11 +259,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                     </div>
                   </div>
                 </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
+                  </Dialog>
+                </div>
+                
+                <Card className="border-purple-200">
+                  <CardContent className="p-0">
+                    <Table>
               <TableHeader>
                 <TableRow className="bg-purple-50">
                   <TableHead className="text-purple-800 font-semibold">Namn</TableHead>
@@ -324,13 +349,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
-        {/* User Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+              {/* User Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <Card className="bg-white shadow-md border-purple-200">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
@@ -376,11 +401,21 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   <p className="text-sm text-purple-600">Operatörer</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="fleet" className="mt-6">
+            <div className="bg-white rounded-lg">
+              <DriverManagement onBack={() => setActiveTab('users')} embedded={true} />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  </div>
+</div>
   );
 };
 

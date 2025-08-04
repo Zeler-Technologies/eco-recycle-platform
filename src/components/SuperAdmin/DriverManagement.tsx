@@ -30,9 +30,10 @@ interface Driver {
 
 interface DriverManagementProps {
   onBack: () => void;
+  embedded?: boolean;
 }
 
-const DriverManagement: React.FC<DriverManagementProps> = ({ onBack }) => {
+const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = false }) => {
   const { user } = useAuth();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,6 +144,238 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack }) => {
 
   if (showLocationMap) {
     return <DriverLocationMap onBack={() => setShowLocationMap(false)} drivers={filteredDrivers} />;
+  }
+
+  if (embedded) {
+    return (
+      <div className="space-y-6">
+        {/* Fleet Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="bg-white shadow-custom-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Drivers</CardTitle>
+              <Users className="h-4 w-4 text-admin-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{drivers.length}</div>
+              <p className="text-xs text-muted-foreground">{activeDrivers} active</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-custom-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Available</CardTitle>
+              <UserCheck className="h-4 w-4 text-status-completed" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{availableDrivers}</div>
+              <p className="text-xs text-muted-foreground">Ready for assignments</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-custom-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Busy</CardTitle>
+              <Clock className="h-4 w-4 text-status-processing" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{busyDrivers}</div>
+              <p className="text-xs text-muted-foreground">On assignments</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-custom-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Response</CardTitle>
+              <MapPin className="h-4 w-4 text-admin-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">12m</div>
+              <p className="text-xs text-muted-foreground">Average response time</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Actions and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search drivers by name or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md"
+          >
+            <option value="all">All Status</option>
+            <option value="available">Available</option>
+            <option value="busy">Busy</option>
+            <option value="offline">Offline</option>
+            <option value="break">On Break</option>
+          </select>
+
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowLocationMap(true)}
+              className="flex items-center gap-2"
+            >
+              <MapPin className="h-4 w-4" />
+              Live Map
+            </Button>
+            
+            <Button 
+              onClick={() => setShowDriverForm(true)}
+              className="bg-admin-primary hover:bg-admin-primary/90 flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Driver
+            </Button>
+          </div>
+        </div>
+
+        {/* Driver List */}
+        <Card className="bg-white shadow-custom-sm">
+          <CardHeader>
+            <CardTitle className="text-admin-primary">Drivers ({filteredDrivers.length})</CardTitle>
+            <CardDescription>Manage your fleet drivers and assignments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">Loading drivers...</div>
+            ) : filteredDrivers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchTerm || statusFilter !== 'all' ? 'No drivers match your filters' : 'No drivers found'}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredDrivers.map((driver) => (
+                  <div key={driver.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-admin-accent rounded-full">
+                        <Users className="h-4 w-4 text-admin-primary" />
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-semibold">{driver.full_name}</h4>
+                          <Badge className={getStatusColor(driver.driver_status)}>
+                            {driver.driver_status}
+                          </Badge>
+                          {!driver.is_active && (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {driver.phone_number}
+                          </span>
+                          {driver.vehicle_registration && (
+                            <span className="flex items-center gap-1">
+                              <Car className="h-3 w-3" />
+                              {driver.vehicle_registration} ({driver.vehicle_type})
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Last seen: {formatLastSeen(driver.last_location_update)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedDriver(driver);
+                          setShowAssignmentModal(true);
+                        }}
+                        disabled={!driver.is_active || driver.driver_status === 'offline'}
+                      >
+                        Assign
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedDriver(driver);
+                          setShowDriverForm(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleActiveStatus(driver)}
+                        className={driver.is_active ? "text-red-600" : "text-green-600"}
+                      >
+                        {driver.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteDriver(driver.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Modals */}
+        {showDriverForm && (
+          <DriverFormModal
+            driver={selectedDriver}
+            onClose={() => {
+              setShowDriverForm(false);
+              setSelectedDriver(null);
+            }}
+            onSuccess={() => {
+              fetchDrivers();
+              setShowDriverForm(false);
+              setSelectedDriver(null);
+            }}
+          />
+        )}
+
+        {showAssignmentModal && selectedDriver && (
+          <DriverAssignmentModal
+            driver={selectedDriver}
+            onClose={() => {
+              setShowAssignmentModal(false);
+              setSelectedDriver(null);
+            }}
+            onSuccess={() => {
+              setShowAssignmentModal(false);
+              setSelectedDriver(null);
+            }}
+          />
+        )}
+      </div>
+    );
   }
 
   return (
