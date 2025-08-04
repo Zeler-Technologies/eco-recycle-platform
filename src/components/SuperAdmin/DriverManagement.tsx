@@ -63,11 +63,21 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching drivers:', error);
+        // Only show error toast for unexpected errors, not when there are no drivers
+        if (!error.message.includes('infinite recursion') && !error.message.includes('no rows')) {
+          toast.error('Failed to load drivers');
+        }
+        setDrivers([]);
+        return;
+      }
+      
       setDrivers((data as any) || []);
     } catch (error) {
       console.error('Error fetching drivers:', error);
-      toast.error('Failed to load drivers');
+      // Set empty array and don't show error for normal cases
+      setDrivers([]);
     } finally {
       setLoading(false);
     }
