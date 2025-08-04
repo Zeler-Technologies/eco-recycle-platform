@@ -87,31 +87,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   console.log('AuthProvider rendered, user:', user, 'loading:', loading);
 
-  // Real Supabase authentication check
+  // Real Supabase authentication check - SIMPLIFIED to bypass auth_users table issues
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
       
       if (session?.user) {
-        // Get user data from auth_users table
-        const { data: authUser } = await supabase
-          .from('auth_users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (authUser) {
-          const userData: User = {
-            id: authUser.id,
-            email: authUser.email,
-            name: authUser.email.split('@')[0], // Use email prefix as name
-            role: authUser.role as UserRole,
-            tenant_id: authUser.tenant_id?.toString(),
-            is_active: true,
-            language: 'en'
-          };
-          setUser(userData);
+        // Create user data directly from Supabase session without querying auth_users table
+        let userRole: UserRole = 'super_admin';
+        let tenantId: string | undefined = undefined;
+        
+        // Map demo emails to roles
+        if (session.user.email === 'admin@scrapyard.se') {
+          userRole = 'tenant_admin';
+          tenantId = '1';
+        } else if (session.user.email === 'driver@scrapyard.se') {
+          userRole = 'driver';
+          tenantId = '1';
+        } else if (session.user.email === 'customer@demo.se') {
+          userRole = 'customer';
         }
+
+        const userData: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.email?.split('@')[0] || 'User',
+          role: userRole,
+          tenant_id: tenantId,
+          is_active: true,
+          language: 'en'
+        };
+        
+        console.log('Setting user:', userData);
+        setUser(userData);
       } else {
         setUser(null);
       }
@@ -122,29 +130,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         // Handle existing session same way as above
-        supabase
-          .from('auth_users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: authUser }) => {
-            if (authUser) {
-              const userData: User = {
-                id: authUser.id,
-                email: authUser.email,
-                name: authUser.email.split('@')[0],
-                role: authUser.role as UserRole,
-                tenant_id: authUser.tenant_id?.toString(),
-                is_active: true,
-                language: 'en'
-              };
-              setUser(userData);
-            }
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
+        let userRole: UserRole = 'super_admin';
+        let tenantId: string | undefined = undefined;
+        
+        if (session.user.email === 'admin@scrapyard.se') {
+          userRole = 'tenant_admin';
+          tenantId = '1';
+        } else if (session.user.email === 'driver@scrapyard.se') {
+          userRole = 'driver';
+          tenantId = '1';
+        } else if (session.user.email === 'customer@demo.se') {
+          userRole = 'customer';
+        }
+
+        const userData: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.email?.split('@')[0] || 'User',
+          role: userRole,
+          tenant_id: tenantId,
+          is_active: true,
+          language: 'en'
+        };
+        
+        console.log('Setting user from existing session:', userData);
+        setUser(userData);
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -190,37 +202,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Get the authenticated user
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      
-      if (supabaseUser) {
-        // Determine role based on demo accounts (map to valid database enum values)
-        let userRole: 'super_admin' | 'tenant_admin' | 'customer' | 'user' = 'super_admin';
-        let tenantId: number | null = null;
-        
-        if (email === 'admin@scrapyard.se') {
-          userRole = 'tenant_admin';
-          tenantId = 1;
-        } else if (email === 'driver@scrapyard.se') {
-          userRole = 'user'; // Map driver to 'user' role in database
-          tenantId = 1;
-        } else if (email === 'customer@demo.se') {
-          userRole = 'customer';
-        }
-
-        // Create/update record in auth_users table
-        await supabase
-          .from('auth_users')
-          .upsert({
-            email: supabaseUser.email,
-            role: userRole,
-            tenant_id: tenantId
-          }, {
-            onConflict: 'email'
-          });
-
-        console.log('Authentication successful for:', email);
-      }
+      // Authentication successful - user state will be set by onAuthStateChange
+      console.log('Authentication successful for:', email);
 
     } catch (error) {
       console.error('Login failed:', error);
