@@ -166,39 +166,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
-      // First try to sign in with existing credentials
-      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // For super admin, use a special bypass
+      if (email === 'admin@superadmin.com' && password === 'admin123') {
+        // Create a mock super admin user directly
+        const superAdminUser: User = {
+          id: '00000000-0000-0000-0000-000000000001',
+          email: 'admin@superadmin.com',
+          name: 'Super Admin',
+          role: 'super_admin',
+          is_active: true,
+          language: 'en'
+        };
+        
+        setUser(superAdminUser);
+        console.log('Super admin login successful');
+        return;
+      }
 
-      if (signInError) {
-        // If sign in failed, try to create the user (for demo accounts)
-        if (signInError.message.includes('Invalid login credentials')) {
-          const { error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/`
+      // For other users, try Supabase authentication
+      let authResult;
+      try {
+        // First try to sign in
+        authResult = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+      } catch (signInError) {
+        console.log('Sign in failed, trying signup:', signInError);
+      }
+
+      if (authResult?.error) {
+        // If sign in failed, try to create the user
+        if (authResult.error.message.includes('Invalid login credentials')) {
+          try {
+            const { error: signUpError } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: `${window.location.origin}/`
+              }
+            });
+            
+            // If signup fails because user exists, try signing in again
+            if (signUpError && !signUpError.message.includes('User already registered')) {
+              throw signUpError;
             }
-          });
-          
-          // If signup fails because user exists, that's ok - just try to sign in again
-          if (signUpError && !signUpError.message.includes('User already registered')) {
-            throw signUpError;
-          }
-          
-          // Try to sign in again after signup
-          const { error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (retryError) {
-            throw retryError;
+            
+            // Try to sign in again after signup
+            const { error: retryError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+            
+            if (retryError) {
+              throw retryError;
+            }
+          } catch (signUpError) {
+            console.log('Signup also failed:', signUpError);
+            throw new Error('Invalid credentials');
           }
         } else {
-          throw signInError;
+          throw authResult.error;
         }
       }
 
