@@ -154,50 +154,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
-      // Real Supabase authentication
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      // First try to sign in with existing credentials
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      if (error && error.message.includes('Invalid login credentials')) {
-        // Create user if doesn't exist  
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`
+      if (signInError) {
+        // If sign in failed, try to create the user (for demo accounts)
+        if (signInError.message.includes('Invalid login credentials')) {
+          const { error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`
+            }
+          });
+          
+          // If signup fails because user exists, that's ok - just try to sign in again
+          if (signUpError && !signUpError.message.includes('User already registered')) {
+            throw signUpError;
           }
-        });
-        
-        if (signUpError) throw signUpError;
-
-        // After signup, try to sign in again
-        const { data: retryAuth, error: retryError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (retryError) throw retryError;
-      } else if (error) {
-        throw error;
+          
+          // Try to sign in again after signup
+          const { error: retryError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (retryError) {
+            throw retryError;
+          }
+        } else {
+          throw signInError;
+        }
       }
 
       // Get the authenticated user
       const { data: { user: supabaseUser } } = await supabase.auth.getUser();
       
       if (supabaseUser) {
+        // Determine role based on demo accounts (map to valid database enum values)
+        let userRole: 'super_admin' | 'tenant_admin' | 'customer' | 'user' = 'super_admin';
+        let tenantId: number | null = null;
+        
+        if (email === 'admin@scrapyard.se') {
+          userRole = 'tenant_admin';
+          tenantId = 1;
+        } else if (email === 'driver@scrapyard.se') {
+          userRole = 'user'; // Map driver to 'user' role in database
+          tenantId = 1;
+        } else if (email === 'customer@demo.se') {
+          userRole = 'customer';
+        }
+
         // Create/update record in auth_users table
         await supabase
           .from('auth_users')
           .upsert({
-            id: supabaseUser.id,
             email: supabaseUser.email,
-            role: 'super_admin', // Default role
-            tenant_id: null // null = access all tenants
+            role: userRole,
+            tenant_id: tenantId
+          }, {
+            onConflict: 'email'
           });
 
-        console.log('Real authentication setup complete!');
+        console.log('Authentication successful for:', email);
       }
 
     } catch (error) {
