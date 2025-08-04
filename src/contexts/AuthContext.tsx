@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 // import { useToast } from '@/hooks/use-toast';
 
 export type UserRole = 'super_admin' | 'tenant_admin' | 'driver' | 'customer';
@@ -86,58 +87,120 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   console.log('AuthProvider rendered, user:', user, 'loading:', loading);
 
-  // Mock authentication check
+  // Real Supabase authentication check
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        console.log('Checking auth - storedUser:', storedUser);
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          console.log('Parsed user data:', userData);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (session?.user) {
+        // Get user data from auth_users table
+        const { data: authUser } = await supabase
+          .from('auth_users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (authUser) {
+          const userData: User = {
+            id: authUser.id,
+            email: authUser.email,
+            name: authUser.email.split('@')[0], // Use email prefix as name
+            role: authUser.role as UserRole,
+            tenant_id: authUser.tenant_id?.toString(),
+            is_active: true,
+            language: 'en'
+          };
           setUser(userData);
         }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // Handle existing session same way as above
+        supabase
+          .from('auth_users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: authUser }) => {
+            if (authUser) {
+              const userData: User = {
+                id: authUser.id,
+                email: authUser.email,
+                name: authUser.email.split('@')[0],
+                role: authUser.role as UserRole,
+                tenant_id: authUser.tenant_id?.toString(),
+                is_active: true,
+                language: 'en'
+              };
+              setUser(userData);
+            }
+            setLoading(false);
+          });
+      } else {
         setLoading(false);
       }
-    };
+    });
 
-    checkAuth();
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     
     try {
-      // Mock authentication
-      const mockUser = mockUsers.find(u => u.email === email);
-      
-      if (!mockUser) {
-        throw new Error('Invalid credentials');
+      // Real Supabase authentication
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error && error.message.includes('Invalid login credentials')) {
+        // Create user if doesn't exist  
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+        
+        if (signUpError) throw signUpError;
+
+        // After signup, try to sign in again
+        const { data: retryAuth, error: retryError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (retryError) throw retryError;
+      } else if (error) {
+        throw error;
       }
 
-      // Mock password validation
-      const validPasswords: { [key: string]: string } = {
-        'admin@superadmin.com': 'admin123',
-        'admin@scrapyard.se': 'scrapyard123',
-        'driver@scrapyard.se': 'driver123',
-        'customer@demo.se': 'customer123'
-      };
-
-      if (validPasswords[email] !== password) {
-        throw new Error('Invalid credentials');
-      }
-
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      // Get the authenticated user
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
       
-      // Simple success notification without toast
-      console.log('Login successful:', mockUser.name);
+      if (supabaseUser) {
+        // Create/update record in auth_users table
+        await supabase
+          .from('auth_users')
+          .upsert({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            role: 'super_admin', // Default role
+            tenant_id: null // null = access all tenants
+          });
+
+        console.log('Real authentication setup complete!');
+      }
 
     } catch (error) {
-      // Simple error notification without toast
       console.error('Login failed:', error);
       throw error;
     } finally {
@@ -145,9 +208,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('user');
     console.log('Logged out successfully');
   };
 
