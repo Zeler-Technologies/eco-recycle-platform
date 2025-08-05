@@ -11,7 +11,7 @@ import CustomerApp from "./pages/CustomerApp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { BillingDashboard } from "./components/SuperAdmin/Billing/BillingDashboard";
 import BankIDLogin from "./components/BankID/BankIDLogin";
-import PantaBilenDriverApp from './components/PantaBilenDriverApp';
+import PantaBilenDriverApp from './components/Driver/PantaBilenDriverApp';
 
 const queryClient = new QueryClient();
 
@@ -46,6 +46,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['customer']}>
                   <CustomerApp />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/driver-app" 
+              element={
+                <ProtectedRoute allowedRoles={['driver']}>
+                  <PantaBilenDriverApp />
                 </ProtectedRoute>
               } 
             />
