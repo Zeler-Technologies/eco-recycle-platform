@@ -161,7 +161,12 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, isActive: boolean = true) => {
+    // If driver is inactive, override status color
+    if (!isActive) {
+      return 'bg-muted text-muted-foreground';
+    }
+    
     switch (status) {
       case 'available': return 'bg-status-completed text-white';
       case 'busy': return 'bg-status-processing text-white';
@@ -169,6 +174,14 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
       case 'break': return 'bg-status-pending text-white';
       default: return 'bg-muted';
     }
+  };
+
+  const getDisplayStatus = (driver: Driver) => {
+    // If driver is inactive, show "Inactive" instead of their operational status
+    if (!driver.is_active) {
+      return 'Inactive';
+    }
+    return driver.driver_status;
   };
 
   const formatLastSeen = (timestamp?: string) => {
@@ -333,14 +346,9 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <h4 className="font-semibold">{driver.full_name}</h4>
-                          <Badge className={getStatusColor(driver.driver_status)}>
-                            {driver.driver_status}
+                          <Badge className={getStatusColor(driver.driver_status, driver.is_active)}>
+                            {getDisplayStatus(driver)}
                           </Badge>
-                          {!driver.is_active && (
-                            <Badge variant="outline" className="text-muted-foreground">
-                              Inactive
-                            </Badge>
-                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
@@ -607,17 +615,12 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       </div>
                       
                       <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold">{driver.full_name}</h4>
-                          <Badge className={getStatusColor(driver.driver_status)}>
-                            {driver.driver_status}
-                          </Badge>
-                          {!driver.is_active && (
-                            <Badge variant="outline" className="text-muted-foreground">
-                              Inactive
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold">{driver.full_name}</h4>
+                            <Badge className={getStatusColor(driver.driver_status, driver.is_active)}>
+                              {getDisplayStatus(driver)}
                             </Badge>
-                          )}
-                        </div>
+                          </div>
                         
                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                            <span className="flex items-center gap-1">
