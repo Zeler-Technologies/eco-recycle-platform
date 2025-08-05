@@ -65,15 +65,7 @@ const Index = () => {
     case 'tenant_admin':
       return <TenantDashboard />;
     case 'driver':
-      // TODO: Implement driver mobile interface
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Driver Interface</h1>
-            <p className="text-muted-foreground">Coming soon...</p>
-          </div>
-        </div>
-      );
+      return <Navigate to="/driver-app" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
