@@ -18,6 +18,7 @@ interface Driver {
   vehicle_type?: string;
   is_active: boolean;
   tenant_id: number;
+  scrapyard_id?: number;
   max_capacity_kg?: number;
 }
 
@@ -37,11 +38,14 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     vehicle_type: '',
     max_capacity_kg: 1000,
     is_active: true,
-    tenant_id: 1
+    tenant_id: 1,
+    scrapyard_id: null as number | null
   });
   const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<any[]>([]);
+  const [scrapyards, setScrapyards] = useState<any[]>([]);
   const [tenantsLoading, setTenantsLoading] = useState(true);
+  const [scrapyardsLoading, setScrapyardsLoading] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -54,7 +58,8 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         vehicle_type: driver.vehicle_type || '',
         max_capacity_kg: driver.max_capacity_kg || 1000,
         is_active: driver.is_active,
-        tenant_id: driver.tenant_id
+        tenant_id: driver.tenant_id,
+        scrapyard_id: driver.scrapyard_id || null
       });
     } else if (user?.role === 'tenant_admin' && user.tenant_id) {
       // Pre-fill tenant for scrapyard admins
@@ -64,6 +69,13 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       }));
     }
   }, [driver, user]);
+
+  // Fetch scrapyards when tenant changes
+  useEffect(() => {
+    if (formData.tenant_id) {
+      fetchScrapyards(formData.tenant_id);
+    }
+  }, [formData.tenant_id]);
 
   const fetchTenants = async () => {
     try {
@@ -89,6 +101,27 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       console.error('Error fetching tenants:', error);
     } finally {
       setTenantsLoading(false);
+    }
+  };
+
+  const fetchScrapyards = async (tenantId: number) => {
+    try {
+      setScrapyardsLoading(true);
+      const { data, error } = await supabase
+        .from('scrapyards')
+        .select('id, name, tenant_id')
+        .eq('tenant_id', tenantId)
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching scrapyards:', error);
+        return;
+      }
+      setScrapyards(data || []);
+    } catch (error) {
+      console.error('Error fetching scrapyards:', error);
+    } finally {
+      setScrapyardsLoading(false);
     }
   };
 
@@ -201,7 +234,10 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                     <select
                       id="tenant_id"
                       value={formData.tenant_id}
-                      onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
+                      onChange={(e) => {
+                        const tenantId = Number(e.target.value);
+                        setFormData({ ...formData, tenant_id: tenantId, scrapyard_id: null });
+                      }}
                       className="w-full px-3 py-2 border rounded-md"
                       required
                       disabled={tenantsLoading}
@@ -213,6 +249,28 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                         </option>
                       ))}
                     </select>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="scrapyard_id">Scrapyard *</Label>
+                  <select
+                    id="scrapyard_id"
+                    value={formData.scrapyard_id || ''}
+                    onChange={(e) => setFormData({ ...formData, scrapyard_id: e.target.value ? Number(e.target.value) : null })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                    disabled={scrapyardsLoading || !formData.tenant_id}
+                  >
+                    <option value="">Select scrapyard</option>
+                    {scrapyards.map((scrapyard) => (
+                      <option key={scrapyard.id} value={scrapyard.id}>
+                        {scrapyard.name}
+                      </option>
+                    ))}
+                  </select>
+                  {!formData.tenant_id && (
+                    <p className="text-sm text-muted-foreground">Select a tenant first</p>
                   )}
                 </div>
               </div>
