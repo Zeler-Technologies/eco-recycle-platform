@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, User, Phone, Mail, Car } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Driver {
   id: string;
@@ -27,6 +28,7 @@ interface DriverFormModalProps {
 }
 
 const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSuccess }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     full_name: '',
     phone_number: '',
@@ -53,12 +55,25 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         is_active: driver.is_active,
         tenant_id: driver.tenant_id
       });
+    } else if (user?.role === 'tenant_admin' && user.tenant_id) {
+      // Pre-fill tenant for scrapyard admins
+      setFormData(prev => ({
+        ...prev,
+        tenant_id: Number(user.tenant_id)
+      }));
     }
-  }, [driver]);
+  }, [driver, user]);
 
   const fetchTenants = async () => {
     try {
-      const { data, error } = await supabase.from('tenants').select('tenants_id, name');
+      let query = supabase.from('tenants').select('tenants_id, name');
+      
+      // Restrict tenant access for scrapyard admins
+      if (user?.role === 'tenant_admin' && user.tenant_id) {
+        query = query.eq('tenants_id', Number(user.tenant_id));
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       setTenants(data || []);
     } catch (error) {
@@ -156,20 +171,31 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                 
                 <div className="space-y-2">
                   <Label htmlFor="tenant_id">Tenant</Label>
-                  <select
-                    id="tenant_id"
-                    value={formData.tenant_id}
-                    onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    required
-                  >
-                    <option value="">Select tenant</option>
-                    {tenants.map((tenant) => (
-                      <option key={tenant.tenants_id} value={tenant.tenants_id}>
-                        {tenant.name}
-                      </option>
-                    ))}
-                  </select>
+                  {user?.role === 'tenant_admin' ? (
+                    // Read-only for scrapyard admins - only show their tenant
+                    <Input
+                      id="tenant_id"
+                      value={tenants.find(t => t.tenants_id === formData.tenant_id)?.name || 'Loading...'}
+                      disabled
+                      className="bg-muted cursor-not-allowed"
+                    />
+                  ) : (
+                    // Dropdown for super admins
+                    <select
+                      id="tenant_id"
+                      value={formData.tenant_id}
+                      onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border rounded-md"
+                      required
+                    >
+                      <option value="">Select tenant</option>
+                      {tenants.map((tenant) => (
+                        <option key={tenant.tenants_id} value={tenant.tenants_id}>
+                          {tenant.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
             </div>
