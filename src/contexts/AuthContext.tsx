@@ -101,9 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session.user.email === 'admin@scrapyard.se') {
           userRole = 'tenant_admin';
           tenantId = '1';
-        } else if (session.user.email === 'driver@scrapyard.se') {
+        } else if (session.user.email === 'driver@scrapyard.se' || session.user.email === 'mikaela@scrapyard.se') {
           userRole = 'driver';
-          tenantId = '1';
+          tenantId = '1234';
         } else if (session.user.email === 'customer@demo.se') {
           userRole = 'customer';
         }
@@ -136,9 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session.user.email === 'admin@scrapyard.se') {
           userRole = 'tenant_admin';
           tenantId = '1';
-        } else if (session.user.email === 'driver@scrapyard.se') {
+        } else if (session.user.email === 'driver@scrapyard.se' || session.user.email === 'mikaela@scrapyard.se') {
           userRole = 'driver';
-          tenantId = '1';
+          tenantId = '1234';
         } else if (session.user.email === 'customer@demo.se') {
           userRole = 'customer';
         }
