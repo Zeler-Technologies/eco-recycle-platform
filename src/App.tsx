@@ -11,6 +11,7 @@ import CustomerApp from "./pages/CustomerApp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { BillingDashboard } from "./components/SuperAdmin/Billing/BillingDashboard";
 import BankIDLogin from "./components/BankID/BankIDLogin";
+import PantaBilenDriverApp from './components/PantaBilenDriverApp';
 
 const queryClient = new QueryClient();
 
