@@ -1,151 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-
-// Custom hook for Supabase data
-const useSupabaseData = () => {
-  const [pickupOrders, setPickupOrders] = useState([]);
-  const [currentDriver, setCurrentDriver] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchPickupOrders = async (driverId) => {
-    try {
-      const { data, error } = await supabase
-        .from('pickup_orders')
-        .select(`
-          *,
-          customer_requests (*),
-          driver_assignments!inner (
-            driver_id,
-            role,
-            is_active
-          ),
-          car_metadata (*)
-        `)
-        .eq('driver_assignments.driver_id', driverId)
-        .eq('driver_assignments.is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPickupOrders(data || []);
-    } catch (error) {
-      console.error('Error fetching pickup orders:', error);
-    }
-  };
-
-  const fetchCurrentDriver = async () => {
-    try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Fetch driver info
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (error) throw error;
-      setCurrentDriver(data);
-      
-      // Fetch pickup orders for this driver
-      if (data) {
-        await fetchPickupOrders(data.id);
-      }
-    } catch (error) {
-      console.error('Error fetching driver:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateDriverStatus = async (driverId, newStatus) => {
-    try {
-      const { error } = await supabase
-        .from('drivers')
-        .update({ 
-          driver_status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', driverId);
-
-      if (error) throw error;
-
-      // Log status change
-      await supabase
-        .from('driver_status_history')
-        .insert({
-          driver_id: driverId,
-          old_status: currentDriver?.driver_status,
-          new_status: newStatus,
-          changed_at: new Date().toISOString()
-        });
-
-      setCurrentDriver(prev => prev ? { ...prev, driver_status: newStatus } : null);
-    } catch (error) {
-      console.error('Error updating driver status:', error);
-    }
-  };
-
-  const updatePickupStatus = async (pickupOrderId, newStatus, notes = null, photos = null) => {
-    try {
-      // Update pickup order
-      const { error: orderError } = await supabase
-        .from('pickup_orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-          ...(notes && { driver_notes: notes }),
-          ...(photos && { completion_photos: photos })
-        })
-        .eq('id', pickupOrderId);
-
-      if (orderError) throw orderError;
-
-      // Log status update
-      await supabase
-        .from('pickup_status_updates')
-        .insert({
-          pickup_order_id: pickupOrderId,
-          driver_id: currentDriver?.id,
-          new_status: newStatus,
-          notes,
-          photos,
-          timestamp: new Date().toISOString()
-        });
-
-      // Refresh data
-      if (currentDriver) {
-        await fetchPickupOrders(currentDriver.id);
-      }
-    } catch (error) {
-      console.error('Error updating pickup status:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchCurrentDriver();
-  }, []);
-
-  return {
-    pickupOrders,
-    currentDriver,
-    loading,
-    updateDriverStatus,
-    updatePickupStatus,
-    refreshData: () => currentDriver && fetchPickupOrders(currentDriver.id)
-  };
-};
-
+import { useDriverIntegration } from '@/hooks/useDriverIntegration';
 const PantaBilenDriverApp = () => {
-  // Use the custom hook
+  // Use the driver integration hook 
   const { 
-    pickupOrders, 
-    currentDriver, 
+    pickups,
+    driver: currentDriver, 
     loading, 
-    updateDriverStatus, 
-    updatePickupStatus 
-  } = useSupabaseData();
+    error,
+    updateDriverStatus: updateDriverStatusHook, 
+    updatePickupStatus: updatePickupStatusHook 
+  } = useDriverIntegration();
 
   // Local state
   const [currentView, setCurrentView] = useState('list');
@@ -158,7 +22,7 @@ const PantaBilenDriverApp = () => {
 
   // Helper functions
   const getFilteredPickups = () => {
-    let filtered = pickupOrders;
+    let filtered = pickups;
 
     // Filter by status
     if (currentFilter !== 'all') {
@@ -193,8 +57,10 @@ const PantaBilenDriverApp = () => {
 
   const handleStatusChange = async (newStatus) => {
     if (currentDriver) {
-      await updateDriverStatus(currentDriver.id, newStatus);
-      setShowStatusMenu(false);
+      const success = await updateDriverStatusHook(newStatus);
+      if (success) {
+        setShowStatusMenu(false);
+      }
     }
   };
 
@@ -204,8 +70,10 @@ const PantaBilenDriverApp = () => {
   };
 
   const handleCompletePickup = async (pickupId) => {
-    await updatePickupStatus(pickupId, 'completed');
-    setShowDetailView(false);
+    const success = await updatePickupStatusHook(pickupId, 'completed');
+    if (success) {
+      setShowDetailView(false);
+    }
   };
 
   if (loading) {
@@ -219,12 +87,14 @@ const PantaBilenDriverApp = () => {
     );
   }
 
-  if (!currentDriver) {
+  if (error || !currentDriver) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Ingen förare hittades</p>
-          <p className="text-sm text-gray-500">Kontakta administratören för att skapa ditt förarkonto</p>
+          <p className="text-red-600 mb-4 font-semibold">⚠️ {error || 'Ingen förare hittades'}</p>
+          <p className="text-sm text-gray-500">
+            {error ? 'Försök igen eller kontakta administratören' : 'Kontakta administratören för att skapa ditt förarkonto'}
+          </p>
         </div>
       </div>
     );
@@ -378,9 +248,6 @@ const PantaBilenDriverApp = () => {
   );
 
   const PickupCard = ({ pickup }) => {
-    const customerRequest = pickup.customer_requests;
-    const carMetadata = pickup.car_metadata;
-    
     return (
       <div
         className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all cursor-pointer overflow-hidden"
@@ -389,7 +256,7 @@ const PantaBilenDriverApp = () => {
         <div className={`p-5 border-l-4`} style={{ borderLeftColor: getStatusColor(pickup.status) }}>
           <div className="flex justify-between items-center mb-2">
             <div className="text-lg font-bold text-gray-900">
-              {customerRequest?.car_registration_number || 'N/A'}
+              {pickup.car_registration_number || 'N/A'}
             </div>
             <div className="flex gap-1">
               <span className="text-base">💀</span>
@@ -398,7 +265,7 @@ const PantaBilenDriverApp = () => {
           </div>
           
           <div className="text-sm text-gray-600 mb-2">
-            {customerRequest?.car_year} — {customerRequest?.car_brand} {customerRequest?.car_model}
+            {pickup.car_year} — {pickup.car_brand} {pickup.car_model}
           </div>
           
           <div className="text-base font-semibold text-gray-900 mb-2">
@@ -406,7 +273,7 @@ const PantaBilenDriverApp = () => {
           </div>
           
           <div className="text-sm text-gray-600 mb-2">
-            Adress: {customerRequest?.pickup_address}
+            Adress: {pickup.pickup_address}
           </div>
           
           <div className={`inline-block px-3 py-1 rounded-xl text-xs font-semibold`} 
@@ -486,10 +353,10 @@ const PantaBilenDriverApp = () => {
         <div className="p-5">
           <div className="text-center mb-8">
             <div className="text-2xl font-bold text-indigo-600 mb-2">
-              {selectedPickup.customer_requests?.car_registration_number}
+              {selectedPickup.car_registration_number}
             </div>
             <div className="text-gray-600">
-              {selectedPickup.customer_requests?.car_year} {selectedPickup.customer_requests?.car_brand} {selectedPickup.customer_requests?.car_model}
+              {selectedPickup.car_year} {selectedPickup.car_brand} {selectedPickup.car_model}
             </div>
           </div>
 
@@ -499,11 +366,11 @@ const PantaBilenDriverApp = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
                 <span className="text-sm text-gray-600">Namn</span>
-                <span className="text-sm text-gray-900 font-medium">{selectedPickup.customer_requests?.owner_name}</span>
+                <span className="text-sm text-gray-900 font-medium">{selectedPickup.owner_name}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
                 <span className="text-sm text-gray-600">Adress</span>
-                <span className="text-sm text-gray-900 font-medium">{selectedPickup.customer_requests?.pickup_address}</span>
+                <span className="text-sm text-gray-900 font-medium">{selectedPickup.pickup_address}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
                 <span className="text-sm text-gray-600">Status</span>
@@ -517,7 +384,7 @@ const PantaBilenDriverApp = () => {
             {selectedPickup.status === 'scheduled' && (
               <button 
                 className="w-full bg-blue-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => updatePickupStatus(selectedPickup.id, 'in_progress')}
+                onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
               >
                 Starta upphämtning
               </button>
@@ -526,7 +393,7 @@ const PantaBilenDriverApp = () => {
             {selectedPickup.status === 'in_progress' && (
               <button 
                 className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => handleCompletePickup(selectedPickup.id)}
+                onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
               >
                 Slutför upphämtning
               </button>
@@ -535,7 +402,7 @@ const PantaBilenDriverApp = () => {
             <button 
               className="w-full bg-gray-600 text-white py-4 rounded-xl text-base font-semibold"
               onClick={() => {
-                const address = selectedPickup.customer_requests?.pickup_address;
+                const address = selectedPickup.pickup_address;
                 if (address) {
                   window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, '_blank');
                 }

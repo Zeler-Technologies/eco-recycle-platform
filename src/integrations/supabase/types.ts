@@ -2840,6 +2840,32 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      get_driver_pickups: {
+        Args: { driver_auth_id: string }
+        Returns: {
+          pickup_id: string
+          customer_request_id: string
+          car_registration_number: string
+          car_brand: string
+          car_model: string
+          car_year: number
+          owner_name: string
+          owner_address: string
+          pickup_address: string
+          pickup_postal_code: string
+          pickup_latitude: number
+          pickup_longitude: number
+          status: string
+          final_price: number
+          driver_notes: string
+          kontrollsiffror: string
+          part_list: Json
+          created_at: string
+          scheduled_pickup_time: string
+          completion_photos: string[]
+          pnr_num: string
+        }[]
+      }
       get_invoice_cancellation_history: {
         Args: { p_invoice_id: number }
         Returns: {
@@ -4329,6 +4355,24 @@ export type Database = {
       unlockrows: {
         Args: { "": string }
         Returns: number
+      }
+      update_driver_status: {
+        Args: {
+          new_driver_status: string
+          reason_param?: string
+          driver_auth_id?: string
+        }
+        Returns: boolean
+      }
+      update_pickup_status: {
+        Args: {
+          pickup_id: string
+          new_status: string
+          driver_notes_param?: string
+          completion_photos_param?: string[]
+          driver_auth_id?: string
+        }
+        Returns: boolean
       }
       updategeometrysrid: {
         Args: {
