@@ -68,10 +68,13 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
   const fetchTenants = async () => {
     try {
       setTenantsLoading(true);
+      console.log('Fetching tenants for user:', user);
+      
       let query = supabase.from('tenants').select('tenants_id, name');
       
       // Restrict tenant access for scrapyard admins
       if (user?.role === 'tenant_admin' && user.tenant_id) {
+        console.log('Filtering tenants for tenant_admin with tenant_id:', user.tenant_id);
         query = query.eq('tenants_id', Number(user.tenant_id));
       }
       
@@ -80,6 +83,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         console.error('Error fetching tenants:', error);
         return;
       }
+      console.log('Fetched tenants:', data);
       setTenants(data || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
