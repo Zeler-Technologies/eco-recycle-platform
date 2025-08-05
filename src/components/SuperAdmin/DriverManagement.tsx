@@ -144,28 +144,16 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const handleToggleActiveStatus = async (driver: Driver) => {
     try {
-      console.log('Attempting to toggle driver status:', {
-        driverId: driver.id,
-        currentStatus: driver.is_active,
-        newStatus: !driver.is_active,
-        currentUser: user,
-        driverTenantId: driver.tenant_id
-      });
-
-      const { error, data } = await supabase
-        .from('drivers' as any)
-        .update({ is_active: !driver.is_active })
-        .eq('id', driver.id)
-        .select();
-
-      console.log('Update result:', { error, data });
-
-      if (error) {
-        console.error('Database error details:', error);
-        throw error;
-      }
+      const newStatus = !driver.is_active;
       
-      toast.success(`Driver ${!driver.is_active ? 'activated' : 'deactivated'} successfully`);
+      const { error } = await supabase
+        .from('drivers' as any)
+        .update({ is_active: newStatus })
+        .eq('id', driver.id);
+
+      if (error) throw error;
+      
+      toast.success(`Driver ${driver.full_name} ${newStatus ? 'activated' : 'deactivated'} successfully`);
       fetchDrivers();
     } catch (error) {
       console.error('Error updating driver status:', error);
