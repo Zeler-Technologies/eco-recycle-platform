@@ -971,6 +971,7 @@ export type Database = {
           last_location_update: string | null
           max_capacity_kg: number | null
           phone_number: string
+          scrapyard_id: number | null
           tenant_id: number
           updated_at: string | null
           vehicle_registration: string | null
@@ -989,6 +990,7 @@ export type Database = {
           last_location_update?: string | null
           max_capacity_kg?: number | null
           phone_number: string
+          scrapyard_id?: number | null
           tenant_id: number
           updated_at?: string | null
           vehicle_registration?: string | null
@@ -1007,12 +1009,48 @@ export type Database = {
           last_location_update?: string | null
           max_capacity_kg?: number | null
           phone_number?: string
+          scrapyard_id?: number | null
           tenant_id?: number
           updated_at?: string | null
           vehicle_registration?: string | null
           vehicle_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "drivers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drivers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "drivers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "drivers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "drivers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "drivers_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -2948,10 +2986,6 @@ export type Database = {
         }[]
       }
       get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_user_role_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
