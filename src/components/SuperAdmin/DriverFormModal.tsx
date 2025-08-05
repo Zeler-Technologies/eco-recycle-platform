@@ -43,9 +43,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
   });
   const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<any[]>([]);
-  const [scrapyards, setScrapyards] = useState<any[]>([]);
   const [tenantsLoading, setTenantsLoading] = useState(true);
-  const [scrapyardsLoading, setScrapyardsLoading] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -59,23 +57,17 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         max_capacity_kg: driver.max_capacity_kg || 1000,
         is_active: driver.is_active,
         tenant_id: driver.tenant_id,
-        scrapyard_id: driver.scrapyard_id || null
+        scrapyard_id: driver.scrapyard_id || driver.tenant_id // Set scrapyard_id to tenant_id if not set
       });
     } else if (user?.role === 'tenant_admin' && user.tenant_id) {
       // Pre-fill tenant for scrapyard admins
       setFormData(prev => ({
         ...prev,
-        tenant_id: Number(user.tenant_id)
+        tenant_id: Number(user.tenant_id),
+        scrapyard_id: Number(user.tenant_id) // Scrapyard = Tenant
       }));
     }
   }, [driver, user]);
-
-  // Fetch scrapyards when tenant changes
-  useEffect(() => {
-    if (formData.tenant_id) {
-      fetchScrapyards(formData.tenant_id);
-    }
-  }, [formData.tenant_id]);
 
   const fetchTenants = async () => {
     try {
@@ -104,37 +96,22 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     }
   };
 
-  const fetchScrapyards = async (tenantId: number) => {
-    try {
-      setScrapyardsLoading(true);
-      const { data, error } = await supabase
-        .from('scrapyards')
-        .select('id, name, tenant_id')
-        .eq('tenant_id', tenantId)
-        .order('name', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching scrapyards:', error);
-        return;
-      }
-      setScrapyards(data || []);
-    } catch (error) {
-      console.error('Error fetching scrapyards:', error);
-    } finally {
-      setScrapyardsLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Since Tenant = Scrapyard, set scrapyard_id to tenant_id
+      const submitData = {
+        ...formData,
+        scrapyard_id: formData.tenant_id
+      };
+
       if (driver) {
         // Update existing driver
         const { error } = await supabase
           .from('drivers' as any)
-          .update(formData)
+          .update(submitData)
           .eq('id', driver.id);
 
         if (error) throw error;
@@ -143,7 +120,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         // Create new driver
         const { error } = await supabase
           .from('drivers' as any)
-          .insert([formData]);
+          .insert([submitData]);
 
         if (error) throw error;
         toast.success('Driver created successfully');
@@ -214,7 +191,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="tenant_id">Tenant</Label>
+                  <Label htmlFor="tenant_id">Scrapyard/Tenant *</Label>
                   {user?.role === 'tenant_admin' ? (
                     // Read-only for scrapyard admins - only show their tenant
                     <Input
@@ -224,7 +201,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                           ? 'Loading...' 
                           : tenants.find(t => t.tenants_id === Number(formData.tenant_id))?.name || 
                             tenants[0]?.name || 
-                            'No tenant found'
+                            'No scrapyard found'
                       }
                       disabled
                       className="bg-muted cursor-not-allowed"
@@ -236,41 +213,19 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                       value={formData.tenant_id}
                       onChange={(e) => {
                         const tenantId = Number(e.target.value);
-                        setFormData({ ...formData, tenant_id: tenantId, scrapyard_id: null });
+                        setFormData({ ...formData, tenant_id: tenantId, scrapyard_id: tenantId });
                       }}
                       className="w-full px-3 py-2 border rounded-md"
                       required
                       disabled={tenantsLoading}
                     >
-                      <option value="">Select tenant</option>
+                      <option value="">Select scrapyard</option>
                       {tenants.map((tenant) => (
                         <option key={tenant.tenants_id} value={tenant.tenants_id}>
                           {tenant.name}
                         </option>
                       ))}
                     </select>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="scrapyard_id">Scrapyard *</Label>
-                  <select
-                    id="scrapyard_id"
-                    value={formData.scrapyard_id || ''}
-                    onChange={(e) => setFormData({ ...formData, scrapyard_id: e.target.value ? Number(e.target.value) : null })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    required
-                    disabled={scrapyardsLoading || !formData.tenant_id}
-                  >
-                    <option value="">Select scrapyard</option>
-                    {scrapyards.map((scrapyard) => (
-                      <option key={scrapyard.id} value={scrapyard.id}>
-                        {scrapyard.name}
-                      </option>
-                    ))}
-                  </select>
-                  {!formData.tenant_id && (
-                    <p className="text-sm text-muted-foreground">Select a tenant first</p>
                   )}
                 </div>
               </div>
