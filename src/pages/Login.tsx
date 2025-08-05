@@ -24,6 +24,8 @@ const Login = () => {
       // Navigate based on user role
       if (email === 'customer@demo.se') {
         navigate('/customer-app');
+      } else if (email === 'driver@scrapyard.se') {
+        navigate('/driver-app');
       } else {
         navigate('/');
       }
