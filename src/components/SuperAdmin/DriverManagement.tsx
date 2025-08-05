@@ -25,7 +25,14 @@ interface Driver {
   current_longitude?: number;
   is_active: boolean;
   tenant_id: number;
+  scrapyard_id?: number;
   max_capacity_kg?: number;
+}
+
+interface Scrapyard {
+  id: number;
+  name: string;
+  tenant_id: number;
 }
 
 interface DriverManagementProps {
@@ -36,9 +43,11 @@ interface DriverManagementProps {
 const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = false }) => {
   const { user } = useAuth();
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [scrapyards, setScrapyards] = useState<Scrapyard[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [scrapyardFilter, setScrapyardFilter] = useState('all');
   const [showDriverForm, setShowDriverForm] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showLocationMap, setShowLocationMap] = useState(false);
@@ -47,6 +56,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   useEffect(() => {
     fetchDrivers();
+    fetchScrapyards();
   }, [selectedTenant]);
 
   const fetchDrivers = async () => {
@@ -80,6 +90,30 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
       setDrivers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchScrapyards = async () => {
+    try {
+      let query = supabase.from('scrapyards').select('id, name, tenant_id');
+      
+      // If not super admin, filter by user's tenant
+      if (user?.role !== 'super_admin' && user?.tenant_id) {
+        query = query.eq('tenant_id', Number(user.tenant_id));
+      }
+
+      const { data, error } = await query.order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching scrapyards:', error);
+        setScrapyards([]);
+        return;
+      }
+      
+      setScrapyards(data || []);
+    } catch (error) {
+      console.error('Error fetching scrapyards:', error);
+      setScrapyards([]);
     }
   };
 
@@ -145,7 +179,8 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     const matchesSearch = driver.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.phone_number.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || driver.driver_status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesScrapyard = scrapyardFilter === 'all' || driver.scrapyard_id?.toString() === scrapyardFilter;
+    return matchesSearch && matchesStatus && matchesScrapyard;
   });
 
   const activeDrivers = drivers.filter(d => d.is_active && d.driver_status !== 'offline').length;
@@ -232,6 +267,19 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
             <option value="break">On Break</option>
           </select>
 
+          <select
+            value={scrapyardFilter}
+            onChange={(e) => setScrapyardFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md"
+          >
+            <option value="all">All Scrapyards</option>
+            {scrapyards.map((scrapyard) => (
+              <option key={scrapyard.id} value={scrapyard.id.toString()}>
+                {scrapyard.name}
+              </option>
+            ))}
+          </select>
+
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -263,7 +311,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
               <div className="text-center py-8">Loading drivers...</div>
             ) : filteredDrivers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm || statusFilter !== 'all' ? 'No drivers match your filters' : 'No drivers found'}
+                {searchTerm || statusFilter !== 'all' || scrapyardFilter !== 'all' ? 'No drivers match your filters' : 'No drivers found'}
               </div>
             ) : (
               <div className="space-y-4">
@@ -491,6 +539,19 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
             <option value="break">On Break</option>
           </select>
 
+          <select
+            value={scrapyardFilter}
+            onChange={(e) => setScrapyardFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md"
+          >
+            <option value="all">All Scrapyards</option>
+            {scrapyards.map((scrapyard) => (
+              <option key={scrapyard.id} value={scrapyard.id.toString()}>
+                {scrapyard.name}
+              </option>
+            ))}
+          </select>
+
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -522,7 +583,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
               <div className="text-center py-8">Loading drivers...</div>
             ) : filteredDrivers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm || statusFilter !== 'all' ? 'No drivers match your filters' : 'No drivers found'}
+                {searchTerm || statusFilter !== 'all' || scrapyardFilter !== 'all' ? 'No drivers match your filters' : 'No drivers found'}
               </div>
             ) : (
               <div className="space-y-4">
