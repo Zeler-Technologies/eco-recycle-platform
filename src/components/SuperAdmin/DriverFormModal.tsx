@@ -18,7 +18,6 @@ interface Driver {
   vehicle_type?: string;
   is_active: boolean;
   tenant_id: number;
-  scrapyard_id?: number;
   max_capacity_kg?: number;
 }
 
@@ -38,8 +37,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     vehicle_type: '',
     max_capacity_kg: 1000,
     is_active: true,
-    tenant_id: 1,
-    scrapyard_id: null as number | null
+    tenant_id: 1
   });
   const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -56,15 +54,13 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         vehicle_type: driver.vehicle_type || '',
         max_capacity_kg: driver.max_capacity_kg || 1000,
         is_active: driver.is_active,
-        tenant_id: driver.tenant_id,
-        scrapyard_id: driver.scrapyard_id || driver.tenant_id // Set scrapyard_id to tenant_id if not set
+        tenant_id: driver.tenant_id
       });
     } else if (user?.role === 'tenant_admin' && user.tenant_id) {
-      // Pre-fill tenant for scrapyard admins
+      // Pre-fill tenant for tenant admins
       setFormData(prev => ({
         ...prev,
-        tenant_id: Number(user.tenant_id),
-        scrapyard_id: Number(user.tenant_id) // Scrapyard = Tenant
+        tenant_id: Number(user.tenant_id)
       }));
     }
   }, [driver, user]);
@@ -101,17 +97,11 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     setLoading(true);
 
     try {
-      // Since Tenant = Scrapyard, set scrapyard_id to tenant_id
-      const submitData = {
-        ...formData,
-        scrapyard_id: formData.tenant_id
-      };
-
       if (driver) {
         // Update existing driver
         const { error } = await supabase
           .from('drivers' as any)
-          .update(submitData)
+          .update(formData)
           .eq('id', driver.id);
 
         if (error) throw error;
@@ -120,7 +110,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         // Create new driver
         const { error } = await supabase
           .from('drivers' as any)
-          .insert([submitData]);
+          .insert([formData]);
 
         if (error) throw error;
         toast.success('Driver created successfully');
@@ -193,7 +183,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                 <div className="space-y-2">
                   <Label htmlFor="tenant_id">Scrapyard/Tenant *</Label>
                   {user?.role === 'tenant_admin' ? (
-                    // Read-only for scrapyard admins - only show their tenant
+                    // Read-only for tenant admins - only show their tenant
                     <Input
                       id="tenant_id"
                       value={
@@ -211,10 +201,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                     <select
                       id="tenant_id"
                       value={formData.tenant_id}
-                      onChange={(e) => {
-                        const tenantId = Number(e.target.value);
-                        setFormData({ ...formData, tenant_id: tenantId, scrapyard_id: tenantId });
-                      }}
+                      onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
                       className="w-full px-3 py-2 border rounded-md"
                       required
                       disabled={tenantsLoading}

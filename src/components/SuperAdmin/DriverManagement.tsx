@@ -25,7 +25,6 @@ interface Driver {
   current_longitude?: number;
   is_active: boolean;
   tenant_id: number;
-  scrapyard_id?: number;
   max_capacity_kg?: number;
 }
 
@@ -95,24 +94,31 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const fetchScrapyards = async () => {
     try {
-      let query = supabase.from('scrapyards').select('id, name, tenant_id');
+      // Since Scrapyard = Tenant, we fetch tenants and treat them as scrapyards
+      let query = supabase.from('tenants').select('tenants_id, name');
       
-      // If not super admin, filter by user's tenant
+      // Apply same filtering logic as for drivers
       if (user?.role !== 'super_admin' && user?.tenant_id) {
-        query = query.eq('tenant_id', Number(user.tenant_id));
+        query = query.eq('tenants_id', Number(user.tenant_id));
       }
-
+      
       const { data, error } = await query.order('name', { ascending: true });
-
       if (error) {
-        console.error('Error fetching scrapyards:', error);
+        console.error('Error fetching scrapyards (tenants):', error);
         setScrapyards([]);
         return;
       }
       
-      setScrapyards(data || []);
+      // Map tenant structure to match expected scrapyard structure
+      const mappedData = (data || []).map(tenant => ({
+        id: tenant.tenants_id,
+        name: tenant.name,
+        tenant_id: tenant.tenants_id
+      }));
+      
+      setScrapyards(mappedData);
     } catch (error) {
-      console.error('Error fetching scrapyards:', error);
+      console.error('Error fetching scrapyards (tenants):', error);
       setScrapyards([]);
     }
   };
@@ -179,7 +185,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     const matchesSearch = driver.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.phone_number.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || driver.driver_status === statusFilter;
-    const matchesScrapyard = scrapyardFilter === 'all' || driver.scrapyard_id?.toString() === scrapyardFilter;
+    const matchesScrapyard = scrapyardFilter === 'all' || driver.tenant_id?.toString() === scrapyardFilter;
     return matchesSearch && matchesStatus && matchesScrapyard;
   });
 
@@ -342,7 +348,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           </span>
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
-                            {scrapyards.find(s => s.id === driver.scrapyard_id)?.name || 'No scrapyard assigned'}
+                            {scrapyards.find(s => s.id === driver.tenant_id)?.name || 'No scrapyard assigned'}
                           </span>
                           {driver.vehicle_registration && (
                             <span className="flex items-center gap-1">
@@ -618,7 +624,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                            </span>
                            <span className="flex items-center gap-1">
                              <Building2 className="h-3 w-3" />
-                             {scrapyards.find(s => s.id === driver.scrapyard_id)?.name || 'No scrapyard assigned'}
+                             {scrapyards.find(s => s.id === driver.tenant_id)?.name || 'No scrapyard assigned'}
                            </span>
                            {driver.vehicle_registration && (
                              <span className="flex items-center gap-1">

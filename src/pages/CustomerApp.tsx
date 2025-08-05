@@ -173,7 +173,6 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
         pickup_address: 'Pickup TBD',
         pickup_postal_code: '00000',
         pnr_num: carDetails.pnr,
-        scrapyard_id: null, // Explicitly set to null to avoid ambiguous column reference
         tenant_id: null // Explicitly set to null for anonymous users
       })
       .select()

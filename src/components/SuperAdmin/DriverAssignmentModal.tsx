@@ -48,7 +48,6 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
         .from('customer_requests')
         .select('*')
         .in('status', ['pending', 'accepted'])
-        .is('scrapyard_id', null)
         .limit(10);
 
       if (error) throw error;

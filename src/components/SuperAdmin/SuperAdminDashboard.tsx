@@ -117,7 +117,7 @@ const SuperAdminDashboard = () => {
       // Fetch recent invoices/payments
       const { data: recentInvoices } = await supabase
         .from('scrapyard_invoices')
-        .select('id, invoice_number, payment_date, created_at, scrapyard_id')
+        .select('id, invoice_number, payment_date, created_at')
         .order('created_at', { ascending: false })
         .limit(2);
 
