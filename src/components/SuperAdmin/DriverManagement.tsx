@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Users, Plus, Search, MapPin, Clock, Phone, Car, UserCheck, UserX, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Search, MapPin, Clock, Phone, Car, UserCheck, UserX, Edit, Trash2, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import DriverFormModal from './DriverFormModal';
@@ -340,6 +340,10 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                             <Phone className="h-3 w-3" />
                             {driver.phone_number}
                           </span>
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {scrapyards.find(s => s.id === driver.scrapyard_id)?.name || 'No scrapyard assigned'}
+                          </span>
                           {driver.vehicle_registration && (
                             <span className="flex items-center gap-1">
                               <Car className="h-3 w-3" />
@@ -607,22 +611,26 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {driver.phone_number}
-                          </span>
-                          {driver.vehicle_registration && (
-                            <span className="flex items-center gap-1">
-                              <Car className="h-3 w-3" />
-                              {driver.vehicle_registration} ({driver.vehicle_type})
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Last seen: {formatLastSeen(driver.last_location_update)}
-                          </span>
-                        </div>
+                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                           <span className="flex items-center gap-1">
+                             <Phone className="h-3 w-3" />
+                             {driver.phone_number}
+                           </span>
+                           <span className="flex items-center gap-1">
+                             <Building2 className="h-3 w-3" />
+                             {scrapyards.find(s => s.id === driver.scrapyard_id)?.name || 'No scrapyard assigned'}
+                           </span>
+                           {driver.vehicle_registration && (
+                             <span className="flex items-center gap-1">
+                               <Car className="h-3 w-3" />
+                               {driver.vehicle_registration} ({driver.vehicle_type})
+                             </span>
+                           )}
+                           <span className="flex items-center gap-1">
+                             <Clock className="h-3 w-3" />
+                             Last seen: {formatLastSeen(driver.last_location_update)}
+                           </span>
+                         </div>
                       </div>
                     </div>
 
