@@ -41,6 +41,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
   });
   const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<any[]>([]);
+  const [tenantsLoading, setTenantsLoading] = useState(true);
 
   useEffect(() => {
     fetchTenants();
@@ -66,6 +67,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
 
   const fetchTenants = async () => {
     try {
+      setTenantsLoading(true);
       let query = supabase.from('tenants').select('tenants_id, name');
       
       // Restrict tenant access for scrapyard admins
@@ -74,10 +76,15 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       }
       
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tenants:', error);
+        return;
+      }
       setTenants(data || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
+    } finally {
+      setTenantsLoading(false);
     }
   };
 
@@ -175,7 +182,13 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                     // Read-only for scrapyard admins - only show their tenant
                     <Input
                       id="tenant_id"
-                      value={tenants.find(t => t.tenants_id === formData.tenant_id)?.name || 'Loading...'}
+                      value={
+                        tenantsLoading 
+                          ? 'Loading...' 
+                          : tenants.find(t => t.tenants_id === Number(formData.tenant_id))?.name || 
+                            tenants[0]?.name || 
+                            'No tenant found'
+                      }
                       disabled
                       className="bg-muted cursor-not-allowed"
                     />
@@ -187,6 +200,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                       onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
                       className="w-full px-3 py-2 border rounded-md"
                       required
+                      disabled={tenantsLoading}
                     >
                       <option value="">Select tenant</option>
                       {tenants.map((tenant) => (
