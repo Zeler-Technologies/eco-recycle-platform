@@ -41,11 +41,16 @@ export const useDriverIntegration = () => {
   const fetchDriverInfo = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔍 fetchDriverInfo - Current user:', user?.id, user?.email);
+      
       if (!user) {
         throw new Error('Användaren är inte inloggad');
       }
 
+      console.log('🔍 fetchDriverInfo - Calling get_current_driver_info RPC...');
       const { data, error } = await supabase.rpc('get_current_driver_info');
+      
+      console.log('🔍 fetchDriverInfo - RPC response:', { data, error });
       
       if (error) {
         throw new Error(`Kunde inte hämta förarinformation: ${error.message}`);
@@ -55,10 +60,11 @@ export const useDriverIntegration = () => {
         throw new Error('Ingen förare hittades. Kontakta administratören för att skapa ditt förarkonto.');
       }
 
+      console.log('🔍 fetchDriverInfo - Setting driver:', data[0]);
       setDriver(data[0]);
       return data[0];
     } catch (err) {
-      console.error('Error fetching driver info:', err);
+      console.error('❌ Error fetching driver info:', err);
       setError(err instanceof Error ? err.message : 'Ett fel uppstod');
       return null;
     }
