@@ -53,10 +53,34 @@ Deno.serve(async (req) => {
       }
     )
     
-    // First check if driver exists
+    // Get current authenticated user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Get current user's role and tenant info
+    const { data: authUser, error: authUserError } = await supabaseClient
+      .from('auth_users')
+      .select('role, tenant_id')
+      .eq('id', user.id)
+      .single()
+    
+    if (authUserError) {
+      return new Response(
+        JSON.stringify({ error: 'User authorization info not found' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Get driver details including tenant and auth_user_id
     const { data: driver, error: driverError } = await supabaseClient
       .from('drivers')
-      .select('id, driver_status')
+      .select('id, driver_status, tenant_id, auth_user_id')
       .eq('id', driverId)
       .single()
     
@@ -64,6 +88,27 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: `Driver with ID ${driverId} does not exist` }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Authorization check: Verify user can update this driver's status
+    const canUpdate = 
+      // Super admin can update any driver
+      authUser.role === 'super_admin' ||
+      // Driver can update their own status
+      (authUser.role === 'driver' && driver.auth_user_id === user.id) ||
+      // Tenant admin can update drivers in their tenant
+      (authUser.role === 'tenant_admin' && authUser.tenant_id === driver.tenant_id)
+    
+    if (!canUpdate) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Insufficient permissions to update this driver status',
+          userRole: authUser.role,
+          userTenant: authUser.tenant_id,
+          driverTenant: driver.tenant_id
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
