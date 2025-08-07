@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           tenantId = '1';
         } else if (session.user.email === 'driver@scrapyard.se' || session.user.email === 'mikaela@scrapyard.se') {
           userRole = 'driver';
-          tenantId = '1234';
+          tenantId = '1';
         } else if (session.user.email === 'customer@demo.se') {
           userRole = 'customer';
         }
@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           tenantId = '1';
         } else if (session.user.email === 'driver@scrapyard.se' || session.user.email === 'mikaela@scrapyard.se') {
           userRole = 'driver';
-          tenantId = '1234';
+          tenantId = '1';
         } else if (session.user.email === 'customer@demo.se') {
           userRole = 'customer';
         }
