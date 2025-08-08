@@ -1,356 +1,321 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Settings, 
-  Save, 
-  Globe, 
-  Mail, 
-  CreditCard, 
-  Calendar, 
-  Percent,
-  AlertTriangle,
-  DollarSign,
-  FileText,
-  Bell
-} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Settings, Globe, CreditCard, Mail, DollarSign, Save, RotateCcw, Loader2, AlertTriangle } from 'lucide-react';
+import { useBillingConfig } from '@/hooks/useBillingConfig';
+import { useBillingOptions } from '@/hooks/useBillingOptions';
+import { useToast } from '@/hooks/use-toast';
 
-interface BillingConfig {
-  currency: string;
-  timezone: string;
-  billingCycle: string;
-  taxRate: number;
-  paymentTerms: number;
-  autoGenerate: boolean;
-  autoSend: boolean;
-  reminderDays: number[];
-  dunningEnabled: boolean;
-  dunningAttempts: number;
-  dunningInterval: number;
-  locale: string;
-  emailSettings: {
-    fromEmail: string;
-    fromName: string;
-    invoiceTemplate: string;
-    reminderTemplate: string;
-    overdueTemplate: string;
-  };
-  sharedCosts: {
-    infrastructure: number;
-    support: number;
-    marketing: number;
-    development: number;
-  };
+interface BillingSettingsProps {
+  tenantId?: number;
 }
 
-export const BillingSettings = () => {
-  const [config, setConfig] = useState<BillingConfig>({
-    currency: 'EUR',
-    timezone: 'Europe/Stockholm',
-    billingCycle: 'monthly',
-    taxRate: 25,
-    paymentTerms: 15,
-    autoGenerate: true,
-    autoSend: false,
-    reminderDays: [7, 3, 1],
-    dunningEnabled: true,
-    dunningAttempts: 3,
-    dunningInterval: 7,
-    locale: 'sv_SE',
-    emailSettings: {
-      fromEmail: 'billing@carrecycling.se',
-      fromName: 'Car Recycling Platform',
-      invoiceTemplate: 'default',
-      reminderTemplate: 'friendly',
-      overdueTemplate: 'urgent'
-    },
-    sharedCosts: {
-      infrastructure: 2500,
-      support: 1200,
-      marketing: 800,
-      development: 1500
-    }
-  });
-
+export const BillingSettings: React.FC<BillingSettingsProps> = ({ tenantId }) => {
   const [activeTab, setActiveTab] = useState('general');
+  const [reminderDaysInput, setReminderDaysInput] = useState('');
+  const { toast } = useToast();
 
-  const handleSave = () => {
-    // Save configuration
-    console.log('Saving billing configuration:', config);
+  const {
+    config,
+    isLoading: configLoading,
+    error: configError,
+    hasUnsavedChanges,
+    updateConfig,
+    saveAllChanges,
+    resetChanges
+  } = useBillingConfig(tenantId);
+
+  const {
+    options,
+    isLoading: optionsLoading,
+    error: optionsError,
+    getCurrencyOptions,
+    getTimezoneOptions,
+    getLocaleOptions,
+    getEmailTemplateOptions,
+    getBillingCycleOptions
+  } = useBillingOptions();
+
+  // Initialize reminder days input when config loads
+  useEffect(() => {
+    if (config.payment?.reminder_days) {
+      setReminderDaysInput(config.payment.reminder_days.join(', '));
+    }
+  }, [config.payment?.reminder_days]);
+
+  const handleSave = async () => {
+    const success = await saveAllChanges();
+    if (success) {
+      toast({
+        title: 'Success',
+        description: 'Billing configuration saved successfully',
+      });
+    }
   };
 
-  const handleConfigChange = (section: string, field: string, value: any) => {
-    setConfig(prev => {
-      const currentSection = prev[section as keyof BillingConfig];
-      if (typeof currentSection === 'object' && currentSection !== null) {
-        return {
-          ...prev,
-          [section]: {
-            ...currentSection,
-            [field]: value
-          }
-        };
-      }
-      return prev;
+  const handleReset = () => {
+    resetChanges();
+    if (config.payment?.reminder_days) {
+      setReminderDaysInput(config.payment.reminder_days.join(', '));
+    }
+    toast({
+      title: 'Reset',
+      description: 'Changes have been reset to saved values',
     });
   };
 
-  const handleDirectChange = (field: string, value: any) => {
-    setConfig(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleReminderDaysChange = (value: string) => {
+    setReminderDaysInput(value);
+    
+    // Parse and validate reminder days
+    const days = value
+      .split(',')
+      .map(d => parseInt(d.trim()))
+      .filter(d => !isNaN(d) && d > 0)
+      .sort((a, b) => a - b);
+    
+    updateConfig('payment', 'reminder_days', days);
   };
 
-  const tabs = [
-    { id: 'general', label: 'General', icon: Settings },
-    { id: 'payment', label: 'Payment', icon: CreditCard },
-    { id: 'email', label: 'Email', icon: Mail },
-    { id: 'costs', label: 'Shared Costs', icon: DollarSign }
-  ];
+  const handleSharedCostChange = (category: string, percentage: number) => {
+    const updatedSharedCosts = {
+      ...config.shared_costs,
+      [category]: { percentage }
+    };
+    updateConfig('shared_costs', 'categories', updatedSharedCosts);
+  };
+
+  const isLoading = configLoading || optionsLoading;
+  const hasError = configError || optionsError;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-96 mt-2" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Failed to load billing configuration: {configError || optionsError}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-admin-primary">Billing Settings</h2>
+          <h2 className="text-2xl font-bold text-foreground">Billing Settings</h2>
           <p className="text-muted-foreground">Configure billing cycles, payment terms, and automation</p>
         </div>
-        <Button 
-          className="bg-admin-primary hover:bg-admin-primary/90"
-          onClick={handleSave}
-        >
-          <Save className="h-4 w-4 mr-2" />
-          Save Configuration
-        </Button>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b">
-        <div className="flex space-x-8">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-2 px-1 border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-admin-primary text-admin-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex gap-2">
+          {hasUnsavedChanges && (
+            <Button variant="outline" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={!hasUnsavedChanges}>
+            <Save className="h-4 w-4 mr-2" />
+            Save Configuration
+          </Button>
         </div>
       </div>
 
-      {/* General Settings */}
-      {activeTab === 'general' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white shadow-custom-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Regional Settings
-              </CardTitle>
-              <CardDescription>Currency, timezone, and locale configuration</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+      {hasUnsavedChanges && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            You have unsaved changes. Make sure to save your configuration before leaving this page.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Payment
+          </TabsTrigger>
+          <TabsTrigger value="email" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Email
+          </TabsTrigger>
+          <TabsTrigger value="shared_costs" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Shared Costs
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Regional Settings
+                </CardTitle>
+                <CardDescription>Currency, timezone, and locale configuration</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select 
+                      value={config.general?.currency || ''} 
+                      onValueChange={(value) => updateConfig('general', 'currency', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getCurrencyOptions().map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <Select 
+                      value={config.general?.timezone || ''} 
+                      onValueChange={(value) => updateConfig('general', 'timezone', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getTimezoneOptions().map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select value={config.currency} onValueChange={(value) => handleDirectChange('currency', value)}>
+                  <Label htmlFor="locale">Locale</Label>
+                  <Select 
+                    value={config.general?.locale || ''} 
+                    onValueChange={(value) => updateConfig('general', 'locale', value)}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select locale" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="SEK">SEK (kr)</SelectItem>
-                      <SelectItem value="NOK">NOK (kr)</SelectItem>
-                      <SelectItem value="DKK">DKK (kr)</SelectItem>
+                      {getLocaleOptions().map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select value={config.timezone} onValueChange={(value) => handleDirectChange('timezone', value)}>
+                  <Label htmlFor="billing_cycle">Billing Cycle</Label>
+                  <Select 
+                    value={config.general?.billing_cycle || ''} 
+                    onValueChange={(value) => updateConfig('general', 'billing_cycle', value)}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select billing cycle" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Europe/Stockholm">Stockholm</SelectItem>
-                      <SelectItem value="Europe/Oslo">Oslo</SelectItem>
-                      <SelectItem value="Europe/Copenhagen">Copenhagen</SelectItem>
-                      <SelectItem value="UTC">UTC</SelectItem>
+                      {getBillingCycleOptions().map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="locale">Locale</Label>
-                <Select value={config.locale} onValueChange={(value) => handleDirectChange('locale', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sv_SE">Swedish</SelectItem>
-                    <SelectItem value="en_US">English (US)</SelectItem>
-                    <SelectItem value="nb_NO">Norwegian</SelectItem>
-                    <SelectItem value="da_DK">Danish</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-          <Card className="bg-white shadow-custom-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Billing Cycle
-              </CardTitle>
-              <CardDescription>Configure billing frequency and tax settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="billingCycle">Billing Cycle</Label>
-                <Select value={config.billingCycle} onValueChange={(value) => handleDirectChange('billingCycle', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annually">Annually</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                <Input
-                  id="taxRate"
-                  type="number"
-                  value={config.taxRate}
-                  onChange={(e) => handleDirectChange('taxRate', parseFloat(e.target.value))}
-                  min="0"
-                  max="100"
-                  step="0.1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="paymentTerms">Payment Terms (days)</Label>
-                <Input
-                  id="paymentTerms"
-                  type="number"
-                  value={config.paymentTerms}
-                  onChange={(e) => handleDirectChange('paymentTerms', parseInt(e.target.value))}
-                  min="1"
-                  max="90"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Payment Settings */}
-      {activeTab === 'payment' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white shadow-custom-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Automation Settings
-              </CardTitle>
-              <CardDescription>Configure automated billing processes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+        <TabsContent value="payment" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Terms
+                </CardTitle>
+                <CardDescription>Configure payment terms and tax settings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="autoGenerate">Auto-generate invoices</Label>
-                  <p className="text-sm text-muted-foreground">Automatically create invoices at billing cycle end</p>
-                </div>
-                <Switch
-                  id="autoGenerate"
-                  checked={config.autoGenerate}
-                  onCheckedChange={(checked) => handleDirectChange('autoGenerate', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="autoSend">Auto-send invoices</Label>
-                  <p className="text-sm text-muted-foreground">Automatically send invoices to tenants</p>
-                </div>
-                <Switch
-                  id="autoSend"
-                  checked={config.autoSend}
-                  onCheckedChange={(checked) => handleDirectChange('autoSend', checked)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-custom-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Dunning & Reminders
-              </CardTitle>
-              <CardDescription>Configure payment reminders and dunning process</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="dunningEnabled">Enable dunning process</Label>
-                  <p className="text-sm text-muted-foreground">Automatic follow-up for overdue invoices</p>
-                </div>
-                <Switch
-                  id="dunningEnabled"
-                  checked={config.dunningEnabled}
-                  onCheckedChange={(checked) => handleDirectChange('dunningEnabled', checked)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dunningAttempts">Dunning attempts</Label>
+                  <Label htmlFor="tax_rate">Tax Rate (%)</Label>
                   <Input
-                    id="dunningAttempts"
+                    id="tax_rate"
                     type="number"
-                    value={config.dunningAttempts}
-                    onChange={(e) => handleDirectChange('dunningAttempts', parseInt(e.target.value))}
-                    min="1"
-                    max="10"
+                    value={config.payment?.tax_rate || 0}
+                    onChange={(e) => updateConfig('payment', 'tax_rate', parseFloat(e.target.value) || 0)}
+                    min="0"
+                    max="100"
+                    step="0.1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dunningInterval">Interval (days)</Label>
+                  <Label htmlFor="payment_terms_days">Payment Terms (days)</Label>
                   <Input
-                    id="dunningInterval"
+                    id="payment_terms_days"
                     type="number"
-                    value={config.dunningInterval}
-                    onChange={(e) => handleDirectChange('dunningInterval', parseInt(e.target.value))}
+                    value={config.payment?.payment_terms_days || 30}
+                    onChange={(e) => updateConfig('payment', 'payment_terms_days', parseInt(e.target.value) || 30)}
                     min="1"
-                    max="30"
+                    max="90"
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                <div>
+                  <Label htmlFor="reminder_days">Reminder Days (comma separated)</Label>
+                  <Input
+                    id="reminder_days"
+                    value={reminderDaysInput}
+                    onChange={(e) => handleReminderDaysChange(e.target.value)}
+                    placeholder="7, 14, 30"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Days before/after due date to send reminders
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-      {/* Email Settings */}
-      {activeTab === 'email' && (
-        <div className="space-y-6">
-          <Card className="bg-white shadow-custom-sm">
+        <TabsContent value="email" className="space-y-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
@@ -361,84 +326,87 @@ export const BillingSettings = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fromEmail">From Email</Label>
+                  <Label htmlFor="from_email">From Email</Label>
                   <Input
-                    id="fromEmail"
+                    id="from_email"
                     type="email"
-                    value={config.emailSettings.fromEmail}
-                    onChange={(e) => handleConfigChange('emailSettings', 'fromEmail', e.target.value)}
+                    value={config.email?.from_email || ''}
+                    onChange={(e) => updateConfig('email', 'from_email', e.target.value)}
                     placeholder="billing@company.com"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fromName">From Name</Label>
+                  <Label htmlFor="from_name">From Name</Label>
                   <Input
-                    id="fromName"
-                    value={config.emailSettings.fromName}
-                    onChange={(e) => handleConfigChange('emailSettings', 'fromName', e.target.value)}
+                    id="from_name"
+                    value={config.email?.from_name || ''}
+                    onChange={(e) => updateConfig('email', 'from_name', e.target.value)}
                     placeholder="Company Name"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="invoiceTemplate">Invoice Template</Label>
+                  <Label htmlFor="template_invoice">Invoice Template</Label>
                   <Select 
-                    value={config.emailSettings.invoiceTemplate} 
-                    onValueChange={(value) => handleConfigChange('emailSettings', 'invoiceTemplate', value)}
+                    value={config.email?.template_invoice || ''} 
+                    onValueChange={(value) => updateConfig('email', 'template_invoice', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select template" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="modern">Modern</SelectItem>
-                      <SelectItem value="classic">Classic</SelectItem>
+                      {getEmailTemplateOptions('invoice').map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="reminderTemplate">Reminder Template</Label>
+                  <Label htmlFor="template_reminder">Reminder Template</Label>
                   <Select 
-                    value={config.emailSettings.reminderTemplate} 
-                    onValueChange={(value) => handleConfigChange('emailSettings', 'reminderTemplate', value)}
+                    value={config.email?.template_reminder || ''} 
+                    onValueChange={(value) => updateConfig('email', 'template_reminder', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select template" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="friendly">Friendly</SelectItem>
-                      <SelectItem value="professional">Professional</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                      {getEmailTemplateOptions('reminder').map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="overdueTemplate">Overdue Template</Label>
+                  <Label htmlFor="template_overdue">Overdue Template</Label>
                   <Select 
-                    value={config.emailSettings.overdueTemplate} 
-                    onValueChange={(value) => handleConfigChange('emailSettings', 'overdueTemplate', value)}
+                    value={config.email?.template_overdue || ''} 
+                    onValueChange={(value) => updateConfig('email', 'template_overdue', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select template" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                      <SelectItem value="final">Final Notice</SelectItem>
-                      <SelectItem value="legal">Legal Notice</SelectItem>
+                      {getEmailTemplateOptions('overdue').map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </TabsContent>
 
-      {/* Shared Costs */}
-      {activeTab === 'costs' && (
-        <div className="space-y-6">
-          <Card className="bg-white shadow-custom-sm">
+        <TabsContent value="shared_costs" className="space-y-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
@@ -447,73 +415,26 @@ export const BillingSettings = () => {
               <CardDescription>Configure shared infrastructure and service costs</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="infrastructure">Infrastructure (€/month)</Label>
+              {config.shared_costs && Object.entries(config.shared_costs).map(([category, data]) => (
+                <div key={category} className="grid grid-cols-3 gap-4 items-center">
+                  <Label className="capitalize">{category} (%)</Label>
                   <Input
-                    id="infrastructure"
                     type="number"
-                    value={config.sharedCosts.infrastructure}
-                    onChange={(e) => handleConfigChange('sharedCosts', 'infrastructure', parseFloat(e.target.value))}
+                    value={data.percentage || 0}
+                    onChange={(e) => handleSharedCostChange(category, parseFloat(e.target.value) || 0)}
                     min="0"
-                    step="0.01"
+                    max="100"
+                    step="0.1"
                   />
-                  <p className="text-sm text-muted-foreground mt-1">Server hosting, CDN, database costs</p>
+                  <Badge variant="secondary">
+                    {data.percentage || 0}% allocation
+                  </Badge>
                 </div>
-                <div>
-                  <Label htmlFor="support">Support (€/month)</Label>
-                  <Input
-                    id="support"
-                    type="number"
-                    value={config.sharedCosts.support}
-                    onChange={(e) => handleConfigChange('sharedCosts', 'support', parseFloat(e.target.value))}
-                    min="0"
-                    step="0.01"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">Customer support and help desk</p>
-                </div>
-                <div>
-                  <Label htmlFor="marketing">Marketing (€/month)</Label>
-                  <Input
-                    id="marketing"
-                    type="number"
-                    value={config.sharedCosts.marketing}
-                    onChange={(e) => handleConfigChange('sharedCosts', 'marketing', parseFloat(e.target.value))}
-                    min="0"
-                    step="0.01"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">Marketing and advertising costs</p>
-                </div>
-                <div>
-                  <Label htmlFor="development">Development (€/month)</Label>
-                  <Input
-                    id="development"
-                    type="number"
-                    value={config.sharedCosts.development}
-                    onChange={(e) => handleConfigChange('sharedCosts', 'development', parseFloat(e.target.value))}
-                    min="0"
-                    step="0.01"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">Development and maintenance</p>
-                </div>
-              </div>
-              
-              <div className="mt-6 p-4 bg-admin-accent/20 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-admin-primary" />
-                  <span className="font-medium">Total Monthly Shared Costs</span>
-                </div>
-                <div className="text-2xl font-bold text-admin-primary">
-                  €{(config.sharedCosts.infrastructure + config.sharedCosts.support + config.sharedCosts.marketing + config.sharedCosts.development).toFixed(2)}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This amount will be allocated across tenants based on their usage or configured share percentages
-                </p>
-              </div>
+              ))}
             </CardContent>
           </Card>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
