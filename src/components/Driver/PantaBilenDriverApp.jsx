@@ -1,5 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDriverIntegration } from '@/hooks/useDriverIntegration';
+import { 
+  STATUS_TEXTS, 
+  STATUS_COLORS, 
+  DRIVER_STATUS_TEXTS,
+  FILTER_OPTIONS,
+  UI_LABELS,
+  ARIA_LABELS
+} from '@/constants/driverAppConstants';
 const PantaBilenDriverApp = () => {
   // Use the driver integration hook 
   const { 
@@ -13,15 +21,14 @@ const PantaBilenDriverApp = () => {
 
   // Local state
   const [currentView, setCurrentView] = useState('list');
-  const [currentTab, setCurrentTab] = useState('mina');
   const [currentFilter, setCurrentFilter] = useState('all');
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selectedPickup, setSelectedPickup] = useState(null);
   const [showDetailView, setShowDetailView] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
-  // Helper functions
-  const getFilteredPickups = () => {
+  // Memoized filtered and sorted pickups
+  const filteredPickups = useMemo(() => {
     let filtered = pickups;
 
     // Filter by status
@@ -31,28 +38,22 @@ const PantaBilenDriverApp = () => {
 
     // Sort by date
     return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  };
+  }, [pickups, currentFilter]);
 
+  // Helper functions
   const getStatusText = (status) => {
-    const statusMap = {
-      'scheduled': 'Väntar på upphämtning',
-      'in_progress': 'Pågående',
-      'completed': 'Klar',
-      'cancelled': 'Avbruten',
-      'pending': 'Att hantera'
-    };
-    return statusMap[status] || status;
+    return STATUS_TEXTS[status] || status;
   };
 
   const getStatusColor = (status) => {
-    const colorMap = {
-      'scheduled': '#6366f1',
-      'in_progress': '#f59e0b', 
-      'completed': '#10b981',
-      'cancelled': '#ef4444',
-      'pending': '#f59e0b'
-    };
-    return colorMap[status] || '#6c757d';
+    return STATUS_COLORS[status] || '#6c757d';
+  };
+
+  const getCurrentTime = () => {
+    return new Date().toLocaleTimeString('sv-SE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -73,6 +74,7 @@ const PantaBilenDriverApp = () => {
     const success = await updatePickupStatusHook(pickupId, 'completed');
     if (success) {
       setShowDetailView(false);
+      // Hook should automatically refresh the list
     }
   };
 
@@ -81,7 +83,7 @@ const PantaBilenDriverApp = () => {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Laddar...</p>
+          <p className="text-gray-600">{UI_LABELS.loading}</p>
         </div>
       </div>
     );
@@ -91,9 +93,9 @@ const PantaBilenDriverApp = () => {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4 font-semibold">⚠️ {error || 'Ingen förare hittades'}</p>
+          <p className="text-red-600 mb-4 font-semibold">⚠️ {error || UI_LABELS.noDriverFound}</p>
           <p className="text-sm text-gray-500">
-            {error ? 'Försök igen eller kontakta administratören' : 'Kontakta administratören för att skapa ditt förarkonto'}
+            {error ? UI_LABELS.tryAgain : UI_LABELS.contactAdmin}
           </p>
         </div>
       </div>
@@ -102,7 +104,7 @@ const PantaBilenDriverApp = () => {
 
   const StatusBar = () => (
     <div className="bg-gray-900 text-white px-5 py-2 flex justify-between items-center text-base font-semibold">
-      <span>12:30</span>
+      <span>{getCurrentTime()}</span>
       <div className="flex gap-1 items-center">
         <div className="w-4 h-3 bg-white rounded-sm"></div>
         <div className="w-4 h-3 bg-white rounded-sm"></div>
@@ -123,6 +125,7 @@ const PantaBilenDriverApp = () => {
                 : 'text-white text-opacity-80'
             }`}
             onClick={() => setCurrentView('list')}
+            aria-label={ARIA_LABELS.listView}
           >
             Lista
           </button>
@@ -133,6 +136,7 @@ const PantaBilenDriverApp = () => {
                 : 'text-white text-opacity-80'
             }`}
             onClick={() => setCurrentView('map')}
+            aria-label={ARIA_LABELS.mapView}
           >
             Karta
           </button>
@@ -148,14 +152,15 @@ const PantaBilenDriverApp = () => {
                 : 'border-gray-500 bg-gray-50 text-gray-700'
             }`}
             onClick={() => setShowStatusMenu(!showStatusMenu)}
+            aria-label={ARIA_LABELS.statusDropdown}
           >
             <div className={`w-3 h-3 rounded-full ${
               currentDriver.driver_status === 'available' ? 'bg-green-500' : 
               currentDriver.driver_status === 'busy' ? 'bg-red-500' : 'bg-gray-500'
             }`}></div>
             <span>
-              {currentDriver.driver_status === 'available' ? 'Tillgänglig' : 
-               currentDriver.driver_status === 'busy' ? 'Upptagen' : 'Offline'}
+              {currentDriver.driver_status === 'available' ? DRIVER_STATUS_TEXTS.available : 
+               currentDriver.driver_status === 'busy' ? DRIVER_STATUS_TEXTS.busy : DRIVER_STATUS_TEXTS.offline}
             </span>
             <span>▼</span>
           </button>
@@ -173,8 +178,8 @@ const PantaBilenDriverApp = () => {
                     status === 'busy' ? 'bg-red-500' : 'bg-gray-500'
                   }`}></div>
                   <span className="text-gray-900">
-                    {status === 'available' ? 'Tillgänglig' : 
-                     status === 'busy' ? 'Upptagen' : 'Offline'}
+                    {status === 'available' ? DRIVER_STATUS_TEXTS.available : 
+                     status === 'busy' ? DRIVER_STATUS_TEXTS.busy : DRIVER_STATUS_TEXTS.offline}
                   </span>
                 </button>
               ))}
@@ -192,26 +197,23 @@ const PantaBilenDriverApp = () => {
   const TabBar = () => (
     <div className="bg-white flex border-b border-gray-200">
       <button
-        className={`flex-1 py-4 text-center font-semibold text-base ${
-          currentTab === 'mina' 
-            ? 'text-gray-900 border-b-3 border-indigo-500' 
-            : 'text-gray-600 hover:text-gray-900'
-        }`}
-        onClick={() => setCurrentTab('mina')}
+        className="flex-1 py-4 text-center font-semibold text-base text-gray-900 border-b-3 border-indigo-500"
+        onClick={() => {}} // Single tab, no action needed
       >
-        Mina ({getFilteredPickups().length})
+        Mina ({filteredPickups.length})
       </button>
     </div>
   );
 
   const FilterHeader = () => (
     <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-200">
-      <span className="text-sm text-gray-600">{getFilteredPickups().length} uppdrag</span>
+      <span className="text-sm text-gray-600">{filteredPickups.length} {UI_LABELS.tasks}</span>
       <button
         className="text-indigo-600 text-sm flex items-center gap-1"
         onClick={() => setFiltersVisible(!filtersVisible)}
+        aria-label={ARIA_LABELS.toggleFilters}
       >
-        Filtrera och sortera ⚙️
+        {UI_LABELS.filterAndSort} ⚙️
       </button>
     </div>
   );
@@ -220,15 +222,9 @@ const PantaBilenDriverApp = () => {
     filtersVisible && (
       <div className="bg-white mx-4 my-4 p-5 rounded-xl shadow-lg">
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-800 mb-2">Filtrera efter status:</label>
+          <label className="block text-sm font-semibold text-gray-800 mb-2">{UI_LABELS.filterByStatus}</label>
           <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'all', label: 'Alla' },
-              { key: 'scheduled', label: 'Schemalagd' },
-              { key: 'in_progress', label: 'Pågående' },
-              { key: 'completed', label: 'Klar' },
-              { key: 'pending', label: 'Väntar' },
-            ].map(({ key, label }) => (
+            {FILTER_OPTIONS.map(({ key, label }) => (
               <button
                 key={key}
                 className={`px-4 py-2 border-2 rounded-full text-sm font-semibold transition-all ${
@@ -259,8 +255,8 @@ const PantaBilenDriverApp = () => {
               {pickup.car_registration_number || 'N/A'}
             </div>
             <div className="flex gap-1">
-              <span className="text-base">💀</span>
-              <span className="text-base">📋</span>
+              <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
+              <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
             </div>
           </div>
           
@@ -269,11 +265,11 @@ const PantaBilenDriverApp = () => {
           </div>
           
           <div className="text-base font-semibold text-gray-900 mb-2">
-            Slutpris: {pickup.final_price ? `${pickup.final_price} kr` : 'Ej bestämt'}
+            {UI_LABELS.finalPrice}: {pickup.final_price ? `${pickup.final_price} kr` : UI_LABELS.notDetermined}
           </div>
           
           <div className="text-sm text-gray-600 mb-2">
-            Adress: {pickup.pickup_address}
+            {UI_LABELS.address}: {pickup.pickup_address}
           </div>
           
           <div className={`inline-block px-3 py-1 rounded-xl text-xs font-semibold`} 
@@ -290,13 +286,13 @@ const PantaBilenDriverApp = () => {
 
   const PickupList = () => (
     <div className={`p-4 ${currentView === 'map' ? 'hidden' : 'block'}`}>
-      {getFilteredPickups().length === 0 ? (
+      {filteredPickups.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-gray-400 text-6xl mb-4">📋</div>
-          <p className="text-gray-600">Inga uppdrag att visa</p>
+          <p className="text-gray-600">{UI_LABELS.noTasksToShow}</p>
         </div>
       ) : (
-        getFilteredPickups().map(pickup => (
+        filteredPickups.map(pickup => (
           <PickupCard key={pickup.id} pickup={pickup} />
         ))
       )}
@@ -309,20 +305,24 @@ const PantaBilenDriverApp = () => {
         <div className="flex justify-between items-center flex-wrap gap-3">
           <div className="flex gap-5 flex-wrap">
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{getFilteredPickups().length}</div>
-              <div className="text-xs text-gray-600">Uppdrag</div>
+              <div className="text-xl font-bold text-gray-900">{filteredPickups.length}</div>
+              <div className="text-xs text-gray-600">{UI_LABELS.tasks}</div>
+            </div>
+            {/* TODO: Replace with real route optimization data */}
+            <div className="text-center">
+              <div className="text-xl font-bold text-gray-900">--</div>
+              <div className="text-xs text-gray-600">{UI_LABELS.estimatedDistance}</div>
             </div>
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{getFilteredPickups().length * 8} km</div>
-              <div className="text-xs text-gray-600">Uppskattad sträcka</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{getFilteredPickups().length * 25} min</div>
-              <div className="text-xs text-gray-600">Uppskattad tid</div>
+              <div className="text-xl font-bold text-gray-900">--</div>
+              <div className="text-xs text-gray-600">{UI_LABELS.estimatedTime}</div>
             </div>
           </div>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-            🗺️ Optimera rutt
+          <button 
+            className="bg-green-600 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2"
+            aria-label={ARIA_LABELS.optimizeRoute}
+          >
+            🗺️ {UI_LABELS.optimizeRoute}
           </button>
         </div>
       </div>
@@ -330,8 +330,8 @@ const PantaBilenDriverApp = () => {
       <div className="bg-gray-200 h-96 rounded-xl flex items-center justify-center">
         <div className="text-gray-600 text-center">
           <div className="text-2xl mb-2">🗺️</div>
-          <div>Google Maps Integration</div>
-          <div className="text-sm mt-1">Visa {getFilteredPickups().length} uppdrag på kartan</div>
+          <div>{UI_LABELS.googleMapsIntegration}</div>
+          <div className="text-sm mt-1">{UI_LABELS.showOnMap} {filteredPickups.length} {UI_LABELS.tasks}</div>
         </div>
       </div>
     </div>
@@ -344,10 +344,11 @@ const PantaBilenDriverApp = () => {
           <button
             className="text-xl font-bold"
             onClick={() => setShowDetailView(false)}
+            aria-label={ARIA_LABELS.backToList}
           >
             ←
           </button>
-          <span className="font-semibold">Tillbaka till listan</span>
+          <span className="font-semibold">{UI_LABELS.backToList}</span>
         </div>
         
         <div className="p-5">
@@ -362,18 +363,18 @@ const PantaBilenDriverApp = () => {
 
           {/* Customer Info */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Kund</h3>
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{UI_LABELS.customer}</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-sm text-gray-600">Namn</span>
+                <span className="text-sm text-gray-600">{UI_LABELS.name}</span>
                 <span className="text-sm text-gray-900 font-medium">{selectedPickup.owner_name}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-sm text-gray-600">Adress</span>
+                <span className="text-sm text-gray-600">{UI_LABELS.address}</span>
                 <span className="text-sm text-gray-900 font-medium">{selectedPickup.pickup_address}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-sm text-gray-600">Status</span>
+                <span className="text-sm text-gray-600">{UI_LABELS.status}</span>
                 <span className="text-sm text-gray-900 font-medium">{getStatusText(selectedPickup.status)}</span>
               </div>
             </div>
@@ -384,18 +385,18 @@ const PantaBilenDriverApp = () => {
             {selectedPickup.status === 'scheduled' && (
               <button 
                 className="w-full bg-blue-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
+                onClick={() => updatePickupStatusHook(selectedPickup.id, 'in_progress')}
               >
-                Starta upphämtning
+                {UI_LABELS.startPickup}
               </button>
             )}
             
             {selectedPickup.status === 'in_progress' && (
               <button 
                 className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
+                onClick={() => handleCompletePickup(selectedPickup.id)}
               >
-                Slutför upphämtning
+                {UI_LABELS.completePickup}
               </button>
             )}
             
@@ -404,11 +405,16 @@ const PantaBilenDriverApp = () => {
               onClick={() => {
                 const address = selectedPickup.pickup_address;
                 if (address) {
-                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, '_blank');
+                  window.open(
+                    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, 
+                    '_blank',
+                    'noopener,noreferrer'
+                  );
                 }
               }}
+              aria-label={ARIA_LABELS.navigate}
             >
-              🗺️ Navigera
+              🗺️ {UI_LABELS.navigate}
             </button>
           </div>
         </div>
