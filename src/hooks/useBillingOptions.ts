@@ -44,13 +44,25 @@ export function useBillingOptions() {
   const { toast } = useToast();
 
   const fetchOptions = useCallback(async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.rpc('get_available_options');
+      const { data, error } = await supabase.rpc('get_available_options', {}, {
+        signal: controller.signal
+      });
 
-      if (error) throw error;
+      clearTimeout(timeoutId);
+
+      if (error) {
+        if (error.message?.includes('network') || error.message?.includes('timeout')) {
+          throw new Error('Could not connect to the server. Please check your internet connection and try again.');
+        }
+        throw error;
+      }
 
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         setOptions(data as unknown as BillingOptions);
@@ -63,10 +75,23 @@ export function useBillingOptions() {
         });
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch billing options';
+      clearTimeout(timeoutId);
+      
+      let errorMessage = 'Failed to fetch billing options';
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timed out. Please try again.';
+        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
       setError(errorMessage);
       toast({
-        title: 'Error',
+        title: 'Connection Error',
         description: errorMessage,
         variant: 'destructive'
       });

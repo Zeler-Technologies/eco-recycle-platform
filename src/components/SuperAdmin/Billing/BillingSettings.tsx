@@ -14,6 +14,7 @@ import { Settings, Globe, CreditCard, Mail, DollarSign, Save, RotateCcw, Loader2
 import { useBillingConfig } from '@/hooks/useBillingConfig';
 import { useBillingOptions } from '@/hooks/useBillingOptions';
 import { useToast } from '@/hooks/use-toast';
+import { SharedCostCategoriesManager } from './SharedCostCategoriesManager';
 
 interface BillingSettingsProps {
   tenantId?: number;
@@ -86,12 +87,8 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ tenantId }) =>
     updateConfig('payment', 'reminder_days', days);
   };
 
-  const handleSharedCostChange = (category: string, percentage: number) => {
-    const updatedSharedCosts = {
-      ...config.shared_costs,
-      [category]: { percentage }
-    };
-    updateConfig('shared_costs', 'categories', updatedSharedCosts);
+  const handleSharedCostChange = (categories: { [category: string]: { percentage: number } }) => {
+    updateConfig('shared_costs', 'categories', categories);
   };
 
   const isLoading = configLoading || optionsLoading;
@@ -406,33 +403,10 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ tenantId }) =>
         </TabsContent>
 
         <TabsContent value="shared_costs" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Shared Cost Allocation
-              </CardTitle>
-              <CardDescription>Configure shared infrastructure and service costs</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {config.shared_costs && Object.entries(config.shared_costs).map(([category, data]) => (
-                <div key={category} className="grid grid-cols-3 gap-4 items-center">
-                  <Label className="capitalize">{category} (%)</Label>
-                  <Input
-                    type="number"
-                    value={data.percentage || 0}
-                    onChange={(e) => handleSharedCostChange(category, parseFloat(e.target.value) || 0)}
-                    min="0"
-                    max="100"
-                    step="0.1"
-                  />
-                  <Badge variant="secondary">
-                    {data.percentage || 0}% allocation
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <SharedCostCategoriesManager
+            categories={config.shared_costs || {}}
+            onChange={handleSharedCostChange}
+          />
         </TabsContent>
       </Tabs>
     </div>
