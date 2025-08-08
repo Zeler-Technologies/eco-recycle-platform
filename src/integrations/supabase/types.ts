@@ -44,6 +44,20 @@ export type Database = {
             foreignKeyName: "auth_users_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "auth_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "auth_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -91,6 +105,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bidding_system_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bidding_system_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
           {
             foreignKeyName: "bidding_system_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -149,6 +177,20 @@ export type Database = {
             foreignKeyName: "bonus_offers_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bonus_offers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "bonus_offers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -164,18 +206,21 @@ export type Database = {
       car_images: {
         Row: {
           car_id: string
+          car_registration_number: string | null
           id: string
           image_url: string
           pnr_num: number
         }
         Insert: {
           car_id: string
+          car_registration_number?: string | null
           id?: string
           image_url: string
           pnr_num: number
         }
         Update: {
           car_id?: string
+          car_registration_number?: string | null
           id?: string
           image_url?: string
           pnr_num?: number
@@ -185,13 +230,35 @@ export type Database = {
             foreignKeyName: "car_images_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["car_id"]
+          },
+          {
+            foreignKeyName: "car_images_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_car_images_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_car_images_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_registrations"
+            referencedColumns: ["car_registration_number"]
           },
         ]
       }
       car_metadata: {
         Row: {
+          car_registration_number: string | null
           car_year: number | null
           control_number: string | null
           customer_request_id: string
@@ -200,9 +267,9 @@ export type Database = {
           kontrollsiffror: string | null
           missing_parts: Json | null
           part_list: Json | null
-          regbevis: string | null
         }
         Insert: {
+          car_registration_number?: string | null
           car_year?: number | null
           control_number?: string | null
           customer_request_id: string
@@ -211,9 +278,9 @@ export type Database = {
           kontrollsiffror?: string | null
           missing_parts?: Json | null
           part_list?: Json | null
-          regbevis?: string | null
         }
         Update: {
+          car_registration_number?: string | null
           car_year?: number | null
           control_number?: string | null
           customer_request_id?: string
@@ -222,9 +289,23 @@ export type Database = {
           kontrollsiffror?: string | null
           missing_parts?: Json | null
           part_list?: Json | null
-          regbevis?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_car_metadata_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_car_metadata_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_registrations"
+            referencedColumns: ["car_registration_number"]
+          },
+        ]
       }
       car_pricing: {
         Row: {
@@ -280,6 +361,20 @@ export type Database = {
             foreignKeyName: "car_pricing_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "car_pricing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "car_pricing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -291,6 +386,24 @@ export type Database = {
             referencedColumns: ["tenants_id"]
           },
         ]
+      }
+      car_registrations: {
+        Row: {
+          car_registration_number: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          car_registration_number: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          car_registration_number?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       cars: {
         Row: {
@@ -371,6 +484,13 @@ export type Database = {
             foreignKeyName: "cars_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "cars_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -394,6 +514,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cars_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "cars_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "cars_tenant_id_fkey"
@@ -526,6 +660,13 @@ export type Database = {
             foreignKeyName: "customer_requests_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -554,6 +695,20 @@ export type Database = {
             foreignKeyName: "customer_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -563,6 +718,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "fk_customer_requests_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_customer_requests_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_registrations"
+            referencedColumns: ["car_registration_number"]
           },
         ]
       }
@@ -602,6 +771,13 @@ export type Database = {
             foreignKeyName: "customers_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["car_id"]
+          },
+          {
+            foreignKeyName: "customers_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
           },
@@ -611,6 +787,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "available_scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
           },
           {
             foreignKeyName: "customers_scrapyard_id_fkey"
@@ -666,6 +849,13 @@ export type Database = {
             foreignKeyName: "deletion_info_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["car_id"]
+          },
+          {
+            foreignKeyName: "deletion_info_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
           },
@@ -700,6 +890,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "distance_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "distance_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
           {
             foreignKeyName: "distance_rules_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -764,6 +968,13 @@ export type Database = {
             foreignKeyName: "driver_assignments_customer_request_id_fkey"
             columns: ["customer_request_id"]
             isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["customer_request_id"]
+          },
+          {
+            foreignKeyName: "driver_assignments_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
             referencedRelation: "customer_requests"
             referencedColumns: ["id"]
           },
@@ -771,8 +982,43 @@ export type Database = {
             foreignKeyName: "driver_assignments_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "driver_assignments_pickup_order_id_fkey"
@@ -828,8 +1074,43 @@ export type Database = {
             foreignKeyName: "driver_locations_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_locations_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_locations_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_locations_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "driver_locations_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "driver_locations_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "driver_locations_pickup_order_id_fkey"
@@ -891,8 +1172,29 @@ export type Database = {
             foreignKeyName: "driver_notifications_customer_request_id_fkey"
             columns: ["customer_request_id"]
             isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["customer_request_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
             referencedRelation: "customer_requests"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
           },
           {
             foreignKeyName: "driver_notifications_driver_id_fkey"
@@ -903,6 +1205,55 @@ export type Database = {
           },
           {
             foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
             columns: ["pickup_order_id"]
             isOneToOne: false
             referencedRelation: "pickup_orders"
@@ -948,6 +1299,20 @@ export type Database = {
           reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "driver_status_history_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_status_history_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
           {
             foreignKeyName: "driver_status_history_driver_id_fkey"
             columns: ["driver_id"]
@@ -1027,6 +1392,13 @@ export type Database = {
             foreignKeyName: "drivers_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "drivers_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -1050,6 +1422,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drivers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "drivers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "drivers_tenant_id_fkey"
@@ -1129,36 +1515,121 @@ export type Database = {
         Row: {
           amount: number
           car_id: string
+          customer_id: string | null
+          driver_id: string | null
           exported_to_csv: boolean | null
           exported_to_excel: boolean | null
           exported_to_pdf: boolean | null
           id: string
           payment_date: string
+          payment_method: string | null
+          payment_status: string | null
+          pickup_order_id: string | null
         }
         Insert: {
           amount: number
           car_id: string
+          customer_id?: string | null
+          driver_id?: string | null
           exported_to_csv?: boolean | null
           exported_to_excel?: boolean | null
           exported_to_pdf?: boolean | null
           id?: string
           payment_date: string
+          payment_method?: string | null
+          payment_status?: string | null
+          pickup_order_id?: string | null
         }
         Update: {
           amount?: number
           car_id?: string
+          customer_id?: string | null
+          driver_id?: string | null
           exported_to_csv?: boolean | null
           exported_to_excel?: boolean | null
           exported_to_pdf?: boolean | null
           id?: string
           payment_date?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          pickup_order_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "payments_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["car_id"]
+          },
+          {
+            foreignKeyName: "payments_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
             referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "payments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "payments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "payments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "payments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "payments_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1226,6 +1697,13 @@ export type Database = {
             foreignKeyName: "pickup_orders_customer_request_id_fkey"
             columns: ["customer_request_id"]
             isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["customer_request_id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
             referencedRelation: "customer_requests"
             referencedColumns: ["id"]
           },
@@ -1233,8 +1711,36 @@ export type Database = {
             foreignKeyName: "pickup_orders_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pickup_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "pickup_orders_tenant_id_fkey"
@@ -1300,6 +1806,13 @@ export type Database = {
             foreignKeyName: "pickup_status_updates_customer_request_id_fkey"
             columns: ["customer_request_id"]
             isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["customer_request_id"]
+          },
+          {
+            foreignKeyName: "pickup_status_updates_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
             referencedRelation: "customer_requests"
             referencedColumns: ["id"]
           },
@@ -1307,8 +1820,43 @@ export type Database = {
             foreignKeyName: "pickup_status_updates_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "pickup_status_updates_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "pickup_status_updates_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
@@ -1384,6 +1932,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
           {
             foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1549,6 +2111,13 @@ export type Database = {
             foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -1572,6 +2141,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
@@ -1609,7 +2192,7 @@ export type Database = {
           operating_days: string[] | null
           postal_code: string | null
           services: Json | null
-          tenant_id: number | null
+          tenant_id: number
           updated_at: string
         }
         Insert: {
@@ -1631,7 +2214,7 @@ export type Database = {
           operating_days?: string[] | null
           postal_code?: string | null
           services?: Json | null
-          tenant_id?: number | null
+          tenant_id: number
           updated_at?: string
         }
         Update: {
@@ -1653,10 +2236,39 @@ export type Database = {
           operating_days?: string[] | null
           postal_code?: string | null
           services?: Json | null
-          tenant_id?: number | null
+          tenant_id?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scrapyards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scrapyards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "scrapyards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scrapyards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
       }
       spatial_ref_sys: {
         Row: {
@@ -1726,6 +2338,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "available_scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
           },
           {
             foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
@@ -1823,6 +2442,20 @@ export type Database = {
             foreignKeyName: "user_tenant_id_fkey"
             columns: ["tenants_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "user_tenant_id_fkey"
+            columns: ["tenants_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "user_tenant_id_fkey"
+            columns: ["tenants_id"]
+            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -1867,6 +2500,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "available_scrapyards"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
           },
           {
             foreignKeyName: "user_roles_scrapyard_id_fkey"
@@ -1925,6 +2565,114 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: []
+      }
+      car_complete_view: {
+        Row: {
+          car_ids: string[] | null
+          car_registration_number: string | null
+          car_year: number | null
+          control_number: string | null
+          customer_request_id: string | null
+          image_ids: string[] | null
+          image_urls: string[] | null
+          kontrollbes_galler_tom: string | null
+          kontrollsiffror: string | null
+          metadata_car_registration: string | null
+          metadata_id: string | null
+          missing_parts: Json | null
+          part_list: Json | null
+          pnr_nums: number[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_car_metadata_registration"
+            columns: ["metadata_car_registration"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_car_metadata_registration"
+            columns: ["metadata_car_registration"]
+            isOneToOne: false
+            referencedRelation: "car_registrations"
+            referencedColumns: ["car_registration_number"]
+          },
+        ]
+      }
+      car_pickup_payments: {
+        Row: {
+          actual_pickup_date: string | null
+          amount: number | null
+          brand: string | null
+          car_id: string | null
+          color: string | null
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          driver_id: string | null
+          driver_name: string | null
+          final_price: number | null
+          license_plate: string | null
+          model: string | null
+          payment_date: string | null
+          payment_id: string | null
+          payment_method: string | null
+          payment_status: string | null
+          pickup_order_id: string | null
+          pickup_status: string | null
+          price_offered: number | null
+          price_payed: number | null
+          scheduled_pickup_date: string | null
+          scrapyard_id: number | null
+          scrapyard_name: string | null
+          tenant_id: number | null
+          tenant_name: string | null
+        }
+        Relationships: []
+      }
+      driver_tenant_orders: {
+        Row: {
+          driver_id: string | null
+          driver_name: string | null
+          order_created_at: string | null
+          order_id: string | null
+          order_status: string | null
+          tenant_id: number | null
+          tenant_name: string | null
+          tenants_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drivers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "drivers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "drivers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "drivers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
       }
       geography_columns: {
         Row: {
@@ -2007,6 +2755,13 @@ export type Database = {
             foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -2029,6 +2784,96 @@ export type Database = {
             columns: ["scrapyard_id"]
             isOneToOne: false
             referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pickup_order_notifications: {
+        Row: {
+          driver_id: string | null
+          message: string | null
+          notification_created_at: string | null
+          notification_id: string | null
+          order_created_at: string | null
+          order_id: string | null
+          pickup_order_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_notifications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_order_notifications"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "fk_driver_notifications_pickup_order"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -2455,6 +3300,73 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      driver_status_history_get: {
+        Args: { p_driver_id: string }
+        Returns: {
+          id: string
+          old_status: string
+          new_status: string
+          reason: string
+          changed_by: string
+          changed_by_email: string
+          created_at: string
+        }[]
+      }
+      driver_status_history_get_v1: {
+        Args: { p_driver_id: string }
+        Returns: {
+          id: string
+          old_status: string
+          new_status: string
+          reason: string
+          changed_by: string
+          changed_by_email: string
+          created_at: string
+        }[]
+      }
+      driver_status_manager: {
+        Args:
+          | {
+              p_driver_id: string
+              p_new_status: string
+              p_latitude?: number
+              p_longitude?: number
+              p_reason?: string
+              p_changed_by?: string
+              p_metadata?: Json
+            }
+          | { p_driver_id: string; p_new_status: string; p_reason?: string }
+        Returns: string
+      }
+      driver_status_manager_v1: {
+        Args: {
+          p_driver_id: string
+          p_new_status: string
+          p_reason?: string
+          p_create_if_missing?: boolean
+        }
+        Returns: string
+      }
+      driver_status_manager_v2: {
+        Args: {
+          p_driver_id: string
+          p_new_status: string
+          p_reason?: string
+          p_create_if_missing?: boolean
+          p_status_column_name?: string
+        }
+        Returns: string
+      }
+      driver_status_manager_v4: {
+        Args: {
+          p_driver_id: string
+          p_new_status: string
+          p_reason?: string
+          p_create_if_missing?: boolean
+          p_status_column_name?: string
+        }
+        Returns: string
+      }
       dropgeometrycolumn: {
         Args:
           | {
@@ -2481,6 +3393,10 @@ export type Database = {
       ensure_car_metadata: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      ensure_driver_status_column: {
+        Args: { p_status_column_name?: string }
+        Returns: boolean
       }
       equals: {
         Args: { geom1: unknown; geom2: unknown }
@@ -2808,6 +3724,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_billing_kpi_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          metric_name: string
+          current_value: number
+          previous_value: number
+          change_percentage: number
+          trend_direction: string
+        }[]
+      }
       get_cancelled_invoices_report: {
         Args: {
           p_scrapyard_id?: number
@@ -2866,6 +3792,18 @@ export type Database = {
           pnr_num: string
         }[]
       }
+      get_driver_status_history: {
+        Args: { p_driver_id: string }
+        Returns: {
+          id: string
+          old_status: string
+          new_status: string
+          reason: string
+          changed_by: string
+          changed_by_email: string
+          created_at: string
+        }[]
+      }
       get_invoice_cancellation_history: {
         Args: { p_invoice_id: number }
         Returns: {
@@ -2890,6 +3828,18 @@ export type Database = {
       get_proj4_from_srid: {
         Args: { "": number }
         Returns: string
+      }
+      get_request_trends_analytics: {
+        Args: { days_back?: number }
+        Returns: {
+          period_start: string
+          period_end: string
+          request_count: number
+          avg_quote_amount: number
+          completed_requests: number
+          pending_requests: number
+          completion_rate: number
+        }[]
       }
       get_scrapyard_analytics: {
         Args:
@@ -2998,6 +3948,27 @@ export type Database = {
       get_scrapyard_users: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_service_utilization_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          service_type: string
+          total_capacity: number
+          active_units: number
+          utilization_rate: number
+          avg_capacity_per_unit: number
+        }[]
+      }
+      get_tenant_performance_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          tenant_id: number
+          tenant_name: string
+          active_drivers: number
+          total_capacity_kg: number
+          service_type: string
+          request_count: number
+        }[]
       }
       get_user_context: {
         Args: Record<PropertyKey, never>
@@ -3247,6 +4218,17 @@ export type Database = {
       }
       postgis_wagyu_version: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      record_customer_payment: {
+        Args: {
+          p_car_id: string
+          p_driver_id: string
+          p_amount: number
+          p_payment_method?: string
+          p_customer_id?: string
+          p_pickup_order_id?: string
+        }
         Returns: string
       }
       record_invoice_payment: {
@@ -4348,6 +5330,16 @@ export type Database = {
         }
         Returns: Json
       }
+      test_driver_status_manager: {
+        Args: { p_driver_id: string; p_new_status: string; p_reason?: string }
+        Returns: {
+          driver_id: string
+          current_status: string
+          would_change_to: string
+          would_change: boolean
+          reason: string
+        }[]
+      }
       text: {
         Args: { "": unknown }
         Returns: string
@@ -4357,11 +5349,21 @@ export type Database = {
         Returns: number
       }
       update_driver_status: {
-        Args: {
-          new_driver_status: string
-          reason_param?: string
-          driver_auth_id?: string
-        }
+        Args:
+          | {
+              new_driver_status: string
+              reason_param?: string
+              driver_auth_id?: string
+            }
+          | {
+              p_driver_id: string
+              p_new_status: string
+              p_latitude?: number
+              p_longitude?: number
+              p_reason?: string
+              p_changed_by?: string
+              p_metadata?: Json
+            }
         Returns: boolean
       }
       update_pickup_status: {
