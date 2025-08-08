@@ -148,6 +148,7 @@ export type Database = {
           tenant_id: number | null
           updated_at: string
           updated_by: string | null
+          version: number
         }
         Insert: {
           config_category: string
@@ -161,6 +162,7 @@ export type Database = {
           tenant_id?: number | null
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Update: {
           config_category?: string
@@ -174,6 +176,7 @@ export type Database = {
           tenant_id?: number | null
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -1524,6 +1527,36 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          is_active: boolean
+          key: string
+          locale: string | null
+          name: string
+          template_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          key: string
+          locale?: string | null
+          name: string
+          template_type: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          key?: string
+          locale?: string | null
+          name?: string
+          template_type?: string
+        }
+        Relationships: []
+      }
       invoice_cancellations: {
         Row: {
           cancelled_at: string
@@ -2528,6 +2561,72 @@ export type Database = {
           proj4text?: string | null
           srid?: number
           srtext?: string | null
+        }
+        Relationships: []
+      }
+      supported_currencies: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          name: string
+          symbol: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name: string
+          symbol: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name?: string
+          symbol?: string
+        }
+        Relationships: []
+      }
+      supported_locales: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      supported_timezones: {
+        Row: {
+          created_at: string
+          display_name: string
+          is_active: boolean
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          is_active?: boolean
+          value: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          is_active?: boolean
+          value?: string
         }
         Relationships: []
       }
@@ -3960,6 +4059,20 @@ export type Database = {
       get_all_tenants: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_available_options: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_billing_configuration: {
+        Args: { p_tenant_id?: number }
+        Returns: {
+          config_category: string
+          config_key: string
+          config_value: Json
+          version: number
+          is_global: boolean
+        }[]
       }
       get_billing_kpi_analytics: {
         Args: Record<PropertyKey, never>
@@ -5585,6 +5698,20 @@ export type Database = {
         Args: { "": string }
         Returns: number
       }
+      update_billing_configuration: {
+        Args: {
+          p_tenant_id: number
+          p_config_category: string
+          p_config_key: string
+          p_config_value: Json
+          p_current_version?: number
+        }
+        Returns: {
+          success: boolean
+          new_version: number
+          error_message: string
+        }[]
+      }
       update_driver_status: {
         Args:
           | {
@@ -5624,7 +5751,9 @@ export type Database = {
         Returns: string
       }
       validate_billing_config_json: {
-        Args: { config_category: string; config_value: Json }
+        Args:
+          | { config_category: string; config_value: Json }
+          | { config_value: Json; config_category: string; config_key: string }
         Returns: boolean
       }
       validate_swedish_pnr: {
