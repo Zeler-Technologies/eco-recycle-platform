@@ -135,6 +135,42 @@ export type Database = {
           },
         ]
       }
+      billing_config_audit: {
+        Row: {
+          action: string
+          changed_at: string | null
+          changed_by: string | null
+          config_category: string
+          config_key: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          tenant_id: number | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string | null
+          changed_by?: string | null
+          config_category: string
+          config_key: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          tenant_id?: number | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          config_category?: string
+          config_key?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          tenant_id?: number | null
+        }
+        Relationships: []
+      }
       billing_configuration: {
         Row: {
           config_category: string

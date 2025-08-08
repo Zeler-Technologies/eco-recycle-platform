@@ -87,20 +87,13 @@ export function useBillingConfig(tenantId?: number) {
   }, []);
 
   const fetchConfig = useCallback(async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
     try {
       setIsLoading(true);
       setError(null);
 
       const { data, error } = await supabase.rpc('get_billing_configuration', {
         p_tenant_id: tenantId || null
-      }, {
-        signal: controller.signal
       });
-
-      clearTimeout(timeoutId);
 
       if (error) {
         if (error.message?.includes('network') || error.message?.includes('timeout')) {
@@ -113,14 +106,10 @@ export function useBillingConfig(tenantId?: number) {
       setConfig(parsedConfig);
       setVersions(configVersions);
     } catch (err) {
-      clearTimeout(timeoutId);
-      
       let errorMessage = 'Failed to fetch billing configuration';
       
       if (err instanceof Error) {
-        if (err.name === 'AbortError') {
-          errorMessage = 'Request timed out. Please try again.';
-        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+        if (err.message.includes('network') || err.message.includes('fetch')) {
           errorMessage = 'Network error. Please check your connection and try again.';
         } else {
           errorMessage = err.message;

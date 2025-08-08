@@ -44,18 +44,11 @@ export function useBillingOptions() {
   const { toast } = useToast();
 
   const fetchOptions = useCallback(async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.rpc('get_available_options', {}, {
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
+      const { data, error } = await supabase.rpc('get_available_options');
 
       if (error) {
         if (error.message?.includes('network') || error.message?.includes('timeout')) {
@@ -75,14 +68,10 @@ export function useBillingOptions() {
         });
       }
     } catch (err) {
-      clearTimeout(timeoutId);
-      
       let errorMessage = 'Failed to fetch billing options';
       
       if (err instanceof Error) {
-        if (err.name === 'AbortError') {
-          errorMessage = 'Request timed out. Please try again.';
-        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+        if (err.message.includes('network') || err.message.includes('fetch')) {
           errorMessage = 'Network error. Please check your connection and try again.';
         } else {
           errorMessage = err.message;
