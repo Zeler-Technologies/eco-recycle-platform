@@ -135,6 +135,77 @@ export type Database = {
           },
         ]
       }
+      billing_configuration: {
+        Row: {
+          config_category: string
+          config_key: string
+          config_value: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          tenant_id: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config_category: string
+          config_key: string
+          config_value: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          tenant_id?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config_category?: string
+          config_key?: string
+          config_value?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          tenant_id?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_configuration_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "billing_configuration_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "billing_configuration_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "billing_configuration_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       bonus_offers: {
         Row: {
           bonus_amount_sek: number
@@ -1511,6 +1582,89 @@ export type Database = {
           },
         ]
       }
+      margin_alert_thresholds: {
+        Row: {
+          alert_category: string
+          comparison_operator: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          message: string
+          service_type: string
+          severity: string
+          tenant_id: number | null
+          threshold_value: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          alert_category: string
+          comparison_operator?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          service_type: string
+          severity?: string
+          tenant_id?: number | null
+          threshold_value: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          alert_category?: string
+          comparison_operator?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          service_type?: string
+          severity?: string
+          tenant_id?: number | null
+          threshold_value?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -1899,6 +2053,89 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: []
+      }
+      pricing_tiers: {
+        Row: {
+          base_price: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          max_units: number | null
+          min_units: number | null
+          price_per_unit: number | null
+          tenant_id: number | null
+          tier_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          max_units?: number | null
+          min_units?: number | null
+          price_per_unit?: number | null
+          tenant_id?: number | null
+          tier_name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          max_units?: number | null
+          min_units?: number | null
+          price_per_unit?: number | null
+          tenant_id?: number | null
+          tier_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_tiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "car_pickup_payments"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pricing_tiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "driver_tenant_orders"
+            referencedColumns: ["tenants_id"]
+          },
+          {
+            foreignKeyName: "pricing_tiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pricing_tiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
       }
       scrap_yard_locations: {
         Row: {
@@ -5385,6 +5622,10 @@ export type Database = {
           new_srid_in: number
         }
         Returns: string
+      }
+      validate_billing_config_json: {
+        Args: { config_category: string; config_value: Json }
+        Returns: boolean
       }
       validate_swedish_pnr: {
         Args: { pnr: string }
