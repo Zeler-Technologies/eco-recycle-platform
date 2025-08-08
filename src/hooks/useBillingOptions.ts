@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,13 +42,23 @@ export function useBillingOptions() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchOptions = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.rpc('get_available_options');
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new AbortController
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      const { data, error } = await supabase.rpc('get_available_options', {}, { signal: abortController.signal } as any);
 
       if (error) {
         if (error.message?.includes('network') || error.message?.includes('timeout')) {
@@ -68,6 +78,11 @@ export function useBillingOptions() {
         });
       }
     } catch (err) {
+      // Don't show error for aborted requests
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+
       let errorMessage = 'Failed to fetch billing options';
       
       if (err instanceof Error) {
@@ -92,6 +107,13 @@ export function useBillingOptions() {
   // Initial fetch
   useEffect(() => {
     fetchOptions();
+
+    // Cleanup: abort any pending requests on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchOptions]);
 
   // Helper functions to get specific option types

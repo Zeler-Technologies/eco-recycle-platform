@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,6 +51,7 @@ export function useBillingConfig(tenantId?: number) {
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { toast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const buildConfigKey = (category: string, key: string) => `${category}.${key}`;
 
@@ -91,9 +92,18 @@ export function useBillingConfig(tenantId?: number) {
       setIsLoading(true);
       setError(null);
 
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new AbortController
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       const { data, error } = await supabase.rpc('get_billing_configuration', {
         p_tenant_id: tenantId || null
-      });
+      }, { signal: abortController.signal } as any);
 
       if (error) {
         if (error.message?.includes('network') || error.message?.includes('timeout')) {
@@ -106,6 +116,11 @@ export function useBillingConfig(tenantId?: number) {
       setConfig(parsedConfig);
       setVersions(configVersions);
     } catch (err) {
+      // Don't show error for aborted requests
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+
       let errorMessage = 'Failed to fetch billing configuration';
       
       if (err instanceof Error) {
@@ -143,13 +158,16 @@ export function useBillingConfig(tenantId?: number) {
         configValue = { [key]: value };
       }
 
+      // Create AbortController for this request
+      const abortController = new AbortController();
+
       const { data, error } = await supabase.rpc('update_billing_configuration', {
         p_tenant_id: tenantId || null,
         p_config_category: category,
         p_config_key: key,
         p_config_value: configValue,
         p_current_version: currentVersion || null
-      });
+      }, { signal: abortController.signal } as any);
 
       if (error) throw error;
 
@@ -189,6 +207,11 @@ export function useBillingConfig(tenantId?: number) {
 
       return true;
     } catch (err) {
+      // Don't show error for aborted requests
+      if (err instanceof Error && err.name === 'AbortError') {
+        return false;
+      }
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to update configuration';
       toast({
         title: 'Error',
@@ -254,6 +277,13 @@ export function useBillingConfig(tenantId?: number) {
   // Initial fetch
   useEffect(() => {
     fetchConfig();
+
+    // Cleanup: abort any pending requests on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchConfig]);
 
   // Real-time subscription for configuration changes
