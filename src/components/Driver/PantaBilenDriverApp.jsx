@@ -4,6 +4,7 @@ import {
   STATUS_TEXTS, 
   STATUS_COLORS, 
   DRIVER_STATUS_TEXTS,
+  DRIVER_STATUS_OPTIONS,
   FILTER_OPTIONS,
   UI_LABELS,
   ARIA_LABELS
@@ -144,13 +145,15 @@ const PantaBilenDriverApp = () => {
           </button>
         </div>
         
-        <div className="relative">
+        <div className="relative z-50">
           <button
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-all ${
-              currentDriver.driver_status === 'available' 
-                ? 'border-green-500 bg-green-50 text-green-800' 
+              currentDriver.driver_status === 'available'
+                ? 'border-green-500 bg-green-50 text-green-800'
                 : currentDriver.driver_status === 'busy'
                 ? 'border-red-500 bg-red-50 text-red-800'
+                : currentDriver.driver_status === 'break'
+                ? 'border-amber-500 bg-amber-50 text-amber-800'
                 : 'border-gray-500 bg-gray-50 text-gray-700'
             }`}
             onClick={() => setShowStatusMenu(!showStatusMenu)}
@@ -158,31 +161,27 @@ const PantaBilenDriverApp = () => {
           >
             <div className={`w-3 h-3 rounded-full ${
               currentDriver.driver_status === 'available' ? 'bg-green-500' : 
-              currentDriver.driver_status === 'busy' ? 'bg-red-500' : 'bg-gray-500'
+              currentDriver.driver_status === 'busy' ? 'bg-red-500' : 
+              currentDriver.driver_status === 'break' ? 'bg-amber-500' : 'bg-gray-500'
             }`}></div>
-            <span>
-              {currentDriver.driver_status === 'available' ? DRIVER_STATUS_TEXTS.available : 
-               currentDriver.driver_status === 'busy' ? DRIVER_STATUS_TEXTS.busy : DRIVER_STATUS_TEXTS.offline}
-            </span>
+            <span>{DRIVER_STATUS_TEXTS[currentDriver.driver_status] || currentDriver.driver_status}</span>
             <span>▼</span>
           </button>
           
           {showStatusMenu && (
             <div className="absolute top-full right-0 mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-36 z-50">
-              {['available', 'offline', 'busy'].map((status) => (
+              {DRIVER_STATUS_OPTIONS.map(({ key, label }) => (
                 <button
-                  key={status}
+                  key={key}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm w-full text-left first:rounded-t-md last:rounded-b-md"
-                  onClick={() => handleStatusChange(status)}
+                  onClick={() => handleStatusChange(key)}
                 >
                   <div className={`w-3 h-3 rounded-full ${
-                    status === 'available' ? 'bg-green-500' : 
-                    status === 'busy' ? 'bg-red-500' : 'bg-gray-500'
+                    key === 'available' ? 'bg-green-500' : 
+                    key === 'busy' ? 'bg-red-500' : 
+                    key === 'break' ? 'bg-amber-500' : 'bg-gray-500'
                   }`}></div>
-                  <span className="text-gray-900">
-                    {status === 'available' ? DRIVER_STATUS_TEXTS.available : 
-                     status === 'busy' ? DRIVER_STATUS_TEXTS.busy : DRIVER_STATUS_TEXTS.offline}
-                  </span>
+                  <span className="text-gray-900">{label}</span>
                 </button>
               ))}
             </div>

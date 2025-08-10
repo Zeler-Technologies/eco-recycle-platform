@@ -29,6 +29,8 @@ export interface DriverInfo {
   driver_id: string;
   tenant_id: number;
   user_role: string;
+  full_name?: string;
+  driver_status?: string;
 }
 
 export const useDriverIntegration = () => {

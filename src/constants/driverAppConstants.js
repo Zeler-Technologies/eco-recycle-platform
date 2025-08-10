@@ -18,6 +18,7 @@ export const STATUS_COLORS = {
 export const DRIVER_STATUS_TEXTS = {
   available: 'Tillgänglig',
   busy: 'Upptagen',
+  break: 'Rast',
   offline: 'Offline'
 };
 
@@ -66,3 +67,10 @@ export const ARIA_LABELS = {
   taskInfo: 'Uppdragsinformation',
   backToList: 'Gå tillbaka till uppdragslistan'
 };
+
+export const DRIVER_STATUS_OPTIONS = [
+  { key: 'available', label: 'Tillgänglig' },
+  { key: 'busy', label: 'Upptagen' },
+  { key: 'break', label: 'Rast' },
+  { key: 'offline', label: 'Offline' }
+];
