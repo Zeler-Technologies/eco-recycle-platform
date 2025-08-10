@@ -1395,8 +1395,8 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           metadata: Json | null
-          new_status: string
-          old_status: string | null
+          new_status: Database["public"]["Enums"]["driver_status"]
+          old_status: Database["public"]["Enums"]["driver_status"] | null
           reason: string | null
           source: string | null
           status: Database["public"]["Enums"]["driver_status"]
@@ -1409,8 +1409,8 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           metadata?: Json | null
-          new_status: string
-          old_status?: string | null
+          new_status: Database["public"]["Enums"]["driver_status"]
+          old_status?: Database["public"]["Enums"]["driver_status"] | null
           reason?: string | null
           source?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
@@ -1423,8 +1423,8 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           metadata?: Json | null
-          new_status?: string
-          old_status?: string | null
+          new_status?: Database["public"]["Enums"]["driver_status"]
+          old_status?: Database["public"]["Enums"]["driver_status"] | null
           reason?: string | null
           source?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
