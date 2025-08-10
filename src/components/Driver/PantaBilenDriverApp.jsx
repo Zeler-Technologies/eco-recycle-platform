@@ -294,7 +294,7 @@ const PantaBilenDriverApp = () => {
         </div>
       ) : (
         filteredPickups.map(pickup => (
-          <PickupCard key={pickup.id} pickup={pickup} />
+          <PickupCard key={pickup.pickup_id || pickup.id} pickup={pickup} />
         ))
       )}
     </div>
@@ -386,7 +386,7 @@ const PantaBilenDriverApp = () => {
             {selectedPickup.status === 'scheduled' && (
               <button 
                 className="w-full bg-blue-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => updatePickupStatusHook(selectedPickup.id, 'in_progress')}
+                onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
               >
                 {UI_LABELS.startPickup}
               </button>
@@ -395,7 +395,7 @@ const PantaBilenDriverApp = () => {
             {selectedPickup.status === 'in_progress' && (
               <button 
                 className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => handleCompletePickup(selectedPickup.id)}
+                onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
               >
                 {UI_LABELS.completePickup}
               </button>

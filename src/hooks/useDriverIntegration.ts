@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeDriverStatus } from '@/utils/driverStatus';
 
 export interface PickupOrder {
   pickup_id: string;
@@ -43,28 +44,50 @@ export const useDriverIntegration = () => {
   const fetchDriverInfo = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔍 fetchDriverInfo - Current user:', user?.id, user?.email);
-      
       if (!user) {
         throw new Error('Användaren är inte inloggad');
       }
 
-      console.log('🔍 fetchDriverInfo - Calling get_current_driver_info RPC...');
       const { data, error } = await supabase.rpc('get_current_driver_info');
-      
-      console.log('🔍 fetchDriverInfo - RPC response:', { data, error });
-      
       if (error) {
         throw new Error(`Kunde inte hämta förarinformation: ${error.message}`);
       }
-
       if (!data || data.length === 0) {
         throw new Error('Ingen förare hittades. Kontakta administratören för att skapa ditt förarkonto.');
       }
 
-      console.log('🔍 fetchDriverInfo - Setting driver:', data[0]);
-      setDriver(data[0]);
-      return data[0];
+      const base = data[0];
+
+      // Try enriched driver row by auth_user_id first, then fallback to id from RPC
+      let driverRow: { id: string; tenant_id: number; full_name?: string; driver_status?: string } | null = null;
+
+      const { data: byAuth } = await supabase
+        .from('drivers')
+        .select('id, tenant_id, full_name, driver_status')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (byAuth) driverRow = byAuth as any;
+
+      if (!driverRow) {
+        const { data: byId } = await supabase
+          .from('drivers')
+          .select('id, tenant_id, full_name, driver_status')
+          .eq('id', base.driver_id)
+          .maybeSingle();
+        if (byId) driverRow = byId as any;
+      }
+
+      const merged: DriverInfo = {
+        driver_id: base.driver_id,
+        tenant_id: base.tenant_id,
+        user_role: base.user_role,
+        full_name: driverRow?.full_name,
+        driver_status: normalizeDriverStatus(driverRow?.driver_status),
+      };
+
+      setDriver(merged);
+      return merged;
     } catch (err) {
       console.error('❌ Error fetching driver info:', err);
       setError(err instanceof Error ? err.message : 'Ett fel uppstod');
@@ -204,6 +227,32 @@ export const useDriverIntegration = () => {
       supabase.removeChannel(channel);
     };
   }, [driver, fetchDriverPickups]);
+
+  // Real-time subscription for driver status changes
+  useEffect(() => {
+    if (!driver?.driver_id) return;
+
+    const channel = supabase
+      .channel('driver_status_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'drivers',
+          filter: `id=eq.${driver.driver_id}`,
+        },
+        () => {
+          // Refresh driver info when own driver row changes
+          fetchDriverInfo();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [driver?.driver_id, fetchDriverInfo]);
 
   return {
     pickups,
