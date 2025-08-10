@@ -1033,6 +1033,8 @@ export type Database = {
       driver_assignments: {
         Row: {
           accepted_at: string | null
+          actual_end: string | null
+          actual_start: string | null
           assigned_at: string | null
           assignment_type: string | null
           completed_at: string | null
@@ -1043,10 +1045,15 @@ export type Database = {
           notes: string | null
           pickup_order_id: string | null
           role: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
           started_at: string | null
+          status: Database["public"]["Enums"]["assignment_status"]
         }
         Insert: {
           accepted_at?: string | null
+          actual_end?: string | null
+          actual_start?: string | null
           assigned_at?: string | null
           assignment_type?: string | null
           completed_at?: string | null
@@ -1057,10 +1064,15 @@ export type Database = {
           notes?: string | null
           pickup_order_id?: string | null
           role?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           started_at?: string | null
+          status?: Database["public"]["Enums"]["assignment_status"]
         }
         Update: {
           accepted_at?: string | null
+          actual_end?: string | null
+          actual_start?: string | null
           assigned_at?: string | null
           assignment_type?: string | null
           completed_at?: string | null
@@ -1071,7 +1083,10 @@ export type Database = {
           notes?: string | null
           pickup_order_id?: string | null
           role?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           started_at?: string | null
+          status?: Database["public"]["Enums"]["assignment_status"]
         }
         Relationships: [
           {
@@ -1383,6 +1398,8 @@ export type Database = {
           new_status: string
           old_status: string | null
           reason: string | null
+          source: string | null
+          status: Database["public"]["Enums"]["driver_status"]
         }
         Insert: {
           changed_at?: string | null
@@ -1395,6 +1412,8 @@ export type Database = {
           new_status: string
           old_status?: string | null
           reason?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["driver_status"]
         }
         Update: {
           changed_at?: string | null
@@ -1407,6 +1426,8 @@ export type Database = {
           new_status?: string
           old_status?: string | null
           reason?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["driver_status"]
         }
         Relationships: [
           {
@@ -1435,6 +1456,7 @@ export type Database = {
       drivers: {
         Row: {
           auth_user_id: string | null
+          available_from: string | null
           created_at: string | null
           current_latitude: number | null
           current_longitude: number | null
@@ -1447,6 +1469,7 @@ export type Database = {
           max_capacity_kg: number | null
           phone_number: string
           scrapyard_id: number | null
+          status: Database["public"]["Enums"]["driver_status"]
           tenant_id: number
           updated_at: string | null
           vehicle_registration: string | null
@@ -1454,6 +1477,7 @@ export type Database = {
         }
         Insert: {
           auth_user_id?: string | null
+          available_from?: string | null
           created_at?: string | null
           current_latitude?: number | null
           current_longitude?: number | null
@@ -1466,6 +1490,7 @@ export type Database = {
           max_capacity_kg?: number | null
           phone_number: string
           scrapyard_id?: number | null
+          status?: Database["public"]["Enums"]["driver_status"]
           tenant_id: number
           updated_at?: string | null
           vehicle_registration?: string | null
@@ -1473,6 +1498,7 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string | null
+          available_from?: string | null
           created_at?: string | null
           current_latitude?: number | null
           current_longitude?: number | null
@@ -1485,6 +1511,7 @@ export type Database = {
           max_capacity_kg?: number | null
           phone_number?: string
           scrapyard_id?: number | null
+          status?: Database["public"]["Enums"]["driver_status"]
           tenant_id?: number
           updated_at?: string | null
           vehicle_registration?: string | null
@@ -5734,6 +5761,13 @@ export type Database = {
         Args: { "": string }
         Returns: number
       }
+      update_assignment_status: {
+        Args: {
+          assignment_id_param: string
+          new_status: Database["public"]["Enums"]["assignment_status"]
+        }
+        Returns: boolean
+      }
       update_billing_configuration: {
         Args: {
           p_tenant_id: number
@@ -5750,6 +5784,12 @@ export type Database = {
       }
       update_driver_status: {
         Args:
+          | {
+              driver_id_param: string
+              new_status: Database["public"]["Enums"]["driver_status"]
+              source_param?: string
+              available_from_param?: string
+            }
           | {
               new_driver_status: string
               reason_param?: string
@@ -5798,7 +5838,16 @@ export type Database = {
       }
     }
     Enums: {
+      assignment_status:
+        | "scheduled"
+        | "en_route"
+        | "arrived"
+        | "picked_up"
+        | "completed"
+        | "canceled"
+        | "failed"
       car_status: "new" | "ongoing" | "done" | "error" | "archive" | "deleted"
+      driver_status: "off_duty" | "available" | "on_job" | "break" | "inactive"
       treatment_type: "pickup" | "drivein"
       user_role: "super_admin" | "tenant_admin" | "user" | "customer"
     }
@@ -5936,7 +5985,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      assignment_status: [
+        "scheduled",
+        "en_route",
+        "arrived",
+        "picked_up",
+        "completed",
+        "canceled",
+        "failed",
+      ],
       car_status: ["new", "ongoing", "done", "error", "archive", "deleted"],
+      driver_status: ["off_duty", "available", "on_job", "break", "inactive"],
       treatment_type: ["pickup", "drivein"],
       user_role: ["super_admin", "tenant_admin", "user", "customer"],
     },
