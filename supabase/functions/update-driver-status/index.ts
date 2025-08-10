@@ -41,6 +41,27 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Map UI statuses to DB enum labels for history table
+    const mapToDbEnum = (s: string) => {
+      switch ((s || '').toLowerCase()) {
+        case 'available':
+        case 'on_duty':
+          return 'on_duty'
+        case 'busy':
+        case 'on_job':
+        case 'in_progress':
+          return 'on_job'
+        case 'break':
+        case 'rest':
+          return 'rest'
+        case 'offline':
+        case 'off_duty':
+        case 'inactive':
+        default:
+          return 'off_duty'
+      }
+    }
     
     // Create Supabase client
     const supabaseClient = createClient(
@@ -139,13 +160,16 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Log the status change in history
+    // Log the status change in history (map to DB enum labels)
+    const oldStatusDb = mapToDbEnum(driver.driver_status as string)
+    const newStatusDb = mapToDbEnum(newStatus)
+
     const { data: historyEntry, error: historyError } = await supabaseClient
       .from('driver_status_history')
       .insert({
         driver_id: driverId,
-        old_status: driver.driver_status,
-        new_status: newStatus,
+        old_status: oldStatusDb,
+        new_status: newStatusDb,
         reason: reason || 'Status changed via API'
       })
       .select()
