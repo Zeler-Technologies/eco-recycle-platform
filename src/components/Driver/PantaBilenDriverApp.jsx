@@ -209,7 +209,7 @@ const PantaBilenDriverApp = () => {
 
   const FilterHeader = () => (
     <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-200">
-      <span className="text-sm text-gray-600">{filteredPickups.length} {UI_LABELS.tasks}</span>
+      <span className="text-sm text-gray-700 tracking-wide capitalize">{filteredPickups.length} {UI_LABELS.tasks}</span>
       <button
         className="text-indigo-600 text-sm flex items-center gap-1"
         onClick={() => setFiltersVisible(!filtersVisible)}
@@ -308,16 +308,16 @@ const PantaBilenDriverApp = () => {
           <div className="flex gap-5 flex-wrap">
             <div className="text-center">
               <div className="text-xl font-bold text-gray-900">{filteredPickups.length}</div>
-              <div className="text-xs text-gray-600">{UI_LABELS.tasks}</div>
+              <div className="text-sm text-gray-700 tracking-wide capitalize">{UI_LABELS.tasks}</div>
             </div>
             {/* TODO: Replace with real route optimization data */}
             <div className="text-center">
               <div className="text-xl font-bold text-gray-900">--</div>
-              <div className="text-xs text-gray-600">{UI_LABELS.estimatedDistance}</div>
+              <div className="text-sm text-gray-700 tracking-wide capitalize">{UI_LABELS.estimatedDistance}</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-gray-900">--</div>
-              <div className="text-xs text-gray-600">{UI_LABELS.estimatedTime}</div>
+              <div className="text-sm text-gray-700 tracking-wide capitalize">{UI_LABELS.estimatedTime}</div>
             </div>
           </div>
           <button 
@@ -333,7 +333,7 @@ const PantaBilenDriverApp = () => {
         <div className="text-gray-600 text-center">
           <div className="text-2xl mb-2">🗺️</div>
           <div>{UI_LABELS.googleMapsIntegration}</div>
-          <div className="text-sm mt-1">{UI_LABELS.showOnMap} {filteredPickups.length} {UI_LABELS.tasks}</div>
+          <div className="text-sm mt-1 tracking-wide capitalize">{UI_LABELS.showOnMap} {filteredPickups.length} {UI_LABELS.tasks}</div>
         </div>
       </div>
     </div>
