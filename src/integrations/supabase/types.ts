@@ -5847,7 +5847,14 @@ export type Database = {
         | "canceled"
         | "failed"
       car_status: "new" | "ongoing" | "done" | "error" | "archive" | "deleted"
-      driver_status: "off_duty" | "available" | "on_job" | "break" | "inactive"
+      driver_status:
+        | "off_duty"
+        | "available"
+        | "on_job"
+        | "break"
+        | "inactive"
+        | "busy"
+        | "offline"
       treatment_type: "pickup" | "drivein"
       user_role: "super_admin" | "tenant_admin" | "user" | "customer"
     }
@@ -5995,7 +6002,15 @@ export const Constants = {
         "failed",
       ],
       car_status: ["new", "ongoing", "done", "error", "archive", "deleted"],
-      driver_status: ["off_duty", "available", "on_job", "break", "inactive"],
+      driver_status: [
+        "off_duty",
+        "available",
+        "on_job",
+        "break",
+        "inactive",
+        "busy",
+        "offline",
+      ],
       treatment_type: ["pickup", "drivein"],
       user_role: ["super_admin", "tenant_admin", "user", "customer"],
     },
