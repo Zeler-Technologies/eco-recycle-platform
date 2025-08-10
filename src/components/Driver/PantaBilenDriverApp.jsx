@@ -117,26 +117,28 @@ const PantaBilenDriverApp = () => {
     <div className="bg-gray-900 text-white px-5 py-4 flex justify-between items-center">
       <h1 className="text-lg font-bold">PantaBilen</h1>
       <div className="flex items-center gap-4">
-        <div className="flex bg-white bg-opacity-10 rounded-full p-0.5 border-2 border-white border-opacity-20">
+        <div className="flex rounded-full p-0.5 border border-white/30 bg-transparent">
           <button
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
               currentView === 'list' 
                 ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-white text-opacity-80'
+                : 'text-white'
             }`}
             onClick={() => setCurrentView('list')}
             aria-label={ARIA_LABELS.listView}
+            aria-pressed={currentView === 'list'}
           >
             Lista
           </button>
           <button
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
               currentView === 'map' 
                 ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-white text-opacity-80'
+                : 'text-white'
             }`}
             onClick={() => setCurrentView('map')}
             aria-label={ARIA_LABELS.mapView}
+            aria-pressed={currentView === 'map'}
           >
             Karta
           </button>
