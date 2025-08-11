@@ -1400,6 +1400,7 @@ export type Database = {
           reason: string | null
           source: string | null
           status: Database["public"]["Enums"]["driver_status"]
+          tenant_id: number | null
         }
         Insert: {
           changed_at?: string | null
@@ -1414,6 +1415,7 @@ export type Database = {
           reason?: string | null
           source?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
+          tenant_id?: number | null
         }
         Update: {
           changed_at?: string | null
@@ -1428,6 +1430,7 @@ export type Database = {
           reason?: string | null
           source?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
+          tenant_id?: number | null
         }
         Relationships: [
           {
@@ -3333,6 +3336,10 @@ export type Database = {
       }
     }
     Functions: {
+      _driver_status_to_enum: {
+        Args: { p: string }
+        Returns: Database["public"]["Enums"]["driver_status"]
+      }
       _postgis_deprecate: {
         Args: { oldname: string; newname: string; version: string }
         Returns: undefined
@@ -5783,27 +5790,40 @@ export type Database = {
         }[]
       }
       update_driver_status: {
-        Args:
-          | {
-              driver_id_param: string
-              new_status: Database["public"]["Enums"]["driver_status"]
-              source_param?: string
-              available_from_param?: string
-            }
-          | {
-              new_driver_status: string
-              reason_param?: string
-              driver_auth_id?: string
-            }
-          | {
-              p_driver_id: string
-              p_new_status: string
-              p_latitude?: number
-              p_longitude?: number
-              p_reason?: string
-              p_changed_by?: string
-              p_metadata?: Json
-            }
+        Args: { new_driver_status: string; reason_param?: string }
+        Returns: Json
+      }
+      update_driver_status_admin: {
+        Args: { p_driver_id: string; p_new_status: string; p_reason?: string }
+        Returns: undefined
+      }
+      update_driver_status_admin_enum: {
+        Args: {
+          driver_id_param: string
+          new_status: Database["public"]["Enums"]["driver_status"]
+          source_param?: string
+          available_from_param?: string
+        }
+        Returns: boolean
+      }
+      update_driver_status_for_auth: {
+        Args: {
+          new_driver_status: string
+          reason_param?: string
+          driver_auth_id?: string
+        }
+        Returns: boolean
+      }
+      update_driver_status_with_location: {
+        Args: {
+          p_driver_id: string
+          p_new_status: string
+          p_latitude?: number
+          p_longitude?: number
+          p_reason?: string
+          p_changed_by?: string
+          p_metadata?: Json
+        }
         Returns: boolean
       }
       update_pickup_status: {
