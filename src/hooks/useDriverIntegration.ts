@@ -34,12 +34,21 @@ export interface DriverInfo {
   driver_status?: string;
 }
 
+export interface DriverStatusHistoryEntry {
+  id: string;
+  changed_at: string;
+  old_status: string | null;
+  new_status: string;
+  reason?: string | null;
+  source?: string | null;
+}
 export const useDriverIntegration = () => {
   const [pickups, setPickups] = useState<PickupOrder[]>([]);
   const [driver, setDriver] = useState<DriverInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [statusHistory, setStatusHistory] = useState<DriverStatusHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   // Fetch current driver info
   const fetchDriverInfo = useCallback(async () => {
     try {
@@ -120,6 +129,31 @@ export const useDriverIntegration = () => {
     }
   }, []);
 
+  // Fetch recent driver status history (last 10)
+  const fetchDriverStatusHistory = useCallback(async (driverId?: string) => {
+    const id = driverId || driver?.driver_id;
+    if (!id) return [] as DriverStatusHistoryEntry[];
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('driver_status_history')
+        .select('id, changed_at, old_status, new_status, reason, source')
+        .eq('driver_id', id)
+        .order('changed_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      const rows = (data as any) || [];
+      setStatusHistory(rows);
+      return rows as DriverStatusHistoryEntry[];
+    } catch (err) {
+      console.error('Error fetching driver status history:', err);
+      setError(err instanceof Error ? err.message : 'Ett fel uppstod vid hämtning av statusändringar');
+      return [] as DriverStatusHistoryEntry[];
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [driver?.driver_id]);
   // Update pickup order status
   const updatePickupStatus = useCallback(async (
     pickupId: string, 
@@ -175,7 +209,9 @@ export const useDriverIntegration = () => {
       }
 
       // Server will broadcast realtime; ensure local info stays consistent
-      await fetchDriverInfo();
+      const refreshed = await fetchDriverInfo();
+      // Also refresh recent history panel
+      await fetchDriverStatusHistory(refreshed?.driver_id);
       return true;
     } catch (err) {
       console.error('Error updating driver status:', err);
@@ -186,18 +222,20 @@ export const useDriverIntegration = () => {
       toast({ title: 'Kunde inte uppdatera förarstatus', description: msg, variant: 'destructive' });
       return false;
     }
-  }, [driver, fetchDriverInfo]);
+  }, [driver, fetchDriverInfo, fetchDriverStatusHistory]);
 
   // Initial data fetch
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
       setError(null);
-      
       try {
         const driverInfo = await fetchDriverInfo();
         if (driverInfo) {
-          await fetchDriverPickups();
+          await Promise.all([
+            fetchDriverPickups(),
+            fetchDriverStatusHistory(driverInfo.driver_id),
+          ]);
         }
       } catch (err) {
         console.error('Initialization error:', err);
@@ -207,7 +245,7 @@ export const useDriverIntegration = () => {
     };
 
     initializeData();
-  }, [fetchDriverInfo, fetchDriverPickups]);
+  }, [fetchDriverInfo, fetchDriverPickups, fetchDriverStatusHistory]);
 
   // Real-time subscriptions for pickup orders
   useEffect(() => {

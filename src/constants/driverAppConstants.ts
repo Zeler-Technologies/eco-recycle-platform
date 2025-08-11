@@ -58,6 +58,10 @@ export const UI_LABELS = {
   navigate: 'Navigera',
   finalPrice: 'Slutpris',
   notDetermined: 'Ej bestämt',
+  recentStatusChanges: 'Senaste statusändringar',
+  noStatusHistory: 'Inga statusändringar ännu',
+  reason: 'Orsak',
+  changedAt: 'Ändrad',
 } as const;
 
 export const ARIA_LABELS = {

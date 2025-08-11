@@ -10,6 +10,7 @@ import {
   UI_LABELS,
   ARIA_LABELS
 } from '@/constants/driverAppConstants';
+import { normalizeDriverStatus } from '@/utils/driverStatus';
 const PantaBilenDriverApp = () => {
   // Use the driver integration hook 
   const { 
@@ -18,7 +19,9 @@ const PantaBilenDriverApp = () => {
     loading, 
     error,
     updateDriverStatus: updateDriverStatusHook, 
-    updatePickupStatus: updatePickupStatusHook 
+    updatePickupStatus: updatePickupStatusHook,
+    statusHistory,
+    historyLoading,
   } = useDriverIntegration();
 
   // Local state
@@ -442,6 +445,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       <TabBar />
       <FilterHeader />
       <FiltersSection />
+      {currentView === 'list' && <RecentStatusChanges />}
       {currentView === 'list' ? <PickupList /> : <MapView />}
       <DetailView />
       
