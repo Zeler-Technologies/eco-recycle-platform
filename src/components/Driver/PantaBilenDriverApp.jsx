@@ -11,6 +11,7 @@ import {
   ARIA_LABELS
 } from '@/constants/driverAppConstants';
 import { normalizeDriverStatus } from '@/utils/driverStatus';
+import RecentStatusChanges from '@/components/Driver/RecentStatusChanges';
 const PantaBilenDriverApp = () => {
   // Use the driver integration hook 
   const { 
@@ -445,7 +446,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       <TabBar />
       <FilterHeader />
       <FiltersSection />
-      {currentView === 'list' && <RecentStatusChanges />}
+      {currentView === 'list' && currentDriver?.driver_id && (
+        <RecentStatusChanges driverId={currentDriver.driver_id} />
+      )}
       {currentView === 'list' ? <PickupList /> : <MapView />}
       <DetailView />
       
