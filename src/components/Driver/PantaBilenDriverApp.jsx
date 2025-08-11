@@ -32,6 +32,7 @@ const PantaBilenDriverApp = () => {
   const [selectedPickup, setSelectedPickup] = useState(null);
   const [showDetailView, setShowDetailView] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showStatusHistory, setShowStatusHistory] = useState(false);
 
   // Memoized filtered and sorted pickups
   const filteredPickups = useMemo(() => {
@@ -446,12 +447,24 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       <TabBar />
       <FilterHeader />
       <FiltersSection />
-      {currentView === 'list' && currentDriver?.driver_id && (
-        <RecentStatusChanges driverId={currentDriver.driver_id} />
+      {currentView === 'list' && (
+        <div className="px-4 mb-2">
+          <button
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 shadow hover:bg-gray-50"
+            onClick={() => setShowStatusHistory((v) => !v)}
+            aria-expanded={showStatusHistory}
+            aria-controls="recent-status-changes"
+          >
+            {showStatusHistory ? 'Dölj senaste statusändringar' : 'Visa senaste statusändringar'}
+          </button>
+          {showStatusHistory && currentDriver?.driver_id && (
+            <div id="recent-status-changes" className="mt-3">
+              <RecentStatusChanges driverId={currentDriver.driver_id} />
+            </div>
+          )}
+        </div>
       )}
       {currentView === 'list' ? <PickupList /> : <MapView />}
-      <DetailView />
-      
       {/* Navigation Indicator */}
       <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 w-33 h-1 bg-gray-900 rounded-full opacity-80"></div>
     </div>
