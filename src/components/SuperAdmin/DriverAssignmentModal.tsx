@@ -18,7 +18,8 @@ interface Driver {
 }
 
 interface CustomerRequest {
-  id: string;
+  pickup_order_id: string;
+  customer_request_id: string;
   owner_name: string;
   pickup_address: string;
   car_brand: string;
@@ -37,58 +38,60 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
   const [loading, setLoading] = useState(true);
   const [assignmentLoading, setAssignmentLoading] = useState<string | null>(null);
   const [assignmentRole, setAssignmentRole] = useState<string>('primary');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAvailableRequests();
   }, []);
 
   const fetchAvailableRequests = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    console.info('Fetching available pickup requests', { driverId: driver.id });
     try {
-      const { data, error } = await supabase
-        .from('customer_requests')
-        .select('*')
-        .in('status', ['pending', 'accepted'])
-        .limit(10);
+      const { data, error } = await supabase.rpc('list_available_pickup_requests', {
+        p_driver_id: driver.id,
+        p_limit: 50,
+      });
 
       if (error) throw error;
-      setAvailableRequests(data || []);
+
+      const mapped = (data ?? []).map((d: any) => ({
+        pickup_order_id: d.pickup_order_id,
+        customer_request_id: d.customer_request_id,
+        owner_name: d.owner_name,
+        pickup_address: d.pickup_address,
+        car_brand: d.car_brand,
+        car_model: d.car_model,
+        status: d.status,
+      }));
+
+      setAvailableRequests(mapped);
     } catch (error) {
-      console.error('Error fetching available requests:', error);
+      console.error('Failed to load available requests via RPC', { driverId: driver.id, error });
+      setErrorMsg('Kunde inte ladda lediga uppdrag. Behörighet eller nätverksfel.');
       toast.error('Failed to load available requests');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssignRequest = async (requestId: string) => {
-    setAssignmentLoading(requestId);
-    
+  const handleAssignRequest = async (pickupOrderId: string) => {
+    setAssignmentLoading(pickupOrderId);
+    console.info('Assigning driver to pickup', { driverId: driver.id, pickupOrderId });
     try {
-      // Create driver assignment
-      const { error: assignmentError } = await supabase
-        .from('driver_assignments' as any)
-        .insert([{
-          driver_id: driver.id,
-          customer_request_id: requestId,
-          assignment_type: 'pickup',
-          role: assignmentRole,
-          is_active: true
-        }]);
+      const { data, error } = await supabase.rpc('assign_driver_to_pickup', {
+        p_driver_id: driver.id,
+        p_pickup_order_id: pickupOrderId,
+        p_notes: null,
+      });
 
-      if (assignmentError) throw assignmentError;
-
-      // Update customer request status
-      const { error: requestError } = await supabase
-        .from('customer_requests')
-        .update({ status: 'assigned' })
-        .eq('id', requestId);
-
-      if (requestError) throw requestError;
+      if (error) throw error;
 
       toast.success('Driver assigned successfully');
       onSuccess();
     } catch (error) {
-      console.error('Error assigning driver:', error);
+      console.error('Failed to assign driver via RPC', { driverId: driver.id, pickupOrderId, error });
       toast.error('Failed to assign driver');
     } finally {
       setAssignmentLoading(null);
@@ -99,6 +102,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     switch (status) {
       case 'pending': return 'bg-status-pending text-white';
       case 'accepted': return 'bg-status-processing text-white';
+      case 'scheduled': return 'bg-status-processing text-white';
       default: return 'bg-muted';
     }
   };
@@ -139,6 +143,10 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
             
             {loading ? (
               <div className="text-center py-8">Loading available requests...</div>
+            ) : errorMsg ? (
+              <div className="text-center py-8 text-destructive">
+                {errorMsg}
+              </div>
             ) : availableRequests.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No unassigned requests available at the moment
@@ -146,7 +154,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
             ) : (
               <div className="space-y-3">
                 {availableRequests.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/20 transition-colors">
+                  <div key={request.pickup_order_id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/20 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="p-2 bg-admin-accent rounded-full">
                         <Car className="h-4 w-4 text-admin-primary" />
@@ -182,11 +190,11 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
                       </div>
                       
                       <Button
-                        onClick={() => handleAssignRequest(request.id)}
-                        disabled={assignmentLoading === request.id}
+                        onClick={() => handleAssignRequest(request.pickup_order_id)}
+                        disabled={assignmentLoading === request.pickup_order_id}
                         className="bg-admin-primary hover:bg-admin-primary/90"
                       >
-                        {assignmentLoading === request.id ? 'Assigning...' : 'Assign'}
+                        {assignmentLoading === request.pickup_order_id ? 'Assigning...' : 'Assign'}
                       </Button>
                     </div>
                   </div>

@@ -3501,6 +3501,14 @@ export type Database = {
             }
         Returns: string
       }
+      assign_driver_to_pickup: {
+        Args: {
+          p_driver_id: string
+          p_pickup_order_id: string
+          p_notes?: string
+        }
+        Returns: string
+      }
       assign_tenant_admin_role: {
         Args:
           | { p_user_id: string; p_tenant_id: number }
@@ -4449,6 +4457,22 @@ export type Database = {
       jsonb: {
         Args: { "": unknown }
         Returns: Json
+      }
+      list_available_pickup_requests: {
+        Args: { p_driver_id: string; p_limit?: number }
+        Returns: {
+          pickup_order_id: string
+          customer_request_id: string
+          owner_name: string
+          car_brand: string
+          car_model: string
+          car_year: number
+          pickup_address: string
+          pickup_latitude: number
+          pickup_longitude: number
+          scheduled_pickup_date: string
+          status: string
+        }[]
       }
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>
