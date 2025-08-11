@@ -20,6 +20,7 @@ export type Database = {
           email: string
           id: string
           pnr_num: string | null
+          pnr_num_norm: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id: number | null
         }
@@ -28,6 +29,7 @@ export type Database = {
           email: string
           id?: string
           pnr_num?: string | null
+          pnr_num_norm?: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id?: number | null
         }
@@ -36,6 +38,7 @@ export type Database = {
           email?: string
           id?: string
           pnr_num?: string | null
+          pnr_num_norm?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: number | null
         }
@@ -320,6 +323,7 @@ export type Database = {
           id: string
           image_url: string
           pnr_num: number
+          pnr_num_norm: string | null
         }
         Insert: {
           car_id: string
@@ -327,6 +331,7 @@ export type Database = {
           id?: string
           image_url: string
           pnr_num: number
+          pnr_num_norm?: string | null
         }
         Update: {
           car_id?: string
@@ -334,6 +339,7 @@ export type Database = {
           id?: string
           image_url?: string
           pnr_num?: number
+          pnr_num_norm?: string | null
         }
         Relationships: [
           {
@@ -706,6 +712,7 @@ export type Database = {
           pickup_longitude: number | null
           pickup_postal_code: string
           pnr_num: string | null
+          pnr_num_norm: string | null
           quote_amount: number | null
           scrapyard_id: number | null
           status: string | null
@@ -729,6 +736,7 @@ export type Database = {
           pickup_longitude?: number | null
           pickup_postal_code: string
           pnr_num?: string | null
+          pnr_num_norm?: string | null
           quote_amount?: number | null
           scrapyard_id?: number | null
           status?: string | null
@@ -752,6 +760,7 @@ export type Database = {
           pickup_longitude?: number | null
           pickup_postal_code?: string
           pnr_num?: string | null
+          pnr_num_norm?: string | null
           quote_amount?: number | null
           scrapyard_id?: number | null
           status?: string | null
@@ -854,6 +863,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           pnr_num: number
+          pnr_num_norm: string | null
           scrapyard_id: number | null
         }
         Insert: {
@@ -864,6 +874,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           pnr_num: number
+          pnr_num_norm?: string | null
           scrapyard_id?: number | null
         }
         Update: {
@@ -874,6 +885,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           pnr_num?: number
+          pnr_num_norm?: string | null
           scrapyard_id?: number | null
         }
         Relationships: [
