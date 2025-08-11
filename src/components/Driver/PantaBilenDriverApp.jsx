@@ -226,13 +226,23 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
   const FilterHeader = () => (
     <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-200">
       <span className="text-sm text-gray-700 tracking-wide capitalize">{filteredPickups.length} {UI_LABELS.tasks}</span>
-      <button
-        className="text-indigo-600 text-sm flex items-center gap-1"
-        onClick={() => setFiltersVisible(!filtersVisible)}
-        aria-label={ARIA_LABELS.toggleFilters}
-      >
-        {UI_LABELS.filterAndSort} ⚙️
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          className="text-gray-700 text-sm flex items-center gap-1 hover:text-gray-900"
+          onClick={() => setShowStatusHistory((v) => !v)}
+          aria-expanded={showStatusHistory}
+          aria-controls="recent-status-changes"
+        >
+          {showStatusHistory ? 'Dölj senaste statusändringar' : 'Visa senaste statusändringar'}
+        </button>
+        <button
+          className="text-indigo-600 text-sm flex items-center gap-1"
+          onClick={() => setFiltersVisible(!filtersVisible)}
+          aria-label={ARIA_LABELS.toggleFilters}
+        >
+          {UI_LABELS.filterAndSort} ⚙️
+        </button>
+      </div>
     </div>
   );
 
@@ -447,21 +457,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       <TabBar />
       <FilterHeader />
       <FiltersSection />
-      {currentView === 'list' && (
-        <div className="px-4 mb-2">
-          <button
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 shadow hover:bg-gray-50"
-            onClick={() => setShowStatusHistory((v) => !v)}
-            aria-expanded={showStatusHistory}
-            aria-controls="recent-status-changes"
-          >
-            {showStatusHistory ? 'Dölj senaste statusändringar' : 'Visa senaste statusändringar'}
-          </button>
-          {showStatusHistory && currentDriver?.driver_id && (
-            <div id="recent-status-changes" className="mt-3">
-              <RecentStatusChanges driverId={currentDriver.driver_id} />
-            </div>
-          )}
+      {currentView === 'list' && showStatusHistory && currentDriver?.driver_id && (
+        <div id="recent-status-changes" className="px-4 mt-3 mb-2">
+          <RecentStatusChanges driverId={currentDriver.driver_id} />
         </div>
       )}
       {currentView === 'list' ? <PickupList /> : <MapView />}
