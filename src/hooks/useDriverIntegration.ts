@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeDriverStatus } from '@/utils/driverStatus';
-
+import { toast } from '@/hooks/use-toast';
 export interface PickupOrder {
   pickup_id: string;
   customer_request_id: string;
@@ -153,34 +153,40 @@ export const useDriverIntegration = () => {
     }
   }, [fetchDriverPickups]);
 
-  // Update driver status
+  // Update driver status with optimistic UI and server RPC
   const updateDriverStatus = useCallback(async (
-    newStatus: string, 
+    newStatus: string,
     reason?: string
   ) => {
+    const prev = driver;
+    // Optimistic update
+    if (prev) {
+      setDriver({ ...prev, driver_status: normalizeDriverStatus(newStatus) });
+    }
+
     try {
-      const { data, error } = await supabase.rpc('update_driver_status', {
+      const { error } = await supabase.rpc('update_driver_status', {
         new_driver_status: newStatus,
-        reason_param: reason || null
+        reason_param: reason || null,
       });
 
       if (error) {
-        throw new Error(`Kunde inte uppdatera förarstatus: ${error.message}`);
+        throw new Error(error.message);
       }
 
-      if (!data) {
-        throw new Error('Statusuppdateringen misslyckades');
-      }
-
-      // Refresh driver info after successful update
+      // Server will broadcast realtime; ensure local info stays consistent
       await fetchDriverInfo();
       return true;
     } catch (err) {
       console.error('Error updating driver status:', err);
-      setError(err instanceof Error ? err.message : 'Ett fel uppstod vid statusuppdatering');
+      // Rollback optimistic state
+      if (prev) setDriver(prev);
+      const msg = err instanceof Error ? err.message : 'Ett fel uppstod vid statusuppdatering';
+      setError(msg);
+      toast({ title: 'Kunde inte uppdatera förarstatus', description: msg, variant: 'destructive' });
       return false;
     }
-  }, [fetchDriverInfo]);
+  }, [driver, fetchDriverInfo]);
 
   // Initial data fetch
   useEffect(() => {

@@ -5,6 +5,7 @@ import {
   STATUS_COLORS, 
   DRIVER_STATUS_TEXTS,
   DRIVER_STATUS_OPTIONS,
+  DRIVER_STATUS_MAP,
   FILTER_OPTIONS,
   UI_LABELS,
   ARIA_LABELS
@@ -55,6 +56,39 @@ const PantaBilenDriverApp = () => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  // Centralized driver status UI components
+  const DriverStatusDropdown = ({ currentStatus, disabled, onChange }) => {
+    return (
+      <div role="listbox" aria-label="Tillgänglighet" className="flex flex-col">
+        {DRIVER_STATUS_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            role="option"
+            aria-selected={currentStatus === opt.value}
+            aria-pressed={currentStatus === opt.value}
+            disabled={disabled}
+            className={`flex items-center gap-3 px-4 py-3 hover:bg-muted/60 text-sm w-full text-left first:rounded-t-md last:rounded-b-md`}
+            onClick={() => onChange(opt.value)}
+          >
+            <span className={`h-2.5 w-2.5 rounded-full ${opt.dotClass}`} />
+            <span className="text-foreground">{opt.label}</span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const DriverStatusBadge = ({ status }) => {
+    const opt = DRIVER_STATUS_MAP[status] || DRIVER_STATUS_MAP['offline'];
+    return (
+      <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs ${opt.badgeClass}`}>
+        <span className={`h-2 w-2 rounded-full ${opt.dotClass}`} />
+        {opt.label}
+      </span>
+    );
   };
 
   const handleStatusChange = async (newStatus) => {
