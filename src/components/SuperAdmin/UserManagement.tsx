@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,6 +59,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     email: '',
     role: '' as User['role'] | ''
   });
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: '' as User['role'] | '' });
 
   const getRoleColor = (role: User['role']) => {
     switch (role) {
@@ -134,6 +135,40 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const handleStartEdit = (user: User) => {
+    setEditingUser(user);
+    setEditForm({ name: user.name, email: user.email, role: user.role });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editForm.name || !editForm.email || !editForm.role) {
+      toast({
+        title: 'Fel',
+        description: 'Alla fält måste fyllas i.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!validateEmail(editForm.email)) {
+      toast({
+        title: 'Fel',
+        description: 'E-postadressen måste ha domänen @bilteknikskrot.se',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!editingUser) return;
+
+    setUsers(users.map(u =>
+      u.id === editingUser.id
+        ? { ...u, name: editForm.name, email: editForm.email, role: editForm.role as User['role'] }
+        : u
+    ));
+
+    setEditingUser(null);
+    toast({ title: 'Användare uppdaterad', description: 'Användarinformationen har sparats.' });
   };
 
   return (
@@ -308,6 +343,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleStartEdit(user)}
                           className="border-purple-200 text-purple-700 hover:bg-purple-50"
                         >
                           <Edit className="h-4 w-4 mr-1" />
@@ -405,7 +441,71 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
               </Card>
             </div>
           </TabsContent>
-          
+
+            {/* Edit User Modal */}
+            <Dialog open={!!editingUser} onOpenChange={(open) => { if (!open) setEditingUser(null); }}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-purple-800">Redigera användare</DialogTitle>
+                  <DialogDescription>Uppdatera informationen för användaren.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name" className="text-purple-700">Fullständigt namn</Label>
+                    <Input
+                      id="edit-name"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      placeholder="Ange fullständigt namn"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-email" className="text-purple-700">E-postadress</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      placeholder="namn@bilteknikskrot.se"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                    <p className="text-xs text-purple-600 mt-1">
+                      E-postadressen måste ha domänen @bilteknikskrot.se
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-role" className="text-purple-700">Roll</Label>
+                    <Select value={editForm.role} onValueChange={(value) => setEditForm({ ...editForm, role: value as User['role'] })}>
+                      <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                        <SelectValue placeholder="Välj roll" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Administrator">Administratör</SelectItem>
+                        <SelectItem value="Chef">Chef/Manager</SelectItem>
+                        <SelectItem value="Operatör">Operatör</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button 
+                      onClick={handleSaveEdit}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    >
+                      Spara ändringar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setEditingUser(null)}
+                      className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50"
+                    >
+                      Avbryt
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
           <TabsContent value="fleet" className="mt-6">
             <div className="bg-white rounded-lg">
               <DriverManagement onBack={() => setActiveTab('users')} embedded={true} />
