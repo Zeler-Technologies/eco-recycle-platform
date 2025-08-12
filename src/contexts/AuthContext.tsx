@@ -17,6 +17,13 @@ export interface User {
   language?: string;
 }
 
+// Local type for whoami RPC
+type WhoAmIRow = {
+  user_id: string;
+  role: 'super_admin' | 'tenant_admin' | 'driver' | 'customer' | 'user' | string;
+  tenant_id: number | null;
+};
+
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
@@ -90,11 +97,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logWhoAmI = async (context: string) => {
     try {
-      const { data, error } = await supabase.rpc('whoami');
-      if (error) {
-        console.warn(`[whoami][${context}] error:`, error.message);
+      const { data: who, error: whoErr } = await supabase
+        .rpc('whoami' as any)
+        .returns<WhoAmIRow[]>();
+      const me = who?.[0] ?? null;
+      if (whoErr) {
+        console.warn(`[whoami][${context}] error:`, whoErr.message);
       } else {
-        console.info(`[whoami][${context}]`, data);
+        console.info(`[whoami][${context}]`, me);
       }
     } catch (e) {
       console.warn(`[whoami][${context}] failed`, e);

@@ -3,20 +3,20 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseSession } from './useSupabaseSession';
 
-export interface TenantCustomer {
+export type TenantCustomer = {
   customer_id: string;
   tenant_id: number;
   scrapyard_id: number | null;
   car_id: string;
-  license_plate: string | null;
-  brand: string | null;
-  model: string | null;
-  name: string | null;
+  license_plate: string;
+  brand: string;
+  model: string;
+  name: string;
   phone: string | null;
   email: string | null;
-  created_at: string | null;
   masked_pnr: string | null;
-}
+  created_at: string;
+};
 
 interface UseTenantCustomersOptions {
   search?: string;
@@ -33,24 +33,24 @@ export function useTenantCustomers({ search = '', page = 1, pageSize = 10 }: Use
     queryFn: async () => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      let query = supabase
-        .from('v_tenant_customers')
+      let query: any = supabase
+        .from('v_tenant_customers' as any)
         // @ts-ignore - the Database type may not include this view; runtime is fine.
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .returns<TenantCustomer[]>();
 
-      const q = search?.trim();
-      if (q) {
-        const like = `%${q}%`;
+      const term = search?.trim();
+      if (term) {
+        const s = `%${term}%`;
         // Push search down to DB for better perf
-        query = query.or(
+        (query as any) = (query as any).or(
           [
-            `name.ilike.${like}`,
-            `email.ilike.${like}`,
-            `license_plate.ilike.${like}`,
-            `brand.ilike.${like}`,
-            `model.ilike.${like}`,
+            `name.ilike.${s}`,
+            `email.ilike.${s}`,
+            `license_plate.ilike.${s}`,
+            `brand.ilike.${s}`,
+            `model.ilike.${s}`,
           ].join(',')
         );
       }
@@ -60,7 +60,7 @@ export function useTenantCustomers({ search = '', page = 1, pageSize = 10 }: Use
         console.error('useTenantCustomers error:', error);
         throw error;
       }
-      return { rows: (data as TenantCustomer[]) ?? [], count: count ?? 0 };
+      return { rows: data ?? [], count: count ?? 0 };
     },
     meta: {
       onError: (err: unknown) => {
