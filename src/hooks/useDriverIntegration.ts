@@ -24,6 +24,9 @@ export interface PickupOrder {
   scheduled_pickup_time?: string;
   completion_photos?: string[];
   pnr_num?: string;
+  // New fields aligned with DB helper/migration
+  scheduled_at?: string | null;
+  assigned_driver_id?: string | null;
 }
 
 export interface DriverInfo {
@@ -247,21 +250,22 @@ export const useDriverIntegration = () => {
     initializeData();
   }, [fetchDriverInfo, fetchDriverPickups, fetchDriverStatusHistory]);
 
-  // Real-time subscriptions for pickup orders
+  // Real-time subscriptions for pickup orders - narrowed to this driver via assigned_driver_id
   useEffect(() => {
-    if (!driver) return;
+    if (!driver?.driver_id) return;
 
     const channel = supabase
-      .channel('pickup_orders_changes')
+      .channel(`pickup_orders_changes_${driver.driver_id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'pickup_orders'
+          table: 'pickup_orders',
+          filter: `assigned_driver_id=eq.${driver.driver_id}`,
         },
         () => {
-          // Refresh pickup orders when changes occur
+          console.log('[RT] pickup_orders change for current driver -> refetch');
           fetchDriverPickups();
         }
       )
@@ -270,7 +274,7 @@ export const useDriverIntegration = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [driver, fetchDriverPickups]);
+  }, [driver?.driver_id, fetchDriverPickups]);
 
   // Real-time subscription for driver status changes
   useEffect(() => {

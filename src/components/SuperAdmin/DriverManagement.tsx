@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,31 +93,30 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const fetchScrapyards = async () => {
     try {
-      // Since Scrapyard = Tenant, we fetch tenants and treat them as scrapyards
-      let query = supabase.from('tenants').select('tenants_id, name');
-      
-      // Apply same filtering logic as for drivers
+      // Fetch real scrapyards, map by tenant_id so driver -> scrapyard name works via tenant link
+      let query: any = supabase.from('scrapyards' as any).select('id, name, tenant_id');
+
+      // Apply same filtering logic as for drivers (by tenant)
       if (user?.role !== 'super_admin' && user?.tenant_id) {
-        query = query.eq('tenants_id', Number(user.tenant_id));
+        query = query.eq('tenant_id', Number(user.tenant_id));
       }
-      
+
       const { data, error } = await query.order('name', { ascending: true });
       if (error) {
-        console.error('Error fetching scrapyards (tenants):', error);
+        console.error('Error fetching scrapyards:', error);
         setScrapyards([]);
         return;
       }
-      
-      // Map tenant structure to match expected scrapyard structure
-      const mappedData = (data || []).map(tenant => ({
-        id: tenant.tenants_id,
-        name: tenant.name,
-        tenant_id: tenant.tenants_id
+
+      const mappedData: Scrapyard[] = (data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        tenant_id: s.tenant_id,
       }));
-      
+
       setScrapyards(mappedData);
     } catch (error) {
-      console.error('Error fetching scrapyards (tenants):', error);
+      console.error('Error fetching scrapyards:', error);
       setScrapyards([]);
     }
   };
@@ -200,6 +198,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     const matchesSearch = driver.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.phone_number.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || driver.driver_status === statusFilter;
+    // Use tenant_id as the filter value, label shows scrapyard name
     const matchesScrapyard = scrapyardFilter === 'all' || driver.tenant_id?.toString() === scrapyardFilter;
     return matchesSearch && matchesStatus && matchesScrapyard;
   });
@@ -295,7 +294,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
           >
             <option value="all">All Scrapyards</option>
             {scrapyards.map((scrapyard) => (
-              <option key={scrapyard.id} value={scrapyard.id.toString()}>
+              <option key={scrapyard.id} value={scrapyard.tenant_id.toString()}>
                 {scrapyard.name}
               </option>
             ))}
@@ -358,7 +357,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           </span>
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
-                            {scrapyards.find(s => s.id === driver.tenant_id)?.name || 'No scrapyard assigned'}
+                            {scrapyards.find(s => s.tenant_id === driver.tenant_id)?.name || 'No scrapyard assigned'}
                           </span>
                           {driver.vehicle_registration && (
                             <span className="flex items-center gap-1">
@@ -566,7 +565,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
           >
             <option value="all">All Scrapyards</option>
             {scrapyards.map((scrapyard) => (
-              <option key={scrapyard.id} value={scrapyard.id.toString()}>
+              <option key={scrapyard.id} value={scrapyard.tenant_id.toString()}>
                 {scrapyard.name}
               </option>
             ))}
@@ -615,33 +614,33 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       </div>
                       
                       <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <h4 className="font-semibold">{driver.full_name}</h4>
-                            <Badge className={getStatusColor(driver.driver_status, driver.is_active)}>
-                              {getDisplayStatus(driver)}
-                            </Badge>
-                          </div>
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-semibold">{driver.full_name}</h4>
+                          <Badge className={getStatusColor(driver.driver_status, driver.is_active)}>
+                            {getDisplayStatus(driver)}
+                          </Badge>
+                        </div>
                         
-                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                           <span className="flex items-center gap-1">
-                             <Phone className="h-3 w-3" />
-                             {driver.phone_number}
-                           </span>
-                           <span className="flex items-center gap-1">
-                             <Building2 className="h-3 w-3" />
-                             {scrapyards.find(s => s.id === driver.tenant_id)?.name || 'No scrapyard assigned'}
-                           </span>
-                           {driver.vehicle_registration && (
-                             <span className="flex items-center gap-1">
-                               <Car className="h-3 w-3" />
-                               {driver.vehicle_registration} ({driver.vehicle_type})
-                             </span>
-                           )}
-                           <span className="flex items-center gap-1">
-                             <Clock className="h-3 w-3" />
-                             Last seen: {formatLastSeen(driver.last_location_update)}
-                           </span>
-                         </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {driver.phone_number}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {scrapyards.find(s => s.tenant_id === driver.tenant_id)?.name || 'No scrapyard assigned'}
+                          </span>
+                          {driver.vehicle_registration && (
+                            <span className="flex items-center gap-1">
+                              <Car className="h-3 w-3" />
+                              {driver.vehicle_registration} ({driver.vehicle_type})
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Last seen: {formatLastSeen(driver.last_location_update)}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
