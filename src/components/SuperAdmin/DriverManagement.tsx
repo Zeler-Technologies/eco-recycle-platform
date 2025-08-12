@@ -94,26 +94,30 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const fetchScrapyards = async () => {
     try {
-      let query: any = supabase.from('scrapyards' as any).select('id, name, tenant_id');
-      if (user?.role !== 'super_admin' && user?.tenant_id) {
-        query = query.eq('tenant_id', Number(user.tenant_id));
-      } else if (selectedTenant) {
-        query = query.eq('tenant_id', selectedTenant);
-      }
-      const { data, error } = await query.order('name', { ascending: true });
-      if (error) {
-        console.error('Error fetching scrapyards:', error);
+      // Use RPC to avoid RLS recursion and get only accessible scrapyards
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('list_scrapyards_for_current_user' as any);
+
+      if (rpcError) {
+        console.error('RPC list_scrapyards_for_current_user error:', rpcError);
         setScrapyards([]);
         return;
       }
-      const mappedData: Scrapyard[] = (data || []).map((s: any) => ({
-        id: s.id,
+
+      const list: any[] = (rpcData as any[] | null) ?? [];
+      // For super admin, optionally filter by selected tenant if provided
+      const filtered = (user?.role === 'super_admin' && selectedTenant)
+        ? list.filter((s: any) => Number(s.tenant_id) === Number(selectedTenant))
+        : list;
+
+      const mappedData: Scrapyard[] = filtered.map((s: any) => ({
+        id: Number(s.id),
         name: s.name,
-        tenant_id: s.tenant_id,
+        tenant_id: Number(s.tenant_id),
       }));
       setScrapyards(mappedData);
     } catch (error) {
-      console.error('Error fetching scrapyards:', error);
+      console.error('Error fetching scrapyards via RPC:', error);
       setScrapyards([]);
     }
   };
@@ -627,7 +631,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           </span>
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
-                            {scrapyards.find(s => s.tenant_id === driver.tenant_id)?.name || 'No scrapyard assigned'}
+                            {scrapyards.find(s => s.id === (driver.scrapyard_id ?? -1))?.name || 'No scrapyard assigned'}
                           </span>
                           {driver.vehicle_registration && (
                             <span className="flex items-center gap-1">

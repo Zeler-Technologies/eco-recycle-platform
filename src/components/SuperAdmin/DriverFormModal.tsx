@@ -96,20 +96,27 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
   const fetchScrapyards = async (tenantId: number, autoAssignIfSingle: boolean = false) => {
     try {
       setScrapyardsLoading(true);
-      let query = supabase.from('scrapyards' as any).select('id, name, tenant_id').eq('tenant_id', tenantId);
-      const { data, error } = await query.order('name', { ascending: true });
-      if (error) {
-        console.error('Error fetching scrapyards:', error);
+
+      // Prefer a secure RPC to avoid RLS/recursion issues
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('list_scrapyards_for_current_user' as any);
+
+      if (rpcError) {
+        console.error('RPC list_scrapyards_for_current_user error:', rpcError);
         setScrapyards([]);
         return;
       }
-      const list = (data as any[]) || [];
-      setScrapyards(list);
-      if (autoAssignIfSingle && list.length === 1) {
-        setFormData(prev => ({ ...prev, scrapyard_id: (list[0] as any).id }));
+
+      // rpcData may include multiple tenants for super_admin; filter by tenantId when provided
+      const list = (rpcData as any[] | null) ?? [];
+      const filtered = tenantId ? list.filter((s: any) => Number(s.tenant_id) === Number(tenantId)) : list;
+
+      setScrapyards(filtered);
+      if (autoAssignIfSingle && filtered.length === 1) {
+        setFormData(prev => ({ ...prev, scrapyard_id: (filtered[0] as any).id }));
       }
     } catch (error) {
-      console.error('Error fetching scrapyards:', error);
+      console.error('Error fetching scrapyards via RPC:', error);
       setScrapyards([]);
     } finally {
       setScrapyardsLoading(false);
