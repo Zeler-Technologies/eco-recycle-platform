@@ -24,6 +24,7 @@ interface Driver {
   current_longitude?: number;
   is_active: boolean;
   tenant_id: number;
+  scrapyard_id?: number | null;
   max_capacity_kg?: number;
 }
 
@@ -93,27 +94,23 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const fetchScrapyards = async () => {
     try {
-      // Fetch real scrapyards, map by tenant_id so driver -> scrapyard name works via tenant link
       let query: any = supabase.from('scrapyards' as any).select('id, name, tenant_id');
-
-      // Apply same filtering logic as for drivers (by tenant)
       if (user?.role !== 'super_admin' && user?.tenant_id) {
         query = query.eq('tenant_id', Number(user.tenant_id));
+      } else if (selectedTenant) {
+        query = query.eq('tenant_id', selectedTenant);
       }
-
       const { data, error } = await query.order('name', { ascending: true });
       if (error) {
         console.error('Error fetching scrapyards:', error);
         setScrapyards([]);
         return;
       }
-
       const mappedData: Scrapyard[] = (data || []).map((s: any) => ({
         id: s.id,
         name: s.name,
         tenant_id: s.tenant_id,
       }));
-
       setScrapyards(mappedData);
     } catch (error) {
       console.error('Error fetching scrapyards:', error);
@@ -198,8 +195,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     const matchesSearch = driver.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.phone_number.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || driver.driver_status === statusFilter;
-    // Use tenant_id as the filter value, label shows scrapyard name
-    const matchesScrapyard = scrapyardFilter === 'all' || driver.tenant_id?.toString() === scrapyardFilter;
+    const matchesScrapyard = scrapyardFilter === 'all' || (driver.scrapyard_id?.toString() === scrapyardFilter) || (scrapyardFilter === 'unassigned' && !driver.scrapyard_id);
     return matchesSearch && matchesStatus && matchesScrapyard;
   });
 
@@ -293,8 +289,9 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
             className="px-3 py-2 border rounded-md"
           >
             <option value="all">All Scrapyards</option>
+            <option value="unassigned">Unassigned</option>
             {scrapyards.map((scrapyard) => (
-              <option key={scrapyard.id} value={scrapyard.tenant_id.toString()}>
+              <option key={scrapyard.id} value={scrapyard.id.toString()}>
                 {scrapyard.name}
               </option>
             ))}
@@ -357,7 +354,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           </span>
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
-                            {scrapyards.find(s => s.tenant_id === driver.tenant_id)?.name || 'No scrapyard assigned'}
+                            {scrapyards.find(s => s.id === (driver.scrapyard_id || -1))?.name || 'No scrapyard assigned'}
                           </span>
                           {driver.vehicle_registration && (
                             <span className="flex items-center gap-1">
@@ -432,6 +429,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
             }}
             onSuccess={() => {
               fetchDrivers();
+              fetchScrapyards();
               setShowDriverForm(false);
               setSelectedDriver(null);
             }}
@@ -564,8 +562,9 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
             className="px-3 py-2 border rounded-md"
           >
             <option value="all">All Scrapyards</option>
+            <option value="unassigned">Unassigned</option>
             {scrapyards.map((scrapyard) => (
-              <option key={scrapyard.id} value={scrapyard.tenant_id.toString()}>
+              <option key={scrapyard.id} value={scrapyard.id.toString()}>
                 {scrapyard.name}
               </option>
             ))}

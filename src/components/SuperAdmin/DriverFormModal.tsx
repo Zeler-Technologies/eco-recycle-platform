@@ -18,6 +18,7 @@ interface Driver {
   vehicle_type?: string;
   is_active: boolean;
   tenant_id: number;
+  scrapyard_id?: number | null;
   max_capacity_kg?: number;
 }
 
@@ -37,11 +38,14 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     vehicle_type: '',
     max_capacity_kg: 1000,
     is_active: true,
-    tenant_id: 1
+    tenant_id: 1,
+    scrapyard_id: null as number | null,
   });
   const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<any[]>([]);
   const [tenantsLoading, setTenantsLoading] = useState(true);
+  const [scrapyards, setScrapyards] = useState<any[]>([]);
+  const [scrapyardsLoading, setScrapyardsLoading] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -54,41 +58,61 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         vehicle_type: driver.vehicle_type || '',
         max_capacity_kg: driver.max_capacity_kg || 1000,
         is_active: driver.is_active,
-        tenant_id: driver.tenant_id
+        tenant_id: driver.tenant_id,
+        scrapyard_id: driver.scrapyard_id ?? null,
       });
+      fetchScrapyards(driver.tenant_id);
     } else if (user?.role === 'tenant_admin' && user.tenant_id) {
       // Pre-fill tenant for tenant admins
+      const tenantId = Number(user.tenant_id);
       setFormData(prev => ({
         ...prev,
-        tenant_id: Number(user.tenant_id)
+        tenant_id: tenantId,
       }));
+      fetchScrapyards(tenantId, true);
     }
   }, [driver, user]);
 
   const fetchTenants = async () => {
     try {
       setTenantsLoading(true);
-      console.log('Fetching tenants for user:', user);
-      
       let query = supabase.from('tenants').select('tenants_id, name');
-      
-      // Restrict tenant access for scrapyard admins
       if (user?.role === 'tenant_admin' && user.tenant_id) {
-        console.log('Filtering tenants for tenant_admin with tenant_id:', user.tenant_id);
         query = query.eq('tenants_id', Number(user.tenant_id));
       }
-      
       const { data, error } = await query;
       if (error) {
         console.error('Error fetching tenants:', error);
         return;
       }
-      console.log('Fetched tenants:', data);
       setTenants(data || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
     } finally {
       setTenantsLoading(false);
+    }
+  };
+
+  const fetchScrapyards = async (tenantId: number, autoAssignIfSingle: boolean = false) => {
+    try {
+      setScrapyardsLoading(true);
+      let query = supabase.from('scrapyards' as any).select('id, name, tenant_id').eq('tenant_id', tenantId);
+      const { data, error } = await query.order('name', { ascending: true });
+      if (error) {
+        console.error('Error fetching scrapyards:', error);
+        setScrapyards([]);
+        return;
+      }
+      const list = (data as any[]) || [];
+      setScrapyards(list);
+      if (autoAssignIfSingle && list.length === 1) {
+        setFormData(prev => ({ ...prev, scrapyard_id: (list[0] as any).id }));
+      }
+    } catch (error) {
+      console.error('Error fetching scrapyards:', error);
+      setScrapyards([]);
+    } finally {
+      setScrapyardsLoading(false);
     }
   };
 
@@ -101,6 +125,15 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       const payload = { ...formData } as any;
       if (user?.role === 'tenant_admin' && user.tenant_id) {
         payload.tenant_id = Number(user.tenant_id);
+      }
+      // Ensure scrapyard_id is set for tenant_admins when only one scrapyard exists
+      if (!payload.scrapyard_id && scrapyards.length === 1) {
+        payload.scrapyard_id = scrapyards[0].id;
+      }
+      // tenant_id should match selected scrapyard's tenant if provided
+      if (payload.scrapyard_id && tenants.length) {
+        const selectedScrapyard = scrapyards.find(s => s.id === payload.scrapyard_id);
+        if (selectedScrapyard) payload.tenant_id = selectedScrapyard.tenant_id;
       }
 
       if (driver) {
@@ -188,32 +221,34 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="tenant_id">Scrapyard/Tenant *</Label>
+                  <Label htmlFor="tenant_id">Tenant *</Label>
                   {user?.role === 'tenant_admin' ? (
-                    // Read-only for tenant admins - only show their tenant
                     <Input
                       id="tenant_id"
                       value={
-                        tenantsLoading 
-                          ? 'Loading...' 
-                          : tenants.find(t => t.tenants_id === Number(formData.tenant_id))?.name || 
-                            tenants[0]?.name || 
-                            'No scrapyard found'
+                        tenantsLoading
+                          ? 'Loading...'
+                          : tenants.find(t => t.tenants_id === Number(formData.tenant_id))?.name ||
+                            tenants[0]?.name ||
+                            'No tenant found'
                       }
                       disabled
                       className="bg-muted cursor-not-allowed"
                     />
                   ) : (
-                    // Dropdown for super admins
                     <select
                       id="tenant_id"
                       value={formData.tenant_id}
-                      onChange={(e) => setFormData({ ...formData, tenant_id: Number(e.target.value) })}
+                      onChange={(e) => {
+                        const newTenantId = Number(e.target.value);
+                        setFormData({ ...formData, tenant_id: newTenantId, scrapyard_id: null });
+                        fetchScrapyards(newTenantId);
+                      }}
                       className="w-full px-3 py-2 border rounded-md"
                       required
                       disabled={tenantsLoading}
                     >
-                      <option value="">Select scrapyard</option>
+                      <option value="">Select tenant</option>
                       {tenants.map((tenant) => (
                         <option key={tenant.tenants_id} value={tenant.tenants_id}>
                           {tenant.name}
@@ -221,6 +256,25 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                       ))}
                     </select>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="scrapyard_id">Scrapyard *</Label>
+                  <select
+                    id="scrapyard_id"
+                    value={formData.scrapyard_id ?? ''}
+                    onChange={(e) => setFormData({ ...formData, scrapyard_id: e.target.value ? Number(e.target.value) : null })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                    disabled={scrapyardsLoading || !formData.tenant_id}
+                  >
+                    <option value="">Select scrapyard</option>
+                    {scrapyards.map((yard) => (
+                      <option key={yard.id} value={yard.id}>
+                        {yard.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
