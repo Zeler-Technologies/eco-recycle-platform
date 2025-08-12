@@ -3652,6 +3652,14 @@ export type Database = {
         Args: { p: string }
         Returns: Database["public"]["Enums"]["driver_status"]
       }
+      _is_assignment_active_text: {
+        Args: {
+          p_status_text: string
+          p_completed_at: string
+          p_is_active: boolean
+        }
+        Returns: boolean
+      }
       _postgis_deprecate: {
         Args: { oldname: string; newname: string; version: string }
         Returns: undefined
