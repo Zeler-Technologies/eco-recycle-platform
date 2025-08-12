@@ -50,7 +50,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     console.info('Fetching available pickup requests', { driverId: driver.id });
     try {
       const { data, error } = await supabase.rpc('list_available_pickup_requests', {
-        p_driver_id: driver.id,
+        p_driver_id: driver.id, // Ensure we pass the driver.id (not auth_user_id)
         p_limit: 50,
       });
 
@@ -68,7 +68,15 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
 
       setAvailableRequests(mapped);
     } catch (error) {
-      console.error('Failed to load available requests via RPC', { driverId: driver.id, error });
+      const msg =
+        (error as any)?.message ||
+        (error as any)?.error?.message ||
+        (typeof error === 'string' ? error : 'Unknown error');
+      console.error('Failed to load available requests via RPC', {
+        driverId: driver.id,
+        errorMessage: msg,
+        error,
+      });
       setErrorMsg('Kunde inte ladda lediga uppdrag. Behörighet eller nätverksfel.');
       toast.error('Failed to load available requests');
     } finally {
@@ -81,7 +89,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     console.info('Assigning driver to pickup', { driverId: driver.id, pickupOrderId });
     try {
       const { data, error } = await supabase.rpc('assign_driver_to_pickup', {
-        p_driver_id: driver.id,
+        p_driver_id: driver.id, // Ensure driver.id is used
         p_pickup_order_id: pickupOrderId,
         p_notes: null,
       });
@@ -91,7 +99,16 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
       toast.success('Driver assigned successfully');
       onSuccess();
     } catch (error) {
-      console.error('Failed to assign driver via RPC', { driverId: driver.id, pickupOrderId, error });
+      const msg =
+        (error as any)?.message ||
+        (error as any)?.error?.message ||
+        (typeof error === 'string' ? error : 'Unknown error');
+      console.error('Failed to assign driver via RPC', {
+        driverId: driver.id,
+        pickupOrderId,
+        errorMessage: msg,
+        error,
+      });
       toast.error('Failed to assign driver');
     } finally {
       setAssignmentLoading(null);
