@@ -97,11 +97,17 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     setLoading(true);
 
     try {
+      // Enforce tenant for tenant_admins regardless of UI state
+      const payload = { ...formData } as any;
+      if (user?.role === 'tenant_admin' && user.tenant_id) {
+        payload.tenant_id = Number(user.tenant_id);
+      }
+
       if (driver) {
         // Update existing driver
         const { error } = await supabase
           .from('drivers' as any)
-          .update(formData)
+          .update(payload)
           .eq('id', driver.id);
 
         if (error) throw error;
@@ -110,16 +116,17 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         // Create new driver
         const { error } = await supabase
           .from('drivers' as any)
-          .insert([formData]);
+          .insert([payload]);
 
         if (error) throw error;
         toast.success('Driver created successfully');
       }
 
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving driver:', error);
-      toast.error(`Failed to ${driver ? 'update' : 'create'} driver`);
+      const message = error?.message || `Failed to ${driver ? 'update' : 'create'} driver`;
+      toast.error(message);
     } finally {
       setLoading(false);
     }

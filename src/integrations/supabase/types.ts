@@ -4012,6 +4012,10 @@ export type Database = {
         }
         Returns: Json
       }
+      current_user_tenant: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       debug_lovable_user: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -4692,6 +4696,10 @@ export type Database = {
       get_scrapyard_requests: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_scrapyard_tenant_id: {
+        Args: { p_scrapyard_id: number }
+        Returns: number
       }
       get_scrapyard_users: {
         Args: Record<PropertyKey, never>
