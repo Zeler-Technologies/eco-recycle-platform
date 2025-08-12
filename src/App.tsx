@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { BillingDashboard } from "./components/SuperAdmin/Billing/BillingDashboard";
 import BankIDLogin from "./components/BankID/BankIDLogin";
 import PantaBilenDriverApp from './components/Driver/PantaBilenDriverApp';
+import TenantCustomersPage from './pages/TenantCustomers';
 
 const queryClient = new QueryClient();
 
@@ -54,6 +56,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['driver']}>
                   <PantaBilenDriverApp />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tenant-customers" 
+              element={
+                <ProtectedRoute allowedRoles={['tenant_admin']}>
+                  <TenantCustomersPage />
                 </ProtectedRoute>
               } 
             />

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 // import { useToast } from '@/hooks/use-toast';
@@ -87,6 +88,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   console.log('AuthProvider rendered, user:', user, 'loading:', loading);
 
+  const logWhoAmI = async (context: string) => {
+    try {
+      const { data, error } = await supabase.rpc('whoami');
+      if (error) {
+        console.warn(`[whoami][${context}] error:`, error.message);
+      } else {
+        console.info(`[whoami][${context}]`, data);
+      }
+    } catch (e) {
+      console.warn(`[whoami][${context}] failed`, e);
+    }
+  };
+
   // Real Supabase authentication check - SIMPLIFIED to bypass auth_users table issues
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -120,6 +134,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('Setting user:', userData);
         setUser(userData);
+
+        // Log whoami for debugging RLS context
+        logWhoAmI('onAuthStateChange');
       } else {
         setUser(null);
       }
@@ -155,6 +172,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('Setting user from existing session:', userData);
         setUser(userData);
+
+        // Log whoami for debugging RLS context
+        logWhoAmI('getSession');
       }
       setLoading(false);
     });
