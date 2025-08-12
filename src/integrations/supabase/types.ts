@@ -4790,6 +4790,14 @@ export type Database = {
           status: string
         }[]
       }
+      list_scrapyards_for_current_user: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: number
+          name: string
+          tenant_id: number
+        }[]
+      }
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>
         Returns: boolean
