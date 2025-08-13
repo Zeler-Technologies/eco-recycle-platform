@@ -64,9 +64,9 @@ const DEFAULT_PRICING = {
 
 export class VehiclePricingCalculator {
   private pricingSettings: any = null;
-  private tenantId: number;
+  private tenantId: string; // Changed to string to match your database
 
-  constructor(tenantId: number) {
+  constructor(tenantId: string) {
     this.tenantId = tenantId;
   }
 
@@ -77,14 +77,12 @@ export class VehiclePricingCalculator {
 
     try {
       // Try to load from database
-      const result = await (supabase as any)
+      const { data, error } = await supabase
         .from('pricing_tiers')
         .select('*')
         .eq('tenant_id', this.tenantId)
         .eq('is_vehicle_pricing', true)
         .single();
-      
-      const { data, error } = result;
 
       if (!error && data) {
         // Extract settings from database
@@ -234,20 +232,20 @@ export class VehiclePricingCalculator {
   }
 
   // Static helper methods
-  static async getQuickPrice(tenantId: number, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<number> {
+  static async getQuickPrice(tenantId: string, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<number> {
     const calculator = new VehiclePricingCalculator(tenantId);
     const result = await calculator.calculatePrice(vehicleInfo, basePrice);
     return result.totalPrice;
   }
 
-  static async getPriceBreakdown(tenantId: number, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<PricingResult> {
+  static async getPriceBreakdown(tenantId: string, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<PricingResult> {
     const calculator = new VehiclePricingCalculator(tenantId);
     return await calculator.calculatePrice(vehicleInfo, basePrice);
   }
 }
 
 // React hook for easy use in components
-export const usePricingCalculator = (tenantId: number) => {
+export const usePricingCalculator = (tenantId: string) => {
   const calculator = new VehiclePricingCalculator(tenantId);
   
   return {
