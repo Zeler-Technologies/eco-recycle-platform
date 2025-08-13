@@ -4164,6 +4164,7 @@ export type Database = {
           id: number
           name: string
           address: string
+          postal_code: string
           city: string
           distance_km: number
           tenant_id: number
