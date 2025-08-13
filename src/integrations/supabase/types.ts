@@ -4164,17 +4164,10 @@ export type Database = {
           id: number
           name: string
           address: string
-          postal_code: string
           city: string
-          latitude: number
-          longitude: number
           distance_km: number
-          max_capacity: number
-          active_requests: number
-          availability_status: string
-          opening_time: string
-          closing_time: string
-          operating_days: string[]
+          tenant_id: number
+          is_active: boolean
         }[]
       }
       find_scrapyards_by_material: {
