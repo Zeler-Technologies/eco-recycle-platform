@@ -6227,7 +6227,7 @@ export type Database = {
         Returns: boolean
       }
       validate_swedish_pnr: {
-        Args: { pnr: string }
+        Args: { pnr_input: string }
         Returns: boolean
       }
       whoami: {
