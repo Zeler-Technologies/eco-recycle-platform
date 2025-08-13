@@ -1,12 +1,21 @@
-export const VehiclePricingCalculator = {
-  getQuickPrice: () => Promise.resolve(0),
-  getPriceBreakdown: () => Promise.resolve({ totalPrice: 0, breakdown: [] })
+// Simple placeholder - no imports, no circular references
+console.log('Pricing calculator placeholder loaded');
+
+const handlePriceCalculation = async () => {
+  const vehicleInfo = {
+    year: 2015,
+    fuelType: 'gasoline' as const,
+    pickupDistance: 30,
+    hasEngine: true,
+    hasFourWheels: true
+  };
+  
+  const result = await VehiclePricingCalculator.getPriceBreakdown(
+    tenantId, 
+    vehicleInfo, 
+    5000 // base price
+  );
+  
+  console.log(`Total price: ${result.totalPrice} KR`);
+  console.log('Breakdown:', result.breakdown);
 };
-
-export const usePricingCalculator = () => ({
-  calculatePrice: () => Promise.resolve({ totalPrice: 0 }),
-  getQuickPrice: () => Promise.resolve(0)
-});
-
-export interface VehicleInfo { year: number; fuelType: string; }
-export interface PricingResult { totalPrice: number; breakdown: any[]; }
