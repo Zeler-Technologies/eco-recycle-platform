@@ -3,18 +3,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { VehiclePricingCalculator, VehicleInfo, PricingResult } from '@/utils/pricingCalculator';
 
-// Types for the driver app
-interface PickupOrder {
+// Export types for use in other components
+export type DriverStatus = 'available' | 'busy' | 'offline';
+export type PickupStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+export type FuelType = 'gasoline' | 'ethanol' | 'electric' | 'other';
+
+export interface PickupOrder {
   id: string;
   customer_name?: string;
   vehicle_year?: number;
   vehicle_make?: string;
   vehicle_model?: string;
-  fuel_type?: 'gasoline' | 'ethanol' | 'electric' | 'other';
+  fuel_type?: FuelType;
   pickup_distance?: number;
   pickup_location?: string;
   dropoff_location?: string;
-  status?: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  status?: PickupStatus;
   assigned_driver_id?: string;
   base_price?: number;
   estimated_price?: number;
@@ -26,20 +30,20 @@ interface PickupOrder {
   scheduled_pickup_time?: string;
 }
 
-interface Driver {
+export interface Driver {
   id: string;
   name?: string;
   email?: string;
   phone?: string;
   vehicle_type?: string;
   current_location?: string;
-  status?: 'available' | 'busy' | 'offline';
+  status?: DriverStatus;
   tenant_id?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-interface StatusHistoryItem {
+export interface StatusHistoryItem {
   id: string;
   pickup_order_id: string;
   driver_id: string;
@@ -57,8 +61,8 @@ interface UseDriverIntegrationReturn {
   error: string | null;
   
   // Status management
-  updateDriverStatus: (driverId: string, status: string) => Promise<void>;
-  updatePickupStatus: (pickupId: string, status: string, notes?: string) => Promise<void>;
+  updateDriverStatus: (driverId: string, status: DriverStatus) => Promise<void>;
+  updatePickupStatus: (pickupId: string, status: PickupStatus, notes?: string) => Promise<void>;
   
   // Status history
   statusHistory: StatusHistoryItem[];
@@ -207,7 +211,7 @@ export const useDriverIntegration = (
   }, [fetchPickups, fetchDriver, fetchStatusHistory]);
 
   // Update driver status
-  const updateDriverStatus = useCallback(async (driverId: string, status: string) => {
+  const updateDriverStatus = useCallback(async (driverId: string, status: DriverStatus) => {
     try {
       setError(null);
       
@@ -238,7 +242,7 @@ export const useDriverIntegration = (
   }, [driver, fetchStatusHistory]);
 
   // Update pickup status
-  const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
+  const updatePickupStatus = useCallback(async (pickupId: string, status: PickupStatus, notes?: string) => {
     try {
       setError(null);
       
@@ -296,7 +300,7 @@ export const useDriverIntegration = (
         .from('pickup_orders')
         .update({ 
           assigned_driver_id: driverId,
-          status: 'assigned',
+          status: 'assigned' as PickupStatus,
           updated_at: new Date().toISOString() 
         })
         .eq('id', orderId);
@@ -321,7 +325,7 @@ export const useDriverIntegration = (
         .from('pickup_orders')
         .update({ 
           assigned_driver_id: null,
-          status: 'pending',
+          status: 'pending' as PickupStatus,
           updated_at: new Date().toISOString() 
         })
         .eq('id', orderId);
@@ -346,7 +350,7 @@ export const useDriverIntegration = (
 
       const vehicleInfo: VehicleInfo = {
         year: order.vehicle_year || new Date().getFullYear(),
-        fuelType: order.fuel_type || 'gasoline',
+        fuelType: (order.fuel_type || 'gasoline') as FuelType,
         pickupDistance: order.pickup_distance || 0,
         isDropoffComplete: order.pickup_distance === 0,
         hasEngine: true,
