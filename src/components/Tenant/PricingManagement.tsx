@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface PricingManagementProps {
   onBack?: () => void;
-  tenantId?: string; // Add tenant ID prop
+  tenantId?: string;
 }
 
 interface PricingSettings {
@@ -83,7 +83,7 @@ const defaultSettings: Omit<PricingSettings, 'tenantId'> = {
 
 const PricingManagement: React.FC<PricingManagementProps> = ({ 
   onBack, 
-  tenantId = 'default-tenant' // Default tenant ID, should be passed from parent
+  tenantId = 'default-tenant'
 }) => {
   const [settings, setSettings] = useState<PricingSettings>({
     ...defaultSettings,
@@ -95,7 +95,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  // Load pricing settings from Supabase on component mount
   useEffect(() => {
     loadPricingSettings();
   }, [tenantId]);
@@ -105,12 +104,12 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       setIsLoading(true);
       
       const { data, error } = await supabase
-        .from('pricing_tiers')
+        .from('vehicle_pricing_config')
         .select('*')
         .eq('tenant_id', tenantId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+      if (error && error.code !== 'PGRST116') {
         console.error('Error loading pricing settings:', error);
         toast({
           title: "Fel vid laddning",
@@ -121,21 +120,19 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       }
 
       if (data) {
-        // Parse the JSON settings from database
         const loadedSettings: PricingSettings = {
           id: data.id,
           tenantId: data.tenant_id,
-          ageBonuses: JSON.parse(data.age_bonuses || '{}'),
-          oldCarDeduction: JSON.parse(data.old_car_deduction || '{}'),
-          distanceAdjustments: JSON.parse(data.distance_adjustments || '{}'),
-          partsBonuses: JSON.parse(data.parts_bonuses || '{}'),
-          fuelAdjustments: JSON.parse(data.fuel_adjustments || '{}')
+          ageBonuses: data.age_bonuses || defaultSettings.ageBonuses,
+          oldCarDeduction: data.old_car_deduction || defaultSettings.oldCarDeduction,
+          distanceAdjustments: data.distance_adjustments || defaultSettings.distanceAdjustments,
+          partsBonuses: data.parts_bonuses || defaultSettings.partsBonuses,
+          fuelAdjustments: data.fuel_adjustments || defaultSettings.fuelAdjustments
         };
         
         setSettings(loadedSettings);
         setLastSaved(new Date(data.updated_at));
       } else {
-        // No existing settings found, use defaults
         setSettings({
           ...defaultSettings,
           tenantId
@@ -159,28 +156,26 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
 
       const settingsToSave = {
         tenant_id: tenantId,
-        age_bonuses: JSON.stringify(settings.ageBonuses),
-        old_car_deduction: JSON.stringify(settings.oldCarDeduction),
-        distance_adjustments: JSON.stringify(settings.distanceAdjustments),
-        parts_bonuses: JSON.stringify(settings.partsBonuses),
-        fuel_adjustments: JSON.stringify(settings.fuelAdjustments),
+        age_bonuses: settings.ageBonuses,
+        old_car_deduction: settings.oldCarDeduction,
+        distance_adjustments: settings.distanceAdjustments,
+        parts_bonuses: settings.partsBonuses,
+        fuel_adjustments: settings.fuelAdjustments,
         updated_at: new Date().toISOString()
       };
 
       let result;
       
       if (settings.id) {
-        // Update existing record
         result = await supabase
-          .from('pricing_tiers')
+          .from('vehicle_pricing_config')
           .update(settingsToSave)
           .eq('id', settings.id)
           .select()
           .single();
       } else {
-        // Insert new record
         result = await supabase
-          .from('pricing_tiers')
+          .from('vehicle_pricing_config')
           .insert(settingsToSave)
           .select()
           .single();
@@ -190,7 +185,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         throw result.error;
       }
 
-      // Update local state with the returned data
       setSettings(prev => ({
         ...prev,
         id: result.data.id
@@ -221,7 +215,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
   };
 
   const handleInputChange = (
-    section: keyof PricingSettings,
+    section: keyof Omit<PricingSettings, 'id' | 'tenantId'>,
     field: string,
     value: string
   ) => {
@@ -243,7 +237,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
     sectionSettings: any, 
     validationRules: { field: string, min: number, max: number }[]
   ) => {
-    // Validate section fields
     const isValid = validationRules.every(rule => 
       validateValue(sectionSettings[rule.field], rule.min, rule.max)
     );
@@ -265,9 +258,9 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       setSettings({
         ...defaultSettings,
         tenantId,
-        id: settings.id // Keep the ID if it exists
+        id: settings.id
       });
-      setHasChanges(true); // Mark as changed so user can save the reset values
+      setHasChanges(true);
       
       toast({
         title: "Återställt till standard",
@@ -300,7 +293,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         <div className="flex items-center space-x-2">
           <Input
             type="number"
-            value={value}
+            value={value.toString()}
             onChange={(e) => onChange(e.target.value)}
             className={`w-32 ${!isValid ? 'border-destructive' : ''}`}
             min={min}
@@ -332,7 +325,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
 
   return (
     <div className="theme-tenant min-h-screen bg-tenant-muted">
-      {/* Header */}
       <header className="bg-tenant-primary text-tenant-primary-foreground shadow-custom-md">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
@@ -374,7 +366,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </AlertDescription>
       </Alert>
 
-      {/* Global Save Button */}
       {hasChanges && (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="py-4">
@@ -396,7 +387,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </Card>
       )}
 
-      {/* Age Bonuses Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -470,7 +460,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Old Car Deduction Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -512,7 +501,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Distance Adjustments Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -615,7 +603,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Parts Bonuses Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -665,7 +652,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Fuel Adjustments Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -700,7 +686,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
           <InputField
             label="Bensin"
             value={settings.fuelAdjustments.gasoline}
-            onChange={() => {}} // Read-only
+            onChange={() => {}}
             min={0}
             max={0}
             disabled={true}
@@ -708,7 +694,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
           <InputField
             label="Etanol"
             value={settings.fuelAdjustments.ethanol}
-            onChange={() => {}} // Read-only
+            onChange={() => {}}
             min={0}
             max={0}
             disabled={true}
@@ -716,7 +702,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
           <InputField
             label="El (Electric)"
             value={settings.fuelAdjustments.electric}
-            onChange={() => {}} // Read-only
+            onChange={() => {}}
             min={0}
             max={0}
             disabled={true}
@@ -731,7 +717,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Reset Button */}
       <div className="flex justify-center pt-6">
         <Button 
           variant="outline" 
