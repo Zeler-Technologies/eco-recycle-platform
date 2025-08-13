@@ -696,21 +696,22 @@ export type Database = {
       }
       customer_requests: {
         Row: {
-          car_brand: string
-          car_model: string
+          car_brand: string | null
+          car_model: string | null
           car_registration_number: string
           car_year: number | null
           control_number: string | null
           created_at: string
           customer_id: string | null
+          estimated_value: number | null
           id: string
-          owner_address: string
-          owner_name: string
-          owner_postal_code: string
-          pickup_address: string
+          owner_address: string | null
+          owner_name: string | null
+          owner_postal_code: string | null
+          pickup_address: string | null
           pickup_latitude: number | null
           pickup_longitude: number | null
-          pickup_postal_code: string
+          pickup_postal_code: string | null
           pnr_num: string | null
           pnr_num_norm: string | null
           quote_amount: number | null
@@ -720,21 +721,22 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          car_brand: string
-          car_model: string
+          car_brand?: string | null
+          car_model?: string | null
           car_registration_number: string
           car_year?: number | null
           control_number?: string | null
           created_at?: string
           customer_id?: string | null
+          estimated_value?: number | null
           id?: string
-          owner_address: string
-          owner_name: string
-          owner_postal_code: string
-          pickup_address: string
+          owner_address?: string | null
+          owner_name?: string | null
+          owner_postal_code?: string | null
+          pickup_address?: string | null
           pickup_latitude?: number | null
           pickup_longitude?: number | null
-          pickup_postal_code: string
+          pickup_postal_code?: string | null
           pnr_num?: string | null
           pnr_num_norm?: string | null
           quote_amount?: number | null
@@ -744,21 +746,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          car_brand?: string
-          car_model?: string
+          car_brand?: string | null
+          car_model?: string | null
           car_registration_number?: string
           car_year?: number | null
           control_number?: string | null
           created_at?: string
           customer_id?: string | null
+          estimated_value?: number | null
           id?: string
-          owner_address?: string
-          owner_name?: string
-          owner_postal_code?: string
-          pickup_address?: string
+          owner_address?: string | null
+          owner_name?: string | null
+          owner_postal_code?: string | null
+          pickup_address?: string | null
           pickup_latitude?: number | null
           pickup_longitude?: number | null
-          pickup_postal_code?: string
+          pickup_postal_code?: string | null
           pnr_num?: string | null
           pnr_num_norm?: string | null
           quote_amount?: number | null
