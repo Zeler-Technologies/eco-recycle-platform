@@ -1,451 +1,212 @@
-// hooks/useDriverIntegration.ts
+// hooks/useDriverIntegration.ts - TEMPORARY VERSION WITH MOCK DATA
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { VehiclePricingCalculator, VehicleInfo, PricingResult } from '@/utils/pricingCalculator';
 
-// Export types for use in other components
-export type DriverStatus = 'available' | 'busy' | 'offline';
-export type PickupStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
-export type FuelType = 'gasoline' | 'ethanol' | 'electric' | 'other';
+// Mock data to match what PantaBilenDriverApp expects
+const MOCK_DRIVER = {
+  driver_id: 'driver-123',
+  full_name: 'Test Driver',
+  driver_status: 'available',
+  email: 'driver@scrapyard.se',
+  phone: '+46700000000',
+  vehicle_type: 'Truck',
+  current_location: 'Stockholm',
+  tenant_id: '1'
+};
 
-export interface PickupOrder {
-  id: string;
-  customer_name?: string;
-  vehicle_year?: number;
-  vehicle_make?: string;
-  vehicle_model?: string;
-  fuel_type?: FuelType;
-  pickup_distance?: number;
-  pickup_location?: string;
-  dropoff_location?: string;
-  status?: PickupStatus;
-  assigned_driver_id?: string;
-  base_price?: number;
-  estimated_price?: number;
-  pricing_breakdown?: any[];
-  created_at?: string;
-  updated_at?: string;
-  pickup_notes?: string;
-  priority?: number;
-  scheduled_pickup_time?: string;
-}
+const MOCK_PICKUPS = [
+  {
+    id: 'pickup-1',
+    pickup_id: 'pickup-1',
+    car_registration_number: 'ABC123',
+    car_year: 2015,
+    car_brand: 'Volvo',
+    car_model: 'XC90',
+    owner_name: 'John Doe',
+    pickup_address: 'Storgatan 1, Stockholm',
+    final_price: 5000,
+    status: 'scheduled',
+    created_at: new Date().toISOString(),
+    vehicle_year: 2015,
+    vehicle_make: 'Volvo',
+    vehicle_model: 'XC90',
+    fuel_type: 'gasoline',
+    pickup_distance: 15,
+    customer_name: 'John Doe',
+    pickup_location: 'Storgatan 1, Stockholm'
+  },
+  {
+    id: 'pickup-2',
+    pickup_id: 'pickup-2',
+    car_registration_number: 'XYZ789',
+    car_year: 2018,
+    car_brand: 'BMW',
+    car_model: '320i',
+    owner_name: 'Jane Smith',
+    pickup_address: 'Kungsgatan 10, Stockholm',
+    final_price: 7500,
+    status: 'in_progress',
+    created_at: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+    vehicle_year: 2018,
+    vehicle_make: 'BMW',
+    vehicle_model: '320i',
+    fuel_type: 'gasoline',
+    pickup_distance: 25,
+    customer_name: 'Jane Smith',
+    pickup_location: 'Kungsgatan 10, Stockholm'
+  },
+  {
+    id: 'pickup-3',
+    pickup_id: 'pickup-3',
+    car_registration_number: 'DEF456',
+    car_year: 2020,
+    car_brand: 'Tesla',
+    car_model: 'Model 3',
+    owner_name: 'Erik Andersson',
+    pickup_address: 'Vasagatan 5, Stockholm',
+    final_price: 12000,
+    status: 'completed',
+    created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    vehicle_year: 2020,
+    vehicle_make: 'Tesla',
+    vehicle_model: 'Model 3',
+    fuel_type: 'electric',
+    pickup_distance: 0,
+    customer_name: 'Erik Andersson',
+    pickup_location: 'Vasagatan 5, Stockholm'
+  }
+];
 
-export interface Driver {
-  id: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  vehicle_type?: string;
-  current_location?: string;
-  status?: DriverStatus;
-  tenant_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+const MOCK_STATUS_HISTORY = [
+  {
+    id: 'history-1',
+    pickup_order_id: 'pickup-1',
+    driver_id: 'driver-123',
+    old_status: 'pending',
+    new_status: 'scheduled',
+    notes: 'Driver assigned and scheduled',
+    created_at: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+  }
+];
 
-export interface StatusHistoryItem {
-  id: string;
-  pickup_order_id: string;
-  driver_id: string;
-  old_status: string;
-  new_status: string;
-  notes?: string;
-  created_at: string;
-}
-
-interface UseDriverIntegrationReturn {
-  // Core data
-  pickups: PickupOrder[];
-  driver: Driver | null;
-  loading: boolean;
-  error: string | null;
-  
-  // Status management
-  updateDriverStatus: (driverId: string, status: DriverStatus) => Promise<void>;
-  updatePickupStatus: (pickupId: string, status: PickupStatus, notes?: string) => Promise<void>;
-  
-  // Status history
-  statusHistory: StatusHistoryItem[];
-  historyLoading: boolean;
-  
-  // Driver assignment
-  assignDriver: (orderId: string, driverId: string) => Promise<void>;
-  unassignDriver: (orderId: string) => Promise<void>;
-  
-  // Pricing functions
-  calculateOrderPrice: (order: PickupOrder) => Promise<PricingResult | null>;
-  updateOrderPricing: (orderId: string, vehicleInfo: VehicleInfo, basePrice?: number) => Promise<void>;
-  bulkCalculatePricing: (orders: PickupOrder[]) => Promise<PickupOrder[]>;
-  
-  // Pricing state
-  isCalculatingPrice: boolean;
-  pricingError: string | null;
-  
-  // Data refresh
-  refreshData: () => Promise<void>;
-}
-
-export const useDriverIntegration = (
-  tenantId: string | number = '1',
-  driverId?: string
-): UseDriverIntegrationReturn => {
-  // Core state
-  const [pickups, setPickups] = useState<PickupOrder[]>([]);
-  const [driver, setDriver] = useState<Driver | null>(null);
+export const useDriverIntegration = (tenantId?: string | number, driverId?: string) => {
+  // State to match what the component expects
+  const [pickups, setPickups] = useState(MOCK_PICKUPS);
+  const [driver, setDriver] = useState(MOCK_DRIVER);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Status history state
-  const [statusHistory, setStatusHistory] = useState<StatusHistoryItem[]>([]);
+  const [error, setError] = useState(null);
+  const [statusHistory, setStatusHistory] = useState(MOCK_STATUS_HISTORY);
   const [historyLoading, setHistoryLoading] = useState(false);
-  
-  // Pricing state
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
-  const [pricingError, setPricingError] = useState<string | null>(null);
+  const [pricingError, setPricingError] = useState(null);
 
-  // Fetch pickup orders
-  const fetchPickups = useCallback(async () => {
-    try {
-      setError(null);
-      
-      // Use direct query to avoid TypeScript issues
-      const { data, error: fetchError } = await (supabase as any)
-        .from('pickup_orders')
-        .select('*')
-        .eq('tenant_id', String(tenantId))
-        .order('created_at', { ascending: false });
-
-      if (fetchError) {
-        console.error('Error fetching pickups:', fetchError);
-        setError('Failed to load pickup orders');
-        return;
-      }
-
-      setPickups(data || []);
-    } catch (err) {
-      console.error('Error in fetchPickups:', err);
-      setError('Failed to load pickup orders');
-      setPickups([]); // Set empty array as fallback
-    }
-  }, [tenantId]);
-
-  // Fetch driver information
-  const fetchDriver = useCallback(async () => {
-    if (!driverId) return;
-    
-    try {
-      const { data, error: fetchError } = await (supabase as any)
-        .from('drivers')
-        .select('*')
-        .eq('id', driverId)
-        .eq('tenant_id', String(tenantId))
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching driver:', fetchError);
-        setError('Failed to load driver information');
-        return;
-      }
-
-      setDriver(data);
-    } catch (err) {
-      console.error('Error in fetchDriver:', err);
-      setError('Failed to load driver information');
-    }
-  }, [driverId, tenantId]);
-
-  // Fetch status history
-  const fetchStatusHistory = useCallback(async () => {
-    if (!driverId) return;
-    
-    try {
-      setHistoryLoading(true);
-      
-      const { data, error: fetchError } = await (supabase as any)
-        .from('driver_status_history')
-        .select('*')
-        .eq('driver_id', driverId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (fetchError) {
-        console.error('Error fetching status history:', fetchError);
-        return;
-      }
-
-      setStatusHistory(data || []);
-    } catch (err) {
-      console.error('Error in fetchStatusHistory:', err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [driverId]);
-
-  // Initial data load
+  // Simulate loading
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([
-          fetchPickups(),
-          fetchDriver(),
-          fetchStatusHistory()
-        ]);
-      } catch (err) {
-        console.error('Error loading initial data:', err);
-      } finally {
-        setLoading(false);
-      }
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Mock functions that match what the component expects
+  const updateDriverStatus = useCallback(async (driverId: string, status: string) => {
+    console.log('Updating driver status:', driverId, status);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Update local state
+    setDriver(prev => prev ? { ...prev, driver_status: status } : prev);
+    
+    return true; // Return success
+  }, []);
+
+  const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
+    console.log('Updating pickup status:', pickupId, status, notes);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Update local state
+    setPickups(prev => 
+      prev.map(pickup => 
+        pickup.pickup_id === pickupId || pickup.id === pickupId
+          ? { ...pickup, status }
+          : pickup
+      )
+    );
+    
+    // Add to status history
+    const historyItem = {
+      id: `history-${Date.now()}`,
+      pickup_order_id: pickupId,
+      driver_id: driver?.driver_id || 'driver-123',
+      old_status: 'previous_status',
+      new_status: status,
+      notes: notes || '',
+      created_at: new Date().toISOString()
     };
+    
+    setStatusHistory(prev => [historyItem, ...prev]);
+    
+    return true; // Return success
+  }, [driver]);
 
-    loadData();
-  }, [fetchPickups, fetchDriver, fetchStatusHistory]);
-
-  // Refresh all data
-  const refreshData = useCallback(async () => {
-    await Promise.all([
-      fetchPickups(),
-      fetchDriver(),
-      fetchStatusHistory()
-    ]);
-  }, [fetchPickups, fetchDriver, fetchStatusHistory]);
-
-  // Update driver status
-  const updateDriverStatus = useCallback(async (driverId: string, status: DriverStatus) => {
-    try {
-      setError(null);
-      
-      const { error: updateError } = await (supabase as any)
-        .from('drivers')
-        .update({ 
-          status, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', driverId);
-
-      if (updateError) {
-        throw new Error(`Failed to update driver status: ${updateError.message}`);
-      }
-
-      // Update local driver state
-      if (driver && driver.id === driverId) {
-        setDriver(prev => prev ? { ...prev, status } : null);
-      }
-
-      // Refresh status history
-      await fetchStatusHistory();
-      
-    } catch (err) {
-      console.error('Error updating driver status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update driver status');
-    }
-  }, [driver, fetchStatusHistory]);
-
-  // Update pickup status
-  const updatePickupStatus = useCallback(async (pickupId: string, status: PickupStatus, notes?: string) => {
-    try {
-      setError(null);
-      
-      const { error: updateError } = await (supabase as any)
-        .from('pickup_orders')
-        .update({ 
-          status, 
-          pickup_notes: notes,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', pickupId);
-
-      if (updateError) {
-        throw new Error(`Failed to update pickup status: ${updateError.message}`);
-      }
-
-      // Update local pickups state
-      setPickups(prev => 
-        prev.map(pickup => 
-          pickup.id === pickupId 
-            ? { ...pickup, status, pickup_notes: notes }
-            : pickup
-        )
-      );
-
-      // Add to status history if driver is involved
-      if (driverId) {
-        const { error: historyError } = await (supabase as any)
-          .from('driver_status_history')
-          .insert({
-            pickup_order_id: pickupId,
-            driver_id: driverId,
-            new_status: status,
-            notes: notes,
-            created_at: new Date().toISOString()
-          });
-
-        if (!historyError) {
-          await fetchStatusHistory();
-        }
-      }
-      
-    } catch (err) {
-      console.error('Error updating pickup status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update pickup status');
-    }
-  }, [driverId, fetchStatusHistory]);
-
-  // Driver assignment functions
+  // Additional functions for compatibility
   const assignDriver = useCallback(async (orderId: string, driverId: string) => {
-    try {
-      setError(null);
-      
-      const { error: assignError } = await (supabase as any)
-        .from('pickup_orders')
-        .update({ 
-          assigned_driver_id: driverId,
-          status: 'assigned' as PickupStatus,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', orderId);
-
-      if (assignError) {
-        throw new Error(`Failed to assign driver: ${assignError.message}`);
-      }
-
-      await refreshData();
-      
-    } catch (err) {
-      console.error('Error assigning driver:', err);
-      setError(err instanceof Error ? err.message : 'Failed to assign driver');
-    }
-  }, [refreshData]);
+    console.log('Assigning driver:', orderId, driverId);
+    await updatePickupStatus(orderId, 'assigned');
+  }, [updatePickupStatus]);
 
   const unassignDriver = useCallback(async (orderId: string) => {
-    try {
-      setError(null);
-      
-      const { error: unassignError } = await (supabase as any)
-        .from('pickup_orders')
-        .update({ 
-          assigned_driver_id: null,
-          status: 'pending' as PickupStatus,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', orderId);
+    console.log('Unassigning driver:', orderId);
+    await updatePickupStatus(orderId, 'pending');
+  }, [updatePickupStatus]);
 
-      if (unassignError) {
-        throw new Error(`Failed to unassign driver: ${unassignError.message}`);
-      }
+  const calculateOrderPrice = useCallback(async (order: any) => {
+    console.log('Calculating price for order:', order);
+    setIsCalculatingPrice(true);
+    
+    // Simulate calculation
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setIsCalculatingPrice(false);
+    
+    return {
+      basePrice: 3000,
+      totalPrice: order.final_price || 5000,
+      breakdown: [
+        { category: 'Base Price', amount: 3000, description: 'Base pickup price' },
+        { category: 'Age Bonus', amount: 2000, description: 'Vehicle age bonus' }
+      ]
+    };
+  }, []);
 
-      await refreshData();
-      
-    } catch (err) {
-      console.error('Error unassigning driver:', err);
-      setError(err instanceof Error ? err.message : 'Failed to unassign driver');
-    }
-  }, [refreshData]);
+  const updateOrderPricing = useCallback(async (orderId: string, vehicleInfo: any, basePrice?: number) => {
+    console.log('Updating order pricing:', orderId, vehicleInfo, basePrice);
+    setIsCalculatingPrice(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setIsCalculatingPrice(false);
+  }, []);
 
-  // Pricing functions (from previous implementation)
-  const calculateOrderPrice = useCallback(async (order: PickupOrder): Promise<PricingResult | null> => {
-    try {
-      setIsCalculatingPrice(true);
-      setPricingError(null);
+  const bulkCalculatePricing = useCallback(async (orders: any[]) => {
+    console.log('Bulk calculating pricing for orders:', orders);
+    return orders; // Return as-is for now
+  }, []);
 
-      const vehicleInfo: VehicleInfo = {
-        year: order.vehicle_year || new Date().getFullYear(),
-        fuelType: (order.fuel_type || 'gasoline') as FuelType,
-        pickupDistance: order.pickup_distance || 0,
-        isDropoffComplete: order.pickup_distance === 0,
-        hasEngine: true,
-        hasFourWheels: true,
-      };
-
-      const basePrice = order.base_price || 3000;
-      const result = await VehiclePricingCalculator.getPriceBreakdown(tenantId, vehicleInfo, basePrice);
-      
-      return result;
-    } catch (error) {
-      console.error('Error calculating order price:', error);
-      setPricingError(error instanceof Error ? error.message : 'Pricing calculation failed');
-      return null;
-    } finally {
-      setIsCalculatingPrice(false);
-    }
-  }, [tenantId]);
-
-  const updateOrderPricing = useCallback(async (orderId: string, vehicleInfo: VehicleInfo, basePrice: number = 3000) => {
-    try {
-      setIsCalculatingPrice(true);
-      
-      const pricingResult = await VehiclePricingCalculator.getPriceBreakdown(tenantId, vehicleInfo, basePrice);
-      
-      const { error: updateError } = await (supabase as any)
-        .from('pickup_orders')
-        .update({
-          estimated_price: pricingResult.totalPrice,
-          pricing_breakdown: pricingResult.breakdown,
-          base_price: basePrice,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-      
-      if (updateError) {
-        throw new Error(`Failed to update pricing: ${updateError.message}`);
-      }
-
-      // Update local state
-      setPickups(prev => 
-        prev.map(pickup => 
-          pickup.id === orderId 
-            ? { 
-                ...pickup, 
-                estimated_price: pricingResult.totalPrice,
-                pricing_breakdown: pricingResult.breakdown,
-                base_price: basePrice
-              }
-            : pickup
-        )
-      );
-      
-    } catch (error) {
-      console.error('Error updating order pricing:', error);
-      setPricingError(error instanceof Error ? error.message : 'Failed to update pricing');
-    } finally {
-      setIsCalculatingPrice(false);
-    }
-  }, [tenantId]);
-
-  const bulkCalculatePricing = useCallback(async (orders: PickupOrder[]): Promise<PickupOrder[]> => {
-    try {
-      setIsCalculatingPrice(true);
-      
-      const updatedOrders = await Promise.all(
-        orders.map(async (order) => {
-          const pricingResult = await calculateOrderPrice(order);
-          
-          if (pricingResult) {
-            return {
-              ...order,
-              estimated_price: pricingResult.totalPrice,
-              pricing_breakdown: pricingResult.breakdown
-            };
-          }
-          
-          return order;
-        })
-      );
-      
-      return updatedOrders;
-    } catch (error) {
-      console.error('Error in bulk pricing calculation:', error);
-      setPricingError('Bulk pricing calculation failed');
-      return orders;
-    } finally {
-      setIsCalculatingPrice(false);
-    }
-  }, [calculateOrderPrice]);
+  const refreshData = useCallback(async () => {
+    console.log('Refreshing data...');
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setLoading(false);
+  }, []);
 
   return {
-    // Core data
+    // Core data (matches PantaBilenDriverApp expectations)
     pickups,
-    driver,
+    driver, // This will have driver_status, full_name, etc.
     loading,
     error,
     
