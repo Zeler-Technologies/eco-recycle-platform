@@ -77,12 +77,14 @@ export class VehiclePricingCalculator {
 
     try {
       // Try to load from database
-      const { data, error } = await supabase
+      const result = await (supabase as any)
         .from('pricing_tiers')
         .select('*')
         .eq('tenant_id', this.tenantId)
         .eq('is_vehicle_pricing', true)
         .single();
+      
+      const { data, error } = result;
 
       if (!error && data) {
         // Extract settings from database

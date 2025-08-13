@@ -103,12 +103,14 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
+      const result = await (supabase as any)
         .from('pricing_tiers')
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('is_vehicle_pricing', true)
         .single();
+      
+      const { data, error } = result;
 
       if (!error && data) {
         const loadedSettings: PricingSettings = {
@@ -159,14 +161,14 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       let result;
       
       if (settings.id) {
-        result = await supabase
+        result = await (supabase as any)
           .from('pricing_tiers')
           .update(settingsToSave)
           .eq('id', settings.id)
           .select()
           .single();
       } else {
-        result = await supabase
+        result = await (supabase as any)
           .from('pricing_tiers')
           .insert(settingsToSave)
           .select()
