@@ -65,8 +65,25 @@ export class VehiclePricingCalculator {
     this.tenantId = String(tenantId);
   }
 
+  private getPricingSettings() {
+    // Load from memory storage (set by PricingManagement component)
+    try {
+      const savedSettings = (window as any).__PRICING_SETTINGS;
+      if (savedSettings && savedSettings[this.tenantId]) {
+        console.log('Using saved pricing settings for tenant:', this.tenantId);
+        return savedSettings[this.tenantId];
+      } else {
+        console.log('Using default pricing settings for tenant:', this.tenantId);
+        return DEFAULT_PRICING;
+      }
+    } catch (err) {
+      console.warn('Error loading saved settings, using defaults:', err);
+      return DEFAULT_PRICING;
+    }
+  }
+
   async calculatePrice(vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<PricingResult> {
-    const settings = DEFAULT_PRICING;
+    const settings = this.getPricingSettings();
     const currentYear = new Date().getFullYear();
     const vehicleAge = currentYear - vehicleInfo.year;
     const breakdown: Array<{category: string, amount: number, description: string}> = [];
@@ -74,78 +91,82 @@ export class VehiclePricingCalculator {
     let ageBonus = 0;
     if (vehicleAge < 5) {
       ageBonus = settings.ageBonuses.age0to5;
-      breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '0-4,99 år' });
+      if (ageBonus > 0) breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '0-4,99 år' });
     } else if (vehicleAge < 10) {
       ageBonus = settings.ageBonuses.age5to10;
-      breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '5-9,99 år' });
+      if (ageBonus > 0) breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '5-9,99 år' });
     } else if (vehicleAge < 15) {
       ageBonus = settings.ageBonuses.age10to15;
-      breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '10-14,99 år' });
+      if (ageBonus > 0) breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '10-14,99 år' });
     } else if (vehicleAge < 20) {
       ageBonus = settings.ageBonuses.age15to20;
-      breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '15-19,99 år' });
+      if (ageBonus > 0) breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '15-19,99 år' });
     } else {
       ageBonus = settings.ageBonuses.age20plus;
-      breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '20+ år' });
+      if (ageBonus > 0) breakdown.push({ category: 'Åldersbonus', amount: ageBonus, description: '20+ år' });
     }
 
     let oldCarDeduction = 0;
     if (vehicleInfo.year < 1990) {
       oldCarDeduction = settings.oldCarDeduction.before1990;
-      breakdown.push({ category: 'Avdrag', amount: oldCarDeduction, description: 'Före 1990' });
+      if (oldCarDeduction !== 0) breakdown.push({ category: 'Avdrag', amount: oldCarDeduction, description: 'Före 1990' });
     }
 
     let distanceAdjustment = 0;
     if (vehicleInfo.pickupDistance === 0) {
       if (vehicleInfo.isDropoffComplete) {
         distanceAdjustment = settings.distanceAdjustments.dropoffComplete;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Avlämning (komplett)' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Avlämning (komplett)' });
       } else {
         distanceAdjustment = settings.distanceAdjustments.dropoffIncomplete;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Avlämning (ofullständig)' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Avlämning (ofullständig)' });
       }
     } else if (vehicleInfo.pickupDistance) {
       const distance = vehicleInfo.pickupDistance;
       if (distance <= 20) {
         distanceAdjustment = settings.distanceAdjustments.pickup0to20;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 0-20km' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 0-20km' });
       } else if (distance <= 50) {
         distanceAdjustment = settings.distanceAdjustments.pickup20to50;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 20-50km' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 20-50km' });
       } else if (distance <= 75) {
         distanceAdjustment = settings.distanceAdjustments.pickup50to75;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 50-75km' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 50-75km' });
       } else if (distance <= 100) {
         distanceAdjustment = settings.distanceAdjustments.pickup75to100;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 75-100km' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 75-100km' });
       } else {
         distanceAdjustment = settings.distanceAdjustments.pickup100plus;
-        breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 100+km' });
+        if (distanceAdjustment !== 0) breakdown.push({ category: 'Avstånd', amount: distanceAdjustment, description: 'Hämtning 100+km' });
       }
     }
 
     let partsBonus = 0;
     if (vehicleInfo.hasEngine || vehicleInfo.hasTransmission || vehicleInfo.hasCatalyst) {
       partsBonus += settings.partsBonuses.engineTransmissionCatalyst;
-      breakdown.push({ 
-        category: 'Delbonus', 
-        amount: settings.partsBonuses.engineTransmissionCatalyst, 
-        description: 'Motor/Växellåda/Katalysator' 
-      });
+      if (settings.partsBonuses.engineTransmissionCatalyst > 0) {
+        breakdown.push({ 
+          category: 'Delbonus', 
+          amount: settings.partsBonuses.engineTransmissionCatalyst, 
+          description: 'Motor/Växellåda/Katalysator' 
+        });
+      }
     }
     if (vehicleInfo.hasBattery || vehicleInfo.hasFourWheels || vehicleInfo.isOtherComplete) {
       partsBonus += settings.partsBonuses.batteryWheelsOther;
-      breakdown.push({ 
-        category: 'Delbonus', 
-        amount: settings.partsBonuses.batteryWheelsOther, 
-        description: 'Batteri/Hjul/Övrigt' 
-      });
+      if (settings.partsBonuses.batteryWheelsOther > 0) {
+        breakdown.push({ 
+          category: 'Delbonus', 
+          amount: settings.partsBonuses.batteryWheelsOther, 
+          description: 'Batteri/Hjul/Övrigt' 
+        });
+      }
     }
 
     let fuelAdjustment = 0;
     if (vehicleInfo.fuelType === 'other') {
       fuelAdjustment = settings.fuelAdjustments.other;
-      breakdown.push({ category: 'Bränsle', amount: fuelAdjustment, description: 'Annat bränsle' });
+      if (fuelAdjustment !== 0) breakdown.push({ category: 'Bränsle', amount: fuelAdjustment, description: 'Annat bränsle' });
     }
 
     const totalPrice = basePrice + ageBonus + oldCarDeduction + distanceAdjustment + partsBonus + fuelAdjustment;
