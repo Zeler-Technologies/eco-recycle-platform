@@ -32,15 +32,16 @@ interface PricingResult {
 export class VehiclePricingCalculator {
   private pricingSettings: any = null;
 
-  constructor(private tenantId: string) {}
+  constructor(private tenantId: number) {}
 
   async loadPricingSettings() {
     if (this.pricingSettings) return this.pricingSettings;
 
     const { data, error } = await supabase
-      .from('vehicle_pricing_config')
+      .from('pricing_tiers')
       .select('*')
       .eq('tenant_id', this.tenantId)
+      .eq('is_vehicle_pricing', true)
       .single();
 
     if (error) {
@@ -49,11 +50,11 @@ export class VehiclePricingCalculator {
     }
 
     this.pricingSettings = {
-      ageBonuses: data.age_bonuses,
-      oldCarDeduction: data.old_car_deduction,
-      distanceAdjustments: data.distance_adjustments,
-      partsBonuses: data.parts_bonuses,
-      fuelAdjustments: data.fuel_adjustments
+      ageBonuses: data.vehicle_age_bonuses,
+      oldCarDeduction: data.vehicle_old_car_deduction,
+      distanceAdjustments: data.vehicle_distance_adjustments,
+      partsBonuses: data.vehicle_parts_bonuses,
+      fuelAdjustments: data.vehicle_fuel_adjustments
     };
 
     return this.pricingSettings;
@@ -188,21 +189,21 @@ export class VehiclePricingCalculator {
   }
 
   // Helper method for quick price calculation
-  static async getQuickPrice(tenantId: string, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<number> {
+  static async getQuickPrice(tenantId: number, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<number> {
     const calculator = new VehiclePricingCalculator(tenantId);
     const result = await calculator.calculatePrice(vehicleInfo, basePrice);
     return result.totalPrice;
   }
 
   // Helper method for drivers to see price breakdown
-  static async getPriceBreakdown(tenantId: string, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<PricingResult> {
+  static async getPriceBreakdown(tenantId: number, vehicleInfo: VehicleInfo, basePrice: number = 0): Promise<PricingResult> {
     const calculator = new VehiclePricingCalculator(tenantId);
     return await calculator.calculatePrice(vehicleInfo, basePrice);
   }
 }
 
 // React hook for easy use in components
-export const usePricingCalculator = (tenantId: string) => {
+export const usePricingCalculator = (tenantId: number) => {
   const calculator = new VehiclePricingCalculator(tenantId);
   
   return {
