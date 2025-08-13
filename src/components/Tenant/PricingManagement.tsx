@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,14 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Save, RotateCcw, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Save, RotateCcw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PricingManagementProps {
   onBack?: () => void;
+  tenantId?: string; // Add tenant ID prop
 }
 
 interface PricingSettings {
+  id?: string;
+  tenantId: string;
   ageBonuses: {
     age0to5: number;
     age5to10: number;
@@ -45,7 +49,7 @@ interface PricingSettings {
   };
 }
 
-const defaultSettings: PricingSettings = {
+const defaultSettings: Omit<PricingSettings, 'tenantId'> = {
   ageBonuses: {
     age0to5: 10000,
     age5to10: 5000,
@@ -77,11 +81,140 @@ const defaultSettings: PricingSettings = {
   }
 };
 
-const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
-  const [settings, setSettings] = useState<PricingSettings>(defaultSettings);
+const PricingManagement: React.FC<PricingManagementProps> = ({ 
+  onBack, 
+  tenantId = 'default-tenant' // Default tenant ID, should be passed from parent
+}) => {
+  const [settings, setSettings] = useState<PricingSettings>({
+    ...defaultSettings,
+    tenantId
+  });
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  // Load pricing settings from Supabase on component mount
+  useEffect(() => {
+    loadPricingSettings();
+  }, [tenantId]);
+
+  const loadPricingSettings = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('pricing_tiers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Error loading pricing settings:', error);
+        toast({
+          title: "Fel vid laddning",
+          description: "Kunde inte ladda prisinställningar från databasen.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data) {
+        // Parse the JSON settings from database
+        const loadedSettings: PricingSettings = {
+          id: data.id,
+          tenantId: data.tenant_id,
+          ageBonuses: JSON.parse(data.age_bonuses || '{}'),
+          oldCarDeduction: JSON.parse(data.old_car_deduction || '{}'),
+          distanceAdjustments: JSON.parse(data.distance_adjustments || '{}'),
+          partsBonuses: JSON.parse(data.parts_bonuses || '{}'),
+          fuelAdjustments: JSON.parse(data.fuel_adjustments || '{}')
+        };
+        
+        setSettings(loadedSettings);
+        setLastSaved(new Date(data.updated_at));
+      } else {
+        // No existing settings found, use defaults
+        setSettings({
+          ...defaultSettings,
+          tenantId
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected error loading pricing settings:', err);
+      toast({
+        title: "Fel vid laddning",
+        description: "Ett oväntat fel uppstod vid laddning av prisinställningar.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const savePricingSettings = async () => {
+    try {
+      setIsSaving(true);
+
+      const settingsToSave = {
+        tenant_id: tenantId,
+        age_bonuses: JSON.stringify(settings.ageBonuses),
+        old_car_deduction: JSON.stringify(settings.oldCarDeduction),
+        distance_adjustments: JSON.stringify(settings.distanceAdjustments),
+        parts_bonuses: JSON.stringify(settings.partsBonuses),
+        fuel_adjustments: JSON.stringify(settings.fuelAdjustments),
+        updated_at: new Date().toISOString()
+      };
+
+      let result;
+      
+      if (settings.id) {
+        // Update existing record
+        result = await supabase
+          .from('pricing_tiers')
+          .update(settingsToSave)
+          .eq('id', settings.id)
+          .select()
+          .single();
+      } else {
+        // Insert new record
+        result = await supabase
+          .from('pricing_tiers')
+          .insert(settingsToSave)
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      // Update local state with the returned data
+      setSettings(prev => ({
+        ...prev,
+        id: result.data.id
+      }));
+      
+      setHasChanges(false);
+      setLastSaved(new Date());
+
+      toast({
+        title: "Sparades framgångsrikt",
+        description: "Prisinställningarna har uppdaterats i databasen.",
+      });
+
+    } catch (err) {
+      console.error('Error saving pricing settings:', err);
+      toast({
+        title: "Fel vid sparning",
+        description: "Kunde inte spara prisinställningarna. Försök igen.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const validateValue = (value: number, min: number, max: number): boolean => {
     return value >= min && value <= max;
@@ -105,7 +238,11 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
     setHasChanges(true);
   };
 
-  const handleSectionSave = (sectionName: string, sectionSettings: any, validationRules: { field: string, min: number, max: number }[]) => {
+  const handleSectionSave = async (
+    sectionName: string, 
+    sectionSettings: any, 
+    validationRules: { field: string, min: number, max: number }[]
+  ) => {
     // Validate section fields
     const isValid = validationRules.every(rule => 
       validateValue(sectionSettings[rule.field], rule.min, rule.max)
@@ -120,23 +257,30 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       return;
     }
 
-    // Simulate saving to database
-    setTimeout(() => {
-      setLastSaved(new Date());
-      toast({
-        title: "Inställningarna har sparats",
-        description: `${sectionName} är nu uppdaterat.`,
-      });
-    }, 500);
+    await savePricingSettings();
   };
 
-  const handleReset = () => {
-    setSettings(defaultSettings);
-    setHasChanges(false);
-    toast({
-      title: "Återställt till standard",
-      description: "Alla värden har återställts till grundinställningar.",
-    });
+  const handleReset = async () => {
+    try {
+      setSettings({
+        ...defaultSettings,
+        tenantId,
+        id: settings.id // Keep the ID if it exists
+      });
+      setHasChanges(true); // Mark as changed so user can save the reset values
+      
+      toast({
+        title: "Återställt till standard",
+        description: "Alla värden har återställts till grundinställningar. Klicka på Spara för att bekräfta.",
+      });
+    } catch (err) {
+      console.error('Error resetting to defaults:', err);
+      toast({
+        title: "Fel vid återställning",
+        description: "Kunde inte återställa till standardvärden.",
+        variant: "destructive"
+      });
+    }
   };
 
   const InputField: React.FC<{
@@ -161,7 +305,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
             className={`w-32 ${!isValid ? 'border-destructive' : ''}`}
             min={min}
             max={max}
-            disabled={disabled}
+            disabled={disabled || isLoading}
           />
           <span className="text-sm text-muted-foreground">{unit}</span>
           {!isValid && (
@@ -175,6 +319,17 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="theme-tenant min-h-screen bg-tenant-muted flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Laddar prisinställningar...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="theme-tenant min-h-screen bg-tenant-muted">
       {/* Header */}
@@ -187,17 +342,25 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
                 size="sm"
                 onClick={onBack}
                 className="border border-white/30 bg-transparent text-white hover:bg-white/20 hover:text-white"
+                disabled={isSaving}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Tillbaka till Dashboard
               </Button>
               <h1 className="text-2xl font-bold">Prishantering</h1>
             </div>
-            {lastSaved && (
-              <p className="text-sm text-tenant-primary-foreground/80">
-                Senast sparat: {lastSaved.toLocaleString('sv-SE')}
-              </p>
-            )}
+            <div className="flex items-center gap-4">
+              {hasChanges && (
+                <span className="text-sm text-yellow-200">
+                  Osparade ändringar
+                </span>
+              )}
+              {lastSaved && (
+                <p className="text-sm text-tenant-primary-foreground/80">
+                  Senast sparat: {lastSaved.toLocaleString('sv-SE')}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -211,6 +374,28 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
         </AlertDescription>
       </Alert>
 
+      {/* Global Save Button */}
+      {hasChanges && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-orange-800">Osparade ändringar</h3>
+                <p className="text-sm text-orange-600">Du har gjort ändringar som inte har sparats ännu.</p>
+              </div>
+              <Button 
+                onClick={savePricingSettings}
+                disabled={isSaving}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Spara alla ändringar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Age Bonuses Section */}
       <Card>
         <CardHeader>
@@ -218,7 +403,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
             <CardTitle>Åldersbonus för Bil</CardTitle>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={isSaving}>
                   <Save className="h-4 w-4 mr-2" />
                   Spara
                 </Button>
@@ -227,7 +412,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Är du säker på ändringarna?
+                    Är du säker på att du vill spara ändringarna för åldersbonus?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -292,7 +477,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
             <CardTitle>Avdrag för gamla årsmodeller</CardTitle>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={isSaving}>
                   <Save className="h-4 w-4 mr-2" />
                   Spara
                 </Button>
@@ -301,7 +486,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Är du säker på ändringarna?
+                    Är du säker på att du vill spara ändringarna för avdrag?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -334,7 +519,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
             <CardTitle>Avståndsjusteringar</CardTitle>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={isSaving}>
                   <Save className="h-4 w-4 mr-2" />
                   Spara
                 </Button>
@@ -343,7 +528,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Är du säker på ändringarna?
+                    Är du säker på att du vill spara ändringarna för avståndsjusteringar?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -437,7 +622,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
             <CardTitle>Bonus för värdefulla delar</CardTitle>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={isSaving}>
                   <Save className="h-4 w-4 mr-2" />
                   Spara
                 </Button>
@@ -446,7 +631,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Är du säker på ändringarna?
+                    Är du säker på att du vill spara ändringarna för delbonus?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -487,7 +672,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
             <CardTitle>Bränslejustering</CardTitle>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={isSaving}>
                   <Save className="h-4 w-4 mr-2" />
                   Spara
                 </Button>
@@ -496,7 +681,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Är du säker på ändringarna?
+                    Är du säker på att du vill spara ändringarna för bränslejustering?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -547,14 +732,17 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ onBack }) => {
       </Card>
 
       {/* Reset Button */}
-      {hasChanges && (
-        <div className="flex justify-center pt-6">
-          <Button variant="outline" onClick={handleReset} className="flex items-center space-x-2">
-            <RotateCcw className="h-4 w-4" />
-            <span>Återställ till standard</span>
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-center pt-6">
+        <Button 
+          variant="outline" 
+          onClick={handleReset} 
+          className="flex items-center space-x-2"
+          disabled={isSaving}
+        >
+          <RotateCcw className="h-4 w-4" />
+          <span>Återställ till standard</span>
+        </Button>
+      </div>
       </div>
     </div>
   );
