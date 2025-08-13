@@ -245,7 +245,47 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       </div>
     </div>
   );
+/ Add this temporary test component to debug the toggle issue
+// Place this right after your FilterHeader in the main render function
 
+const DebugStatusHistory = () => (
+  <div className="bg-yellow-100 border border-yellow-400 p-4 m-4 rounded">
+    <h4 className="font-bold text-yellow-800">Debug Info:</h4>
+    <p>showStatusHistory: {showStatusHistory ? 'TRUE' : 'FALSE'}</p>
+    <p>currentView: {currentView}</p>
+    <p>currentDriver: {currentDriver ? 'EXISTS' : 'NULL'}</p>
+    <p>currentDriver.driver_id: {currentDriver?.driver_id || 'MISSING'}</p>
+    
+    {showStatusHistory ? (
+      <div className="mt-2 p-2 bg-green-100 rounded">
+        <p className="text-green-800">✅ Status history should be visible</p>
+        <RecentStatusChanges driverId={currentDriver?.driver_id || 'driver-123'} />
+      </div>
+    ) : (
+      <p className="mt-2 text-red-800">❌ Status history is hidden</p>
+    )}
+  </div>
+);
+
+// Add this to your main render function temporarily:
+return (
+  <div className="min-h-screen bg-gray-100">
+    <StatusBar />
+    <AppHeader />
+    <TabBar />
+    <FilterHeader />
+    <FiltersSection />
+    
+    {/* TEMPORARY DEBUG COMPONENT */}
+    <DebugStatusHistory />
+    
+    {/* Your existing content */}
+    {currentView === 'list' ? <PickupList /> : <MapView />}
+    
+    {/* Navigation Indicator */}
+    <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 w-33 h-1 bg-gray-900 rounded-full opacity-80"></div>
+  </div>
+);
   const FiltersSection = () => (
     filtersVisible && (
       <div className="bg-white mx-4 my-4 p-5 rounded-xl shadow-lg">
