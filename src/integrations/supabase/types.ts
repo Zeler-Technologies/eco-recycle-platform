@@ -2222,86 +2222,57 @@ export type Database = {
       }
       pricing_tiers: {
         Row: {
-          base_price: number
-          created_at: string
-          created_by: string | null
-          description: string | null
-          effective_from: string
-          effective_to: string | null
+          age_bonuses: Json | null
+          created_at: string | null
+          distance_adjustments: Json | null
+          fuel_adjustments: Json | null
           id: string
-          is_active: boolean
-          max_units: number | null
-          min_units: number | null
-          price_per_unit: number | null
-          tenant_id: number | null
-          tier_name: string
-          updated_at: string
-          updated_by: string | null
+          is_vehicle_pricing: boolean | null
+          old_car_deduction: Json | null
+          parts_bonuses: Json | null
+          tenant_id: string
+          updated_at: string | null
+          vehicle_age_bonuses: Json | null
+          vehicle_distance_adjustments: Json | null
+          vehicle_fuel_adjustments: Json | null
+          vehicle_old_car_deduction: Json | null
+          vehicle_parts_bonuses: Json | null
         }
         Insert: {
-          base_price?: number
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          effective_from?: string
-          effective_to?: string | null
+          age_bonuses?: Json | null
+          created_at?: string | null
+          distance_adjustments?: Json | null
+          fuel_adjustments?: Json | null
           id?: string
-          is_active?: boolean
-          max_units?: number | null
-          min_units?: number | null
-          price_per_unit?: number | null
-          tenant_id?: number | null
-          tier_name: string
-          updated_at?: string
-          updated_by?: string | null
+          is_vehicle_pricing?: boolean | null
+          old_car_deduction?: Json | null
+          parts_bonuses?: Json | null
+          tenant_id: string
+          updated_at?: string | null
+          vehicle_age_bonuses?: Json | null
+          vehicle_distance_adjustments?: Json | null
+          vehicle_fuel_adjustments?: Json | null
+          vehicle_old_car_deduction?: Json | null
+          vehicle_parts_bonuses?: Json | null
         }
         Update: {
-          base_price?: number
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          effective_from?: string
-          effective_to?: string | null
+          age_bonuses?: Json | null
+          created_at?: string | null
+          distance_adjustments?: Json | null
+          fuel_adjustments?: Json | null
           id?: string
-          is_active?: boolean
-          max_units?: number | null
-          min_units?: number | null
-          price_per_unit?: number | null
-          tenant_id?: number | null
-          tier_name?: string
-          updated_at?: string
-          updated_by?: string | null
+          is_vehicle_pricing?: boolean | null
+          old_car_deduction?: Json | null
+          parts_bonuses?: Json | null
+          tenant_id?: string
+          updated_at?: string | null
+          vehicle_age_bonuses?: Json | null
+          vehicle_distance_adjustments?: Json | null
+          vehicle_fuel_adjustments?: Json | null
+          vehicle_old_car_deduction?: Json | null
+          vehicle_parts_bonuses?: Json | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "pricing_tiers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "pricing_tiers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "pricing_tiers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "pricing_tiers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["tenants_id"]
-          },
-        ]
+        Relationships: []
       }
       scrap_yard_locations: {
         Row: {
@@ -3006,6 +2977,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vehicle_pricing_config: {
+        Row: {
+          age_bonuses: Json | null
+          created_at: string | null
+          distance_adjustments: Json | null
+          fuel_adjustments: Json | null
+          id: string
+          old_car_deduction: Json | null
+          parts_bonuses: Json | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          age_bonuses?: Json | null
+          created_at?: string | null
+          distance_adjustments?: Json | null
+          fuel_adjustments?: Json | null
+          id?: string
+          old_car_deduction?: Json | null
+          parts_bonuses?: Json | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          age_bonuses?: Json | null
+          created_at?: string | null
+          distance_adjustments?: Json | null
+          fuel_adjustments?: Json | null
+          id?: string
+          old_car_deduction?: Json | null
+          parts_bonuses?: Json | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -4139,6 +4146,10 @@ export type Database = {
       equals: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
+      }
+      export_all_tables_data: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       find_nearby_scrapyards: {
         Args: {
