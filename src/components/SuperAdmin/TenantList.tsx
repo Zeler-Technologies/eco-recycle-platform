@@ -159,13 +159,6 @@ export const TenantList = () => {
     );
   }
 
-  // Handle opening the edit dialog
-  React.useEffect(() => {
-    if (editingTenant) {
-      // We'll trigger the dialog to open by passing the editing tenant to TenantSetupForm
-    }
-  }, [editingTenant]);
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -292,13 +285,11 @@ export const TenantList = () => {
           </div>
         )}
         
-        {/* Edit Tenant Dialog */}
-        {editingTenant && (
-          <TenantSetupForm 
-            editTenant={editingTenant}
-            onTenantUpdated={handleTenantUpdated}
-          />
-        )}
+        {/* Always render TenantSetupForm for editing to avoid hook order issues */}
+        <TenantSetupForm 
+          editTenant={editingTenant}
+          onTenantUpdated={handleTenantUpdated}
+        />
       </CardContent>
     </Card>
   );
