@@ -77,10 +77,26 @@ const Login = () => {
 
   const demoAccounts = [
     {
+      role: 'Super Admin',
+      email: 'admin@pantabilen.se',
+      password: 'SecurePass123!',
+      description: 'Full system access - Can manage all tenants and data',
+      icon: Shield,
+      color: 'bg-red-600'
+    },
+    {
+      role: 'Tenant Admin - Pantabilen',
+      email: 'admin@demoscrapyard.se',
+      password: 'SecurePass123!',
+      description: 'Manage tenant operations, drivers, and scrapyards',
+      icon: Building2,
+      color: 'bg-blue-600'
+    },
+    {
       role: 'Driver - Erik',
       email: 'erik@pantabilen.se',
       password: 'SecurePass123!',
-      description: 'Real Supabase auth user - Erik Andersson driver account',
+      description: 'Driver with PNR - Can use driver app for pickups',
       icon: Car,
       color: 'bg-purple-600'
     },
@@ -88,7 +104,7 @@ const Login = () => {
       role: 'Driver - Anna',
       email: 'anna@pantabilen.se',
       password: 'SecurePass123!',
-      description: 'Real Supabase auth user - Anna Johansson driver account',
+      description: 'Driver with PNR - Can use driver app for pickups',
       icon: Car,
       color: 'bg-indigo-600'
     }
