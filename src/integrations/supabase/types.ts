@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -3664,18 +3664,18 @@ export type Database = {
       }
       _is_assignment_active_text: {
         Args: {
-          p_status_text: string
           p_completed_at: string
           p_is_active: boolean
+          p_status_text: string
         }
         Returns: boolean
       }
       _postgis_deprecate: {
-        Args: { oldname: string; newname: string; version: string }
+        Args: { newname: string; oldname: string; version: string }
         Returns: undefined
       }
       _postgis_index_extent: {
-        Args: { tbl: unknown; col: string }
+        Args: { col: string; tbl: unknown }
         Returns: unknown
       }
       _postgis_pgsql_version: {
@@ -3687,7 +3687,7 @@ export type Database = {
         Returns: string
       }
       _postgis_selectivity: {
-        Args: { tbl: unknown; att_name: string; geom: unknown; mode?: string }
+        Args: { att_name: string; geom: unknown; mode?: string; tbl: unknown }
         Returns: number
       }
       _st_3dintersects: {
@@ -3773,10 +3773,10 @@ export type Database = {
       }
       _st_voronoi: {
         Args: {
-          g1: unknown
           clip?: unknown
-          tolerance?: number
+          g1: unknown
           return_polygons?: boolean
+          tolerance?: number
         }
         Returns: unknown
       }
@@ -3792,29 +3792,29 @@ export type Database = {
         Args:
           | {
               catalog_name: string
-              schema_name: string
-              table_name: string
               column_name: string
+              new_dim: number
               new_srid_in: number
               new_type: string
-              new_dim: number
-              use_typmod?: boolean
-            }
-          | {
               schema_name: string
               table_name: string
-              column_name: string
-              new_srid: number
-              new_type: string
-              new_dim: number
               use_typmod?: boolean
             }
           | {
-              table_name: string
               column_name: string
+              new_dim: number
               new_srid: number
               new_type: string
+              schema_name: string
+              table_name: string
+              use_typmod?: boolean
+            }
+          | {
+              column_name: string
               new_dim: number
+              new_srid: number
+              new_type: string
+              table_name: string
               use_typmod?: boolean
             }
         Returns: string
@@ -3822,19 +3822,19 @@ export type Database = {
       assign_driver_to_pickup: {
         Args: {
           p_driver_id: string
-          p_pickup_order_id: string
           p_notes?: string
+          p_pickup_order_id: string
         }
         Returns: string
       }
       assign_tenant_admin_role: {
         Args:
-          | { p_user_id: string; p_tenant_id: number }
-          | { p_user_id: string; p_tenant_id: number; p_scrapyard_id: number }
+          | { p_scrapyard_id: number; p_tenant_id: number; p_user_id: string }
+          | { p_tenant_id: number; p_user_id: string }
         Returns: Json
       }
       assign_user_to_scrapyard: {
-        Args: { p_user_id: string; p_scrapyard_id: number; p_role: string }
+        Args: { p_role: string; p_scrapyard_id: number; p_user_id: string }
         Returns: undefined
       }
       belongs_to_scrapyard: {
@@ -3887,39 +3887,39 @@ export type Database = {
       }
       calculate_distance: {
         Args:
-          | { lat1: number; lon1: number; lat2: number; lon2: number }
-          | { lat1: number; lon1: number; lat2: number; lon2: number }
+          | { lat1: number; lat2: number; lon1: number; lon2: number }
+          | { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
       }
       calculate_distance_km: {
-        Args: { lat1: number; lng1: number; lat2: number; lng2: number }
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
       }
       calculate_invoice_totals: {
         Args: { p_invoice_id: number }
         Returns: {
-          total_amount: number
           tax_amount: number
+          total_amount: number
         }[]
       }
       can_cancel_invoice: {
         Args: { p_invoice_id: number }
         Returns: {
           can_cancel: boolean
-          reason: string
-          invoice_number: string
-          invoice_date: string
-          invoice_status: string
-          invoice_amount: number
-          scrapyard_name: string
           days_since_creation: number
+          invoice_amount: number
+          invoice_date: string
+          invoice_number: string
+          invoice_status: string
+          reason: string
+          scrapyard_name: string
         }[]
       }
       cancel_invoice: {
         Args: {
-          p_invoice_id: number
           p_cancellation_reason: string
           p_cancelled_by?: string
+          p_invoice_id: number
         }
         Returns: boolean
       }
@@ -3933,15 +3933,15 @@ export type Database = {
       }
       create_customer_request: {
         Args: {
-          p_customer_name: string
+          p_address?: string
+          p_city?: string
           p_customer_email: string
+          p_customer_name: string
           p_customer_phone: string
-          p_request_details: string
           p_latitude: number
           p_longitude: number
-          p_address?: string
           p_postal_code?: string
-          p_city?: string
+          p_request_details: string
         }
         Returns: string
       }
@@ -3951,74 +3951,74 @@ export type Database = {
       }
       create_scrapyard_with_admin: {
         Args: {
-          p_name: string
           p_address: string
-          p_postal_code: string
-          p_city: string
-          p_contact_person: string
-          p_contact_email: string
-          p_contact_phone: string
           p_admin_user_id: string
+          p_city: string
+          p_contact_email: string
+          p_contact_person: string
+          p_contact_phone: string
+          p_name: string
+          p_postal_code: string
         }
         Returns: number
       }
       create_tenant_complete: {
         Args: {
-          p_name: string
-          p_country: string
-          p_admin_name: string
-          p_admin_email: string
-          p_invoice_email?: string
-          p_service_type?: string
           p_address?: string
-          p_postal_code?: string
+          p_admin_email: string
+          p_admin_name: string
           p_city?: string
+          p_country: string
+          p_invoice_email?: string
+          p_name: string
+          p_postal_code?: string
+          p_service_type?: string
         }
         Returns: Json
       }
       create_tenant_complete_correct: {
         Args: {
-          p_name: string
-          p_country: string
-          p_admin_name: string
-          p_admin_email: string
-          p_invoice_email?: string
-          p_service_type?: string
           p_address?: string
-          p_postal_code?: string
+          p_admin_email: string
+          p_admin_name: string
           p_city?: string
+          p_country: string
+          p_invoice_email?: string
+          p_name: string
+          p_postal_code?: string
+          p_service_type?: string
         }
         Returns: Json
       }
       create_tenant_complete_fixed: {
         Args: {
-          p_name: string
-          p_country: string
-          p_admin_name: string
-          p_admin_email: string
-          p_invoice_email?: string
-          p_service_type?: string
           p_address?: string
-          p_postal_code?: string
+          p_admin_email: string
+          p_admin_name: string
           p_city?: string
+          p_country: string
+          p_invoice_email?: string
+          p_name: string
+          p_postal_code?: string
+          p_service_type?: string
         }
         Returns: Json
       }
       create_tenant_debug: {
         Args: {
-          p_name: string
-          p_country: string
-          p_admin_name: string
           p_admin_email: string
+          p_admin_name: string
+          p_country: string
+          p_name: string
         }
         Returns: Json
       }
       create_tenant_no_auth_check: {
         Args: {
-          p_name: string
-          p_country: string
-          p_admin_name: string
           p_admin_email: string
+          p_admin_name: string
+          p_country: string
+          p_name: string
         }
         Returns: Json
       }
@@ -4032,15 +4032,15 @@ export type Database = {
       }
       debug_tenant_params: {
         Args: {
-          p_name?: string
-          p_country?: string
-          p_admin_name?: string
-          p_admin_email?: string
-          p_invoice_email?: string
-          p_service_type?: string
           p_address?: string
-          p_postal_code?: string
+          p_admin_email?: string
+          p_admin_name?: string
           p_city?: string
+          p_country?: string
+          p_invoice_email?: string
+          p_name?: string
+          p_postal_code?: string
+          p_service_type?: string
         }
         Returns: Json
       }
@@ -4051,66 +4051,66 @@ export type Database = {
       driver_status_history_get: {
         Args: { p_driver_id: string }
         Returns: {
-          id: string
-          old_status: string
-          new_status: string
-          reason: string
           changed_by: string
           changed_by_email: string
           created_at: string
+          id: string
+          new_status: string
+          old_status: string
+          reason: string
         }[]
       }
       driver_status_history_get_v1: {
         Args: { p_driver_id: string }
         Returns: {
-          id: string
-          old_status: string
-          new_status: string
-          reason: string
           changed_by: string
           changed_by_email: string
           created_at: string
+          id: string
+          new_status: string
+          old_status: string
+          reason: string
         }[]
       }
       driver_status_manager: {
         Args:
           | {
+              p_changed_by?: string
               p_driver_id: string
-              p_new_status: string
               p_latitude?: number
               p_longitude?: number
-              p_reason?: string
-              p_changed_by?: string
               p_metadata?: Json
+              p_new_status: string
+              p_reason?: string
             }
           | { p_driver_id: string; p_new_status: string; p_reason?: string }
         Returns: string
       }
       driver_status_manager_v1: {
         Args: {
+          p_create_if_missing?: boolean
           p_driver_id: string
           p_new_status: string
           p_reason?: string
-          p_create_if_missing?: boolean
         }
         Returns: string
       }
       driver_status_manager_v2: {
         Args: {
+          p_create_if_missing?: boolean
           p_driver_id: string
           p_new_status: string
           p_reason?: string
-          p_create_if_missing?: boolean
           p_status_column_name?: string
         }
         Returns: string
       }
       driver_status_manager_v4: {
         Args: {
+          p_create_if_missing?: boolean
           p_driver_id: string
           p_new_status: string
           p_reason?: string
-          p_create_if_missing?: boolean
           p_status_column_name?: string
         }
         Returns: string
@@ -4119,12 +4119,12 @@ export type Database = {
         Args:
           | {
               catalog_name: string
+              column_name: string
               schema_name: string
               table_name: string
-              column_name: string
             }
-          | { schema_name: string; table_name: string; column_name: string }
-          | { table_name: string; column_name: string }
+          | { column_name: string; schema_name: string; table_name: string }
+          | { column_name: string; table_name: string }
         Returns: string
       }
       dropgeometrytable: {
@@ -4161,48 +4161,48 @@ export type Database = {
           p_max_distance?: number
         }
         Returns: {
-          id: number
-          name: string
           address: string
-          postal_code: string
           city: string
           distance_km: number
-          tenant_id: number
+          id: number
           is_active: boolean
+          name: string
+          postal_code: string
+          tenant_id: number
         }[]
       }
       find_scrapyards_by_material: {
         Args:
           | { material_name: string }
           | {
-              p_material: string
               p_latitude?: number
               p_longitude?: number
+              p_material: string
               p_max_distance?: number
             }
         Returns: {
-          id: number
-          name: string
+          accepted_materials: Json
           address: string
-          city: string
-          state: string
-          zip_code: string
-          phone: string
-          email: string
-          website: string
-          description: string
-          latitude: number
-          longitude: number
-          created_at: string
-          updated_at: string
-          tenant_id: number
-          is_active: boolean
-          logo_url: string
           banner_url: string
           business_hours: Json
-          accepted_materials: Json
+          city: string
+          created_at: string
+          description: string
+          email: string
+          id: number
+          is_active: boolean
+          latitude: number
+          logo_url: string
+          longitude: number
+          name: string
+          phone: string
           rating: number
+          state: string
+          tenant_id: number
           total_reviews: number
+          updated_at: string
+          website: string
+          zip_code: string
         }[]
       }
       generate_invoice_number: {
@@ -4442,28 +4442,28 @@ export type Database = {
       get_accessible_scrapyards: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: number
-          name: string
           address: string
-          postal_code: string
           city: string
-          contact_person: string
           contact_email: string
+          contact_person: string
           contact_phone: string
           created_at: string
-          updated_at: string
+          id: number
+          name: string
+          postal_code: string
           role: string
+          updated_at: string
         }[]
       }
       get_active_tenant_bids: {
         Args: { region_filter?: string }
         Returns: {
-          scrapyard_id: number
-          scrapyard_name: string
           bid_amount: number
+          end_date: string
           position_rank: number
           region_code: string
-          end_date: string
+          scrapyard_id: number
+          scrapyard_name: string
         }[]
       }
       get_all_tenants: {
@@ -4480,35 +4480,35 @@ export type Database = {
           config_category: string
           config_key: string
           config_value: Json
-          version: number
           is_global: boolean
+          version: number
         }[]
       }
       get_billing_kpi_analytics: {
         Args: Record<PropertyKey, never>
         Returns: {
-          metric_name: string
-          current_value: number
-          previous_value: number
           change_percentage: number
+          current_value: number
+          metric_name: string
+          previous_value: number
           trend_direction: string
         }[]
       }
       get_cancelled_invoices_report: {
         Args: {
+          p_end_date?: string
           p_scrapyard_id?: number
           p_start_date?: string
-          p_end_date?: string
         }
         Returns: {
-          scrapyard_id: number
-          scrapyard_name: string
-          total_cancelled_invoices: number
-          total_cancelled_amount: number
+          avg_days_before_cancellation: number
           cancellation_reasons: Json
           cancelled_by_users: Json
           most_common_reason: string
-          avg_days_before_cancellation: number
+          scrapyard_id: number
+          scrapyard_name: string
+          total_cancelled_amount: number
+          total_cancelled_invoices: number
         }[]
       }
       get_current_driver_info: {
@@ -4522,59 +4522,59 @@ export type Database = {
       get_current_user_info: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_role: Database["public"]["Enums"]["user_role"]
           tenant_id: number
+          user_role: Database["public"]["Enums"]["user_role"]
         }[]
       }
       get_driver_pickups: {
         Args: { driver_auth_id: string }
         Returns: {
-          pickup_id: string
-          customer_request_id: string
-          car_registration_number: string
           car_brand: string
           car_model: string
+          car_registration_number: string
           car_year: number
-          owner_name: string
+          completion_photos: string[]
+          created_at: string
+          customer_request_id: string
+          driver_notes: string
+          final_price: number
+          kontrollsiffror: string
           owner_address: string
+          owner_name: string
+          part_list: Json
           pickup_address: string
-          pickup_postal_code: string
+          pickup_id: string
           pickup_latitude: number
           pickup_longitude: number
-          status: string
-          final_price: number
-          driver_notes: string
-          kontrollsiffror: string
-          part_list: Json
-          created_at: string
-          scheduled_pickup_time: string
-          completion_photos: string[]
+          pickup_postal_code: string
           pnr_num: string
+          scheduled_pickup_time: string
+          status: string
         }[]
       }
       get_driver_status_history: {
         Args: { p_driver_id: string }
         Returns: {
-          id: string
-          old_status: string
-          new_status: string
-          reason: string
           changed_by: string
           changed_by_email: string
           created_at: string
+          id: string
+          new_status: string
+          old_status: string
+          reason: string
         }[]
       }
       get_invoice_cancellation_history: {
         Args: { p_invoice_id: number }
         Returns: {
           cancellation_id: number
-          invoice_id: number
           cancelled_at: string
           cancelled_by_email: string
-          reason: string
-          previous_status: string
-          scrapyard_name: string
           invoice_amount: number
+          invoice_id: number
+          previous_status: string
+          reason: string
+          scrapyard_name: string
         }[]
       }
       get_my_requests: {
@@ -4592,39 +4592,39 @@ export type Database = {
       get_request_trends_analytics: {
         Args: { days_back?: number }
         Returns: {
-          period_start: string
-          period_end: string
-          request_count: number
           avg_quote_amount: number
           completed_requests: number
-          pending_requests: number
           completion_rate: number
+          pending_requests: number
+          period_end: string
+          period_start: string
+          request_count: number
         }[]
       }
       get_scrapyard_analytics: {
         Args:
-          | { p_tenant_id?: number; p_start_date?: string; p_end_date?: string }
-          | { scrapyard_id_param: number }
           | {
+              end_date_param: string
               scrapyard_id_param: number
               start_date_param: string
-              end_date_param: string
             }
+          | { p_end_date?: string; p_start_date?: string; p_tenant_id?: number }
+          | { scrapyard_id_param: number }
         Returns: {
+          avg_processing_time_hours: number
+          busiest_day_of_week: string
+          busiest_hour_of_day: number
+          cancelled_requests: number
+          completed_requests: number
+          completion_rate: number
+          in_progress_requests: number
+          most_common_material: string
           scrapyard_id: number
           scrapyard_name: string
           tenant_id: number
           tenant_name: string
           total_requests: number
-          completed_requests: number
-          cancelled_requests: number
-          in_progress_requests: number
-          completion_rate: number
-          avg_processing_time_hours: number
           total_revenue: number
-          most_common_material: string
-          busiest_day_of_week: string
-          busiest_hour_of_day: number
         }[]
       }
       get_scrapyard_dashboard: {
@@ -4634,71 +4634,71 @@ export type Database = {
       get_scrapyard_details: {
         Args: { p_scrapyard_id: number }
         Returns: {
-          id: number
-          name: string
+          active_requests: number
           address: string
-          postal_code: string
+          availability_status: string
           city: string
-          contact_person: string
+          closing_time: string
           contact_email: string
+          contact_person: string
           contact_phone: string
+          id: number
           latitude: number
           longitude: number
-          tenant_name: string
-          active_requests: number
-          availability_status: string
-          max_capacity: number
-          remaining_capacity: number
-          opening_time: string
-          closing_time: string
-          operating_days: string[]
-          services: Json
           materials_accepted: Json
+          max_capacity: number
+          name: string
+          opening_time: string
+          operating_days: string[]
+          postal_code: string
           rating: number
+          remaining_capacity: number
           review_count: number
+          services: Json
+          tenant_name: string
         }[]
       }
       get_scrapyard_details_extended: {
         Args: { p_scrapyard_id: number }
         Returns: {
-          id: number
-          name: string
+          active_requests: number
           address: string
-          postal_code: string
+          availability_status: string
           city: string
-          contact_person: string
+          closing_time: string
           contact_email: string
+          contact_person: string
           contact_phone: string
+          id: number
           latitude: number
           longitude: number
-          tenant_name: string
-          active_requests: number
-          availability_status: string
-          max_capacity: number
-          remaining_capacity: number
-          opening_time: string
-          closing_time: string
-          operating_days: string[]
-          services: Json
           materials_accepted: Json
+          max_capacity: number
+          name: string
+          opening_time: string
+          operating_days: string[]
+          postal_code: string
+          remaining_capacity: number
+          services: Json
+          tenant_name: string
         }[]
       }
       get_scrapyard_invoice_stats: {
         Args: {
+          p_end_date?: string
           p_scrapyard_id: number
           p_start_date?: string
-          p_end_date?: string
         }
         Returns: {
-          total_invoices: number
-          total_amount: number
-          paid_invoices: number
-          paid_amount: number
-          pending_invoices: number
-          pending_amount: number
-          overdue_invoices: number
-          overdue_amount: number
           avg_days_to_payment: number
+          overdue_amount: number
+          overdue_invoices: number
+          paid_amount: number
+          paid_invoices: number
+          pending_amount: number
+          pending_invoices: number
+          total_amount: number
+          total_invoices: number
         }[]
       }
       get_scrapyard_requests: {
@@ -4716,34 +4716,34 @@ export type Database = {
       get_service_utilization_analytics: {
         Args: Record<PropertyKey, never>
         Returns: {
+          active_units: number
+          avg_capacity_per_unit: number
           service_type: string
           total_capacity: number
-          active_units: number
           utilization_rate: number
-          avg_capacity_per_unit: number
         }[]
       }
       get_tenant_performance_analytics: {
         Args: Record<PropertyKey, never>
         Returns: {
+          active_drivers: number
+          request_count: number
+          service_type: string
           tenant_id: number
           tenant_name: string
-          active_drivers: number
           total_capacity_kg: number
-          service_type: string
-          request_count: number
         }[]
       }
       get_user_context: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_id: string
+          is_customer: boolean
+          is_driver: boolean
+          is_scrapyard_admin: boolean
+          is_super_admin: boolean
           role: string
           scrapyard_id: number
-          is_super_admin: boolean
-          is_scrapyard_admin: boolean
-          is_driver: boolean
-          is_customer: boolean
+          user_id: string
         }[]
       }
       get_user_role: {
@@ -4785,15 +4785,15 @@ export type Database = {
       list_available_pickup_requests: {
         Args: { p_driver_id: string; p_limit?: number }
         Returns: {
-          pickup_order_id: string
-          customer_request_id: string
-          owner_name: string
           car_brand: string
           car_model: string
           car_year: number
+          customer_request_id: string
+          owner_name: string
           pickup_address: string
           pickup_latitude: number
           pickup_longitude: number
+          pickup_order_id: string
           scheduled_pickup_date: string
           status: string
         }[]
@@ -4885,15 +4885,15 @@ export type Database = {
         Returns: unknown
       }
       postgis_constraint_dims: {
-        Args: { geomschema: string; geomtable: string; geomcolumn: string }
+        Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: number
       }
       postgis_constraint_srid: {
-        Args: { geomschema: string; geomtable: string; geomcolumn: string }
+        Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: number
       }
       postgis_constraint_type: {
-        Args: { geomschema: string; geomtable: string; geomcolumn: string }
+        Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: string
       }
       postgis_dropbbox: {
@@ -4982,8 +4982,8 @@ export type Database = {
       }
       postgis_type_name: {
         Args: {
-          geomname: string
           coord_dimension: number
+          geomname: string
           use_new_name?: boolean
         }
         Returns: string
@@ -5010,11 +5010,11 @@ export type Database = {
       }
       record_customer_payment: {
         Args: {
-          p_car_id: string
-          p_driver_id: string
           p_amount: number
-          p_payment_method?: string
+          p_car_id: string
           p_customer_id?: string
+          p_driver_id: string
+          p_payment_method?: string
           p_pickup_order_id?: string
         }
         Returns: string
@@ -5124,10 +5124,10 @@ export type Database = {
           | { geog: unknown; maxdecimaldigits?: number; options?: number }
           | { geom: unknown; maxdecimaldigits?: number; options?: number }
           | {
-              r: Record<string, unknown>
               geom_column?: string
               maxdecimaldigits?: number
               pretty_bool?: boolean
+              r: Record<string, unknown>
             }
         Returns: string
       }
@@ -5136,28 +5136,28 @@ export type Database = {
           | { "": string }
           | {
               geog: unknown
-              maxdecimaldigits?: number
-              options?: number
-              nprefix?: string
               id?: string
+              maxdecimaldigits?: number
+              nprefix?: string
+              options?: number
+            }
+          | {
+              geog: unknown
+              id?: string
+              maxdecimaldigits?: number
+              nprefix?: string
+              options?: number
+              version: number
+            }
+          | {
+              geom: unknown
+              id?: string
+              maxdecimaldigits?: number
+              nprefix?: string
+              options?: number
+              version: number
             }
           | { geom: unknown; maxdecimaldigits?: number; options?: number }
-          | {
-              version: number
-              geog: unknown
-              maxdecimaldigits?: number
-              options?: number
-              nprefix?: string
-              id?: string
-            }
-          | {
-              version: number
-              geom: unknown
-              maxdecimaldigits?: number
-              options?: number
-              nprefix?: string
-              id?: string
-            }
         Returns: string
       }
       st_ashexewkb: {
@@ -5176,24 +5176,24 @@ export type Database = {
         Returns: string
       }
       st_asmarc21: {
-        Args: { geom: unknown; format?: string }
+        Args: { format?: string; geom: unknown }
         Returns: string
       }
       st_asmvtgeom: {
         Args: {
-          geom: unknown
           bounds: unknown
-          extent?: number
           buffer?: number
           clip_geom?: boolean
+          extent?: number
+          geom: unknown
         }
         Returns: unknown
       }
       st_assvg: {
         Args:
           | { "": string }
-          | { geog: unknown; rel?: number; maxdecimaldigits?: number }
-          | { geom: unknown; rel?: number; maxdecimaldigits?: number }
+          | { geog: unknown; maxdecimaldigits?: number; rel?: number }
+          | { geom: unknown; maxdecimaldigits?: number; rel?: number }
         Returns: string
       }
       st_astext: {
@@ -5206,18 +5206,18 @@ export type Database = {
               geom: unknown[]
               ids: number[]
               prec?: number
-              prec_z?: number
               prec_m?: number
-              with_sizes?: boolean
+              prec_z?: number
               with_boxes?: boolean
+              with_sizes?: boolean
             }
           | {
               geom: unknown
               prec?: number
-              prec_z?: number
               prec_m?: number
-              with_sizes?: boolean
+              prec_z?: number
               with_boxes?: boolean
+              with_sizes?: boolean
             }
         Returns: string
       }
@@ -5236,13 +5236,13 @@ export type Database = {
         Returns: unknown
       }
       st_boundingdiagonal: {
-        Args: { geom: unknown; fits?: boolean }
+        Args: { fits?: boolean; geom: unknown }
         Returns: unknown
       }
       st_buffer: {
         Args:
-          | { geom: unknown; radius: number; options?: string }
-          | { geom: unknown; radius: number; quadsegs: number }
+          | { geom: unknown; options?: string; radius: number }
+          | { geom: unknown; quadsegs: number; radius: number }
         Returns: unknown
       }
       st_buildarea: {
@@ -5258,7 +5258,7 @@ export type Database = {
         Returns: unknown
       }
       st_clipbybox2d: {
-        Args: { geom: unknown; box: unknown }
+        Args: { box: unknown; geom: unknown }
         Returns: unknown
       }
       st_closestpoint: {
@@ -5283,9 +5283,9 @@ export type Database = {
       }
       st_concavehull: {
         Args: {
+          param_allow_holes?: boolean
           param_geom: unknown
           param_pctconvex: number
-          param_allow_holes?: boolean
         }
         Returns: unknown
       }
@@ -5322,11 +5322,11 @@ export type Database = {
         Returns: boolean
       }
       st_curvetoline: {
-        Args: { geom: unknown; tol?: number; toltype?: number; flags?: number }
+        Args: { flags?: number; geom: unknown; tol?: number; toltype?: number }
         Returns: unknown
       }
       st_delaunaytriangles: {
-        Args: { g1: unknown; tolerance?: number; flags?: number }
+        Args: { flags?: number; g1: unknown; tolerance?: number }
         Returns: unknown
       }
       st_difference: {
@@ -5398,7 +5398,7 @@ export type Database = {
         Args:
           | { box: unknown; dx: number; dy: number }
           | { box: unknown; dx: number; dy: number; dz?: number }
-          | { geom: unknown; dx: number; dy: number; dz?: number; dm?: number }
+          | { dm?: number; dx: number; dy: number; dz?: number; geom: unknown }
         Returns: unknown
       }
       st_exteriorring: {
@@ -5426,7 +5426,7 @@ export type Database = {
         Returns: unknown
       }
       st_force4d: {
-        Args: { geom: unknown; zvalue?: number; mvalue?: number }
+        Args: { geom: unknown; mvalue?: number; zvalue?: number }
         Returns: unknown
       }
       st_forcecollection: {
@@ -5487,10 +5487,10 @@ export type Database = {
       }
       st_geometricmedian: {
         Args: {
-          g: unknown
-          tolerance?: number
-          max_iter?: number
           fail_if_not_converged?: boolean
+          g: unknown
+          max_iter?: number
+          tolerance?: number
         }
         Returns: unknown
       }
@@ -5551,11 +5551,11 @@ export type Database = {
         Returns: number
       }
       st_hexagon: {
-        Args: { size: number; cell_i: number; cell_j: number; origin?: unknown }
+        Args: { cell_i: number; cell_j: number; origin?: unknown; size: number }
         Returns: unknown
       }
       st_hexagongrid: {
-        Args: { size: number; bounds: unknown }
+        Args: { bounds: unknown; size: number }
         Returns: Record<string, unknown>[]
       }
       st_interpolatepoint: {
@@ -5605,7 +5605,7 @@ export type Database = {
         Returns: boolean
       }
       st_isvaliddetail: {
-        Args: { geom: unknown; flags?: number }
+        Args: { flags?: number; geom: unknown }
         Returns: Database["public"]["CompositeTypes"]["valid_detail"]
       }
       st_isvalidreason: {
@@ -5628,7 +5628,7 @@ export type Database = {
         Returns: number
       }
       st_letters: {
-        Args: { letters: string; font?: Json }
+        Args: { font?: Json; letters: string }
         Returns: unknown
       }
       st_linecrossingdirection: {
@@ -5636,7 +5636,7 @@ export type Database = {
         Returns: number
       }
       st_linefromencodedpolyline: {
-        Args: { txtin: string; nprecision?: number }
+        Args: { nprecision?: number; txtin: string }
         Returns: unknown
       }
       st_linefrommultipoint: {
@@ -5668,20 +5668,20 @@ export type Database = {
         Returns: unknown
       }
       st_locatealong: {
-        Args: { geometry: unknown; measure: number; leftrightoffset?: number }
+        Args: { geometry: unknown; leftrightoffset?: number; measure: number }
         Returns: unknown
       }
       st_locatebetween: {
         Args: {
-          geometry: unknown
           frommeasure: number
-          tomeasure: number
+          geometry: unknown
           leftrightoffset?: number
+          tomeasure: number
         }
         Returns: unknown
       }
       st_locatebetweenelevations: {
-        Args: { geometry: unknown; fromelevation: number; toelevation: number }
+        Args: { fromelevation: number; geometry: unknown; toelevation: number }
         Returns: unknown
       }
       st_longestline: {
@@ -5829,7 +5829,7 @@ export type Database = {
         Returns: number
       }
       st_offsetcurve: {
-        Args: { line: unknown; distance: number; params?: string }
+        Args: { distance: number; line: unknown; params?: string }
         Returns: unknown
       }
       st_orderingequals: {
@@ -5862,10 +5862,10 @@ export type Database = {
       }
       st_pointm: {
         Args: {
-          xcoordinate: number
-          ycoordinate: number
           mcoordinate: number
           srid?: number
+          xcoordinate: number
+          ycoordinate: number
         }
         Returns: unknown
       }
@@ -5879,20 +5879,20 @@ export type Database = {
       }
       st_pointz: {
         Args: {
+          srid?: number
           xcoordinate: number
           ycoordinate: number
           zcoordinate: number
-          srid?: number
         }
         Returns: unknown
       }
       st_pointzm: {
         Args: {
+          mcoordinate: number
+          srid?: number
           xcoordinate: number
           ycoordinate: number
           zcoordinate: number
-          mcoordinate: number
-          srid?: number
         }
         Returns: unknown
       }
@@ -5917,16 +5917,16 @@ export type Database = {
         Returns: unknown
       }
       st_project: {
-        Args: { geog: unknown; distance: number; azimuth: number }
+        Args: { azimuth: number; distance: number; geog: unknown }
         Returns: unknown
       }
       st_quantizecoordinates: {
         Args: {
           g: unknown
+          prec_m?: number
           prec_x: number
           prec_y?: number
           prec_z?: number
-          prec_m?: number
         }
         Returns: unknown
       }
@@ -5967,7 +5967,7 @@ export type Database = {
         Returns: unknown
       }
       st_simplifypolygonhull: {
-        Args: { geom: unknown; vertex_fraction: number; is_outer?: boolean }
+        Args: { geom: unknown; is_outer?: boolean; vertex_fraction: number }
         Returns: unknown
       }
       st_split: {
@@ -5975,11 +5975,11 @@ export type Database = {
         Returns: unknown
       }
       st_square: {
-        Args: { size: number; cell_i: number; cell_j: number; origin?: unknown }
+        Args: { cell_i: number; cell_j: number; origin?: unknown; size: number }
         Returns: unknown
       }
       st_squaregrid: {
-        Args: { size: number; bounds: unknown }
+        Args: { bounds: unknown; size: number }
         Returns: Record<string, unknown>[]
       }
       st_srid: {
@@ -5991,7 +5991,7 @@ export type Database = {
         Returns: unknown
       }
       st_subdivide: {
-        Args: { geom: unknown; maxvertices?: number; gridsize?: number }
+        Args: { geom: unknown; gridsize?: number; maxvertices?: number }
         Returns: unknown[]
       }
       st_summary: {
@@ -6012,11 +6012,11 @@ export type Database = {
       }
       st_tileenvelope: {
         Args: {
-          zoom: number
-          x: number
-          y: number
           bounds?: unknown
           margin?: number
+          x: number
+          y: number
+          zoom: number
         }
         Returns: unknown
       }
@@ -6026,8 +6026,8 @@ export type Database = {
       }
       st_transform: {
         Args:
-          | { geom: unknown; from_proj: string; to_proj: string }
-          | { geom: unknown; from_proj: string; to_srid: number }
+          | { from_proj: string; geom: unknown; to_proj: string }
+          | { from_proj: string; geom: unknown; to_srid: number }
           | { geom: unknown; to_proj: string }
         Returns: unknown
       }
@@ -6043,11 +6043,11 @@ export type Database = {
         Returns: unknown
       }
       st_voronoilines: {
-        Args: { g1: unknown; tolerance?: number; extend_to?: unknown }
+        Args: { extend_to?: unknown; g1: unknown; tolerance?: number }
         Returns: unknown
       }
       st_voronoipolygons: {
-        Args: { g1: unknown; tolerance?: number; extend_to?: unknown }
+        Args: { extend_to?: unknown; g1: unknown; tolerance?: number }
         Returns: unknown
       }
       st_within: {
@@ -6063,7 +6063,7 @@ export type Database = {
         Returns: unknown
       }
       st_wrapx: {
-        Args: { geom: unknown; wrap: number; move: number }
+        Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
       }
       st_x: {
@@ -6108,11 +6108,11 @@ export type Database = {
       }
       submit_customer_request: {
         Args: {
-          p_car_registration_number: string
           p_car_brand: string
           p_car_model: string
-          p_owner_name: string
+          p_car_registration_number: string
           p_owner_address: string
+          p_owner_name: string
           p_pickup_address: string
           p_pickup_postal_code: string
         }
@@ -6121,11 +6121,11 @@ export type Database = {
       test_driver_status_manager: {
         Args: { p_driver_id: string; p_new_status: string; p_reason?: string }
         Returns: {
-          driver_id: string
           current_status: string
-          would_change_to: string
-          would_change: boolean
+          driver_id: string
           reason: string
+          would_change: boolean
+          would_change_to: string
         }[]
       }
       text: {
@@ -6145,16 +6145,16 @@ export type Database = {
       }
       update_billing_configuration: {
         Args: {
-          p_tenant_id: number
           p_config_category: string
           p_config_key: string
           p_config_value: Json
           p_current_version?: number
+          p_tenant_id: number
         }
         Returns: {
-          success: boolean
-          new_version: number
           error_message: string
+          new_version: number
+          success: boolean
         }[]
       }
       update_driver_status: {
@@ -6167,57 +6167,57 @@ export type Database = {
       }
       update_driver_status_admin_enum: {
         Args: {
+          available_from_param?: string
           driver_id_param: string
           new_status: Database["public"]["Enums"]["driver_status"]
           source_param?: string
-          available_from_param?: string
         }
         Returns: boolean
       }
       update_driver_status_for_auth: {
         Args: {
+          driver_auth_id?: string
           new_driver_status: string
           reason_param?: string
-          driver_auth_id?: string
         }
         Returns: boolean
       }
       update_driver_status_with_location: {
         Args: {
+          p_changed_by?: string
           p_driver_id: string
-          p_new_status: string
           p_latitude?: number
           p_longitude?: number
-          p_reason?: string
-          p_changed_by?: string
           p_metadata?: Json
+          p_new_status: string
+          p_reason?: string
         }
         Returns: boolean
       }
       update_pickup_status: {
         Args: {
-          pickup_id: string
-          new_status: string
-          driver_notes_param?: string
           completion_photos_param?: string[]
           driver_auth_id?: string
+          driver_notes_param?: string
+          new_status: string
+          pickup_id: string
         }
         Returns: boolean
       }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
-          schema_name: string
-          table_name: string
           column_name: string
           new_srid_in: number
+          schema_name: string
+          table_name: string
         }
         Returns: string
       }
       validate_billing_config_json: {
         Args:
+          | { config_category: string; config_key: string; config_value: Json }
           | { config_category: string; config_value: Json }
-          | { config_value: Json; config_category: string; config_key: string }
         Returns: boolean
       }
       validate_swedish_pnr: {
@@ -6227,9 +6227,9 @@ export type Database = {
       whoami: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_id: string
           role: string
           tenant_id: number
+          user_id: string
         }[]
       }
     }
