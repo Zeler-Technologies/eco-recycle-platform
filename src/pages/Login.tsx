@@ -20,16 +20,11 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const user = await login(email, password);
-      // Navigate based on user role
-      if (email === 'customer@demo.se') {
-        navigate('/customer-app');
-      } else if (email === 'driver@scrapyard.se') {
-        navigate('/driver-app');
-      } else {
-        navigate('/');
-      }
+      await login(email, password);
+      // Navigate to main dashboard after successful login
+      navigate('/');
     } catch (error) {
+      console.error('Login failed:', error);
       // Error handling is done in AuthContext
     } finally {
       setIsLoading(false);
@@ -39,35 +34,51 @@ const Login = () => {
   const demoAccounts = [
     {
       role: 'Super Admin',
-      email: 'admin@superadmin.com',
+      email: 'admin@pantabilen.se',
       password: 'admin123',
-      description: 'Platform administration',
+      description: 'Full platform access - all tenants, users, and system configuration',
       icon: Shield,
-      color: 'bg-brand-blue'
+      color: 'bg-red-600'
     },
     {
-      role: 'Scrap Yard Admin',
-      email: 'admin@scrapyard.se',
-      password: 'scrapyard123',
-      description: 'Scrap yard operations',
+      role: 'Tenant Admin - Stockholm',
+      email: 'admin@stockholm.pantabilen.se',
+      password: 'stockholm123',
+      description: 'Stockholm tenant management - drivers, customers, orders',
+      icon: Building2,
+      color: 'bg-blue-600'
+    },
+    {
+      role: 'Tenant Admin - Göteborg',
+      email: 'admin@goteborg.pantabilen.se',
+      password: 'goteborg123',
+      description: 'Göteborg tenant management - separate tenant operations',
+      icon: Building2,
+      color: 'bg-green-600'
+    },
+    {
+      role: 'Scrapyard Admin',
+      email: 'admin@skrot.stockholm.se',
+      password: 'skrot123',
+      description: 'Scrapyard operations - vehicle processing and logistics',
       icon: Recycle,
-      color: 'bg-brand-green'
+      color: 'bg-orange-600'
     },
     {
-      role: 'Driver',
-      email: 'driver@scrapyard.se',
+      role: 'Driver - Erik',
+      email: 'erik@pantabilen.se',
       password: 'driver123',
-      description: 'Vehicle pickup operations',
+      description: 'Vehicle pickup driver - mobile app and route management',
       icon: Car,
-      color: 'bg-status-processing'
+      color: 'bg-purple-600'
     },
     {
-      role: 'Customer App',
-      email: 'customer@demo.se',
-      password: 'customer123',
-      description: 'Customer interface for car pickup requests',
-      icon: Smartphone,
-      color: 'bg-primary'
+      role: 'Driver - Anna',
+      email: 'anna@pantabilen.se',
+      password: 'driver123',
+      description: 'Vehicle pickup driver - alternative driver account',
+      icon: Car,
+      color: 'bg-indigo-600'
     }
   ];
 
@@ -129,9 +140,9 @@ const Login = () => {
         {/* Demo Accounts */}
         <Card className="shadow-custom-xl bg-white/95 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Demo Accounts</CardTitle>
+            <CardTitle className="text-xl">Test Accounts</CardTitle>
             <CardDescription>
-              Click on any account to automatically fill credentials
+              Click on any account to automatically fill credentials. Each account provides different access levels for testing functionality.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

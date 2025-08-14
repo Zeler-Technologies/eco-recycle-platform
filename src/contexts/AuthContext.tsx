@@ -148,23 +148,100 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       
-      // Special handling for super admin bypass during development
-      if (email === 'admin@pantabilen.se' && password === 'admin123') {
-        const mockUser: User = {
-          id: 'mock-super-admin',
-          email: 'admin@pantabilen.se',
-          name: 'Super Admin',
-          role: 'super_admin',
-          tenant_id: 1,
-          tenant_name: 'PantaBilen AB',
-          tenant_country: 'Sverige'
-        };
-        setUser(mockUser);
+      // Test accounts for different admin roles
+      const testAccounts = {
+        // Super Admin
+        'admin@pantabilen.se': {
+          password: 'admin123',
+          user: {
+            id: 'super-admin-001',
+            email: 'admin@pantabilen.se',
+            name: 'Super Admin',
+            role: 'super_admin' as UserRole,
+            tenant_id: undefined,
+            tenant_name: undefined,
+            tenant_country: 'Sverige'
+          }
+        },
+        // Tenant Admin
+        'admin@stockholm.pantabilen.se': {
+          password: 'stockholm123',
+          user: {
+            id: 'tenant-admin-001',
+            email: 'admin@stockholm.pantabilen.se',
+            name: 'Stockholm Admin',
+            role: 'tenant_admin' as UserRole,
+            tenant_id: 1,
+            tenant_name: 'PantaBilen Stockholm',
+            tenant_country: 'Sverige'
+          }
+        },
+        // Another Tenant Admin
+        'admin@goteborg.pantabilen.se': {
+          password: 'goteborg123', 
+          user: {
+            id: 'tenant-admin-002',
+            email: 'admin@goteborg.pantabilen.se',
+            name: 'Göteborg Admin',
+            role: 'tenant_admin' as UserRole,
+            tenant_id: 2,
+            tenant_name: 'PantaBilen Göteborg',
+            tenant_country: 'Sverige'
+          }
+        },
+        // Scrapyard Admin
+        'admin@skrot.stockholm.se': {
+          password: 'skrot123',
+          user: {
+            id: 'scrapyard-admin-001',
+            email: 'admin@skrot.stockholm.se',
+            name: 'Skrotgård Admin Stockholm',
+            role: 'scrapyard_admin' as UserRole,
+            tenant_id: 1,
+            scrapyard_id: 1,
+            tenant_name: 'PantaBilen Stockholm',
+            tenant_country: 'Sverige'
+          }
+        },
+        // Driver
+        'erik@pantabilen.se': {
+          password: 'driver123',
+          user: {
+            id: 'driver-001',
+            email: 'erik@pantabilen.se',
+            name: 'Erik Andersson',
+            role: 'driver' as UserRole,
+            tenant_id: 1,
+            scrapyard_id: 1,
+            tenant_name: 'PantaBilen Stockholm',
+            tenant_country: 'Sverige'
+          }
+        },
+        // Another Driver
+        'anna@pantabilen.se': {
+          password: 'driver123',
+          user: {
+            id: 'driver-002',
+            email: 'anna@pantabilen.se',
+            name: 'Anna Larsson',
+            role: 'driver' as UserRole,
+            tenant_id: 1,
+            scrapyard_id: 1,
+            tenant_name: 'PantaBilen Stockholm',
+            tenant_country: 'Sverige'
+          }
+        }
+      };
+
+      // Check for test account login
+      const testAccount = testAccounts[email as keyof typeof testAccounts];
+      if (testAccount && password === testAccount.password) {
+        setUser(testAccount.user);
         setIsAnonymous(false);
         return;
       }
 
-      // Real Supabase authentication
+      // Real Supabase authentication for production accounts
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
