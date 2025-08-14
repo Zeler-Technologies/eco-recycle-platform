@@ -12,7 +12,7 @@ export const BillingTest = () => {
         
         // Test 1: Check RLS functions
         const { data: superAdminCheck, error: superAdminError } = await supabase
-          .rpc('is_super_admin_safe');
+          .rpc('is_super_admin_bypass');
         
         if (superAdminError) {
           setTestResult(`❌ Super admin check failed: ${superAdminError.message}`);

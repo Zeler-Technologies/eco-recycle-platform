@@ -4709,6 +4709,10 @@ export type Database = {
         Args: { pickup_order_uuid: string }
         Returns: boolean
       }
+      is_super_admin_bypass: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_super_admin_safe: {
         Args: Record<PropertyKey, never>
         Returns: boolean
