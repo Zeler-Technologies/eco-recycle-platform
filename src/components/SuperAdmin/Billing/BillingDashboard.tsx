@@ -24,6 +24,7 @@ import {
 // import { UsageMetering } from './UsageMetering';
 // import { BillingAnalytics } from './BillingAnalytics';
 // import { BillingSettings } from './BillingSettings';
+import { BillingTest } from './BillingTest';
 
 export const BillingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -240,8 +241,11 @@ export const BillingDashboard = () => {
           </TabsContent>
 
           <TabsContent value="pricing">
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground">Pricing catalog temporarily disabled</p>
+            <div className="space-y-6">
+              <BillingTest />
+              <div className="p-6 text-center">
+                <p className="text-muted-foreground">Pricing catalog temporarily disabled</p>
+              </div>
             </div>
           </TabsContent>
 
