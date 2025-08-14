@@ -1,237 +1,463 @@
-// hooks/useDriverIntegration.ts - TEMPORARY VERSION WITH MOCK DATA
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
 
-// Mock data to match what PantaBilenDriverApp expects
-const MOCK_DRIVER = {
-  driver_id: 'driver-001',
-  full_name: 'Test Driver',
-  driver_status: 'available',
-  email: 'driver@scrapyard.se',
-  phone: '+46700000000',
-  vehicle_type: 'Truck',
-  current_location: 'Stockholm',
-  tenant_id: '1'
-};
+interface Driver {
+  id: string;
+  driver_id: string;
+  auth_user_id: string;
+  full_name: string;
+  phone_number: string;
+  email?: string;
+  vehicle_type?: string;
+  vehicle_registration?: string;
+  driver_status: string;
+  status: string;
+  current_latitude?: number;
+  current_longitude?: number;
+  is_active: boolean;
+  tenant_id: number;
+  scrapyard_id?: number;
+  max_capacity_kg?: number;
+  last_location_update?: string;
+  created_at: string;
+  updated_at?: string;
+}
 
-const MOCK_PICKUPS = [
-  {
-    id: 'pickup-1',
-    pickup_id: 'pickup-1',
-    car_registration_number: 'ABC123',
-    car_year: 2015,
-    car_brand: 'Volvo',
-    car_model: 'XC90',
-    owner_name: 'John Doe',
-    pickup_address: 'Storgatan 1, Stockholm',
-    final_price: 5000,
-    status: 'scheduled',
-    created_at: new Date().toISOString(),
-    vehicle_year: 2015,
-    vehicle_make: 'Volvo',
-    vehicle_model: 'XC90',
-    fuel_type: 'gasoline',
-    pickup_distance: 15,
-    customer_name: 'John Doe',
-    pickup_location: 'Storgatan 1, Stockholm'
-  },
-  {
-    id: 'pickup-2',
-    pickup_id: 'pickup-2',
-    car_registration_number: 'XYZ789',
-    car_year: 2018,
-    car_brand: 'BMW',
-    car_model: '320i',
-    owner_name: 'Jane Smith',
-    pickup_address: 'Kungsgatan 10, Stockholm',
-    final_price: 7500,
-    status: 'in_progress',
-    created_at: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-    vehicle_year: 2018,
-    vehicle_make: 'BMW',
-    vehicle_model: '320i',
-    fuel_type: 'gasoline',
-    pickup_distance: 25,
-    customer_name: 'Jane Smith',
-    pickup_location: 'Kungsgatan 10, Stockholm'
-  },
-  {
-    id: 'pickup-3',
-    pickup_id: 'pickup-3',
-    car_registration_number: 'DEF456',
-    car_year: 2020,
-    car_brand: 'Tesla',
-    car_model: 'Model 3',
-    owner_name: 'Erik Andersson',
-    pickup_address: 'Vasagatan 5, Stockholm',
-    final_price: 12000,
-    status: 'completed',
-    created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-    vehicle_year: 2020,
-    vehicle_make: 'Tesla',
-    vehicle_model: 'Model 3',
-    fuel_type: 'electric',
-    pickup_distance: 0,
-    customer_name: 'Erik Andersson',
-    pickup_location: 'Vasagatan 5, Stockholm'
-  }
-];
+interface PickupOrder {
+  id: string;
+  pickup_id: string;
+  car_registration_number: string;
+  car_year?: number;
+  car_brand: string;
+  car_model: string;
+  owner_name: string;
+  pickup_address: string;
+  final_price?: number;
+  status: string;
+  created_at: string;
+  vehicle_year?: number;
+  vehicle_make: string;
+  vehicle_model: string;
+  fuel_type?: string;
+  pickup_distance?: number;
+  customer_name: string;
+  pickup_location: string;
+  estimated_arrival?: string;
+  scheduled_at?: string;
+  completion_notes?: string;
+  driver_notes?: string;
+}
 
-const MOCK_STATUS_HISTORY = [
-  {
-    id: 'history-1',
-    pickup_order_id: 'pickup-1',
-    driver_id: 'driver-001',
-    old_status: 'pending',
-    new_status: 'scheduled',
-    notes: 'Driver assigned and scheduled',
-    created_at: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
-  }
-];
+interface StatusHistoryItem {
+  id: string;
+  driver_id: string;
+  old_status?: string;
+  new_status: string;
+  changed_at: string;
+  changed_by?: string;
+  source?: string;
+  reason?: string;
+  metadata?: any;
+}
 
-export const useDriverIntegration = (tenantId?: string | number, driverId?: string) => {
-  // State to match what the component expects
-  const [pickups, setPickups] = useState(MOCK_PICKUPS);
-  const [driver, setDriver] = useState(MOCK_DRIVER);
+export const useDriverIntegration = () => {
+  const [pickups, setPickups] = useState<PickupOrder[]>([]);
+  const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [statusHistory, setStatusHistory] = useState(MOCK_STATUS_HISTORY);
+  const [error, setError] = useState<string | null>(null);
+  const [statusHistory, setStatusHistory] = useState<StatusHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
-  const [pricingError, setPricingError] = useState(null);
+  const [pricingError, setPricingError] = useState<string | null>(null);
 
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+  // Load current driver information
+  const loadDriverInfo = useCallback(async () => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        throw new Error(`Authentication error: ${authError.message}`);
+      }
 
-    return () => clearTimeout(timer);
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+
+      // Get driver info directly from the drivers table
+      const { data: directDriverData, error: directError } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('auth_user_id', user.id)
+        .eq('is_active', true)
+        .single();
+
+      if (directError) {
+        throw new Error(`No driver found for current user: ${directError.message}`);
+      }
+
+      // Map the direct query result to match expected format
+      const mappedDriver: Driver = {
+        ...directDriverData,
+        driver_id: directDriverData.id,
+        status: directDriverData.driver_status
+      };
+      setDriver(mappedDriver);
+
+    } catch (err) {
+      console.error('Error loading driver info:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load driver information');
+    }
   }, []);
 
-  // Mock functions that match what the component expects
+  // Load pickup orders for the driver
+  const loadPickups = useCallback(async (driverId?: string) => {
+    if (!driverId) return;
+
+    try {
+      // Use direct query to pickup_orders table
+      const { data: directPickupData, error: directError } = await supabase
+        .from('pickup_orders')
+        .select(`
+          *,
+          customer_requests (
+            car_registration_number,
+            car_brand,
+            car_model,
+            car_year,
+            owner_name,
+            pickup_address
+          )
+        `)
+        .eq('assigned_driver_id', driverId)
+        .order('created_at', { ascending: false });
+
+      if (directError) {
+        throw new Error(`Failed to load pickups: ${directError.message}`);
+      }
+
+      // Map the direct query result to expected format
+      const mappedPickups: PickupOrder[] = directPickupData?.map(pickup => ({
+        id: pickup.id,
+        pickup_id: pickup.id,
+        car_registration_number: pickup.customer_requests?.car_registration_number || '',
+        car_year: pickup.customer_requests?.car_year,
+        car_brand: pickup.customer_requests?.car_brand || '',
+        car_model: pickup.customer_requests?.car_model || '',
+        owner_name: pickup.customer_requests?.owner_name || '',
+        pickup_address: pickup.customer_requests?.pickup_address || '',
+        final_price: pickup.final_price,
+        status: pickup.status,
+        created_at: pickup.created_at,
+        vehicle_year: pickup.customer_requests?.car_year,
+        vehicle_make: pickup.customer_requests?.car_brand || '',
+        vehicle_model: pickup.customer_requests?.car_model || '',
+        fuel_type: 'gasoline', // Default value
+        pickup_distance: 0, // Default value
+        customer_name: pickup.customer_requests?.owner_name || '',
+        pickup_location: pickup.customer_requests?.pickup_address || '',
+        estimated_arrival: pickup.estimated_arrival,
+        scheduled_at: pickup.scheduled_at,
+        completion_notes: pickup.completion_photos?.join(', ') || '', // Fix: use completion_photos
+        driver_notes: pickup.driver_notes
+      })) || [];
+
+      setPickups(mappedPickups);
+
+    } catch (err) {
+      console.error('Error loading pickups:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load pickup orders');
+    }
+  }, []);
+
+  // Load status history for the driver
+  const loadStatusHistory = useCallback(async (driverId?: string) => {
+    if (!driverId) return;
+
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('driver_status_history')
+        .select('id, driver_id, old_status, new_status, changed_at, source, reason')
+        .eq('driver_id', driverId)
+        .order('changed_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        throw new Error(`Failed to load status history: ${error.message}`);
+      }
+
+      setStatusHistory(data || []);
+    } catch (err) {
+      console.error('Error loading status history:', err);
+      // Don't set error for status history, it's not critical
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  // Update driver status
   const updateDriverStatus = useCallback(async (driverId: string, status: string) => {
-    console.log('Updating driver status:', driverId, status);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Update local state
-    setDriver(prev => prev ? { ...prev, driver_status: status } : prev);
-    
-    return true; // Return success
+    try {
+      // Call the existing edge function
+      const response = await supabase.functions.invoke('update-driver-status', {
+        body: {
+          driverId,
+          newStatus: status,
+          reason: 'Manual status change'
+        }
+      });
+
+      if (response.error) {
+        throw new Error(`Failed to update status: ${response.error.message}`);
+      }
+
+      // Optimistically update local state
+      setDriver(prev => prev ? { ...prev, status, driver_status: status } : null);
+
+      // Reload status history to get the latest entry
+      await loadStatusHistory(driverId);
+
+      return response.data;
+    } catch (err) {
+      console.error('Error updating driver status:', err);
+      throw new Error(err instanceof Error ? err.message : 'Failed to update driver status');
+    }
+  }, [loadStatusHistory]);
+
+  // Update pickup status
+  const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
+    try {
+      const { error } = await supabase
+        .from('pickup_orders')
+        .update({ 
+          status,
+          driver_notes: notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pickupId);
+
+      if (error) {
+        throw new Error(`Failed to update pickup status: ${error.message}`);
+      }
+
+      // Optimistically update local state
+      setPickups(prev => prev.map(pickup => 
+        pickup.id === pickupId 
+          ? { ...pickup, status, driver_notes: notes }
+          : pickup
+      ));
+
+    } catch (err) {
+      console.error('Error updating pickup status:', err);
+      throw new Error(err instanceof Error ? err.message : 'Failed to update pickup status');
+    }
   }, []);
 
-  const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
-    console.log('Updating pickup status:', pickupId, status, notes);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Update local state
-    setPickups(prev => 
-      prev.map(pickup => 
-        pickup.pickup_id === pickupId || pickup.id === pickupId
-          ? { ...pickup, status }
-          : pickup
-      )
-    );
-    
-    // Add to status history
-    const historyItem = {
-      id: `history-${Date.now()}`,
-      pickup_order_id: pickupId,
-      driver_id: driver?.driver_id || 'driver-001',
-      old_status: 'previous_status',
-      new_status: status,
-      notes: notes || '',
-      created_at: new Date().toISOString()
-    };
-    
-    setStatusHistory(prev => [historyItem, ...prev]);
-    
-    return true; // Return success
-  }, [driver]);
-
-  // Additional functions for compatibility
+  // Other hook methods (keeping existing signatures for compatibility)
   const assignDriver = useCallback(async (orderId: string, driverId: string) => {
-    console.log('Assigning driver:', orderId, driverId);
-    await updatePickupStatus(orderId, 'assigned');
+    await updatePickupStatus(orderId, 'assigned', `Assigned to driver ${driverId}`);
   }, [updatePickupStatus]);
 
   const unassignDriver = useCallback(async (orderId: string) => {
-    console.log('Unassigning driver:', orderId);
-    await updatePickupStatus(orderId, 'pending');
+    await updatePickupStatus(orderId, 'pending', 'Driver unassigned');
   }, [updatePickupStatus]);
 
   const calculateOrderPrice = useCallback(async (order: any) => {
-    console.log('Calculating price for order:', order);
     setIsCalculatingPrice(true);
+    setPricingError(null);
     
-    // Simulate calculation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsCalculatingPrice(false);
-    
-    return {
-      basePrice: 3000,
-      totalPrice: order.final_price || 5000,
-      breakdown: [
-        { category: 'Base Price', amount: 3000, description: 'Base pickup price' },
-        { category: 'Age Bonus', amount: 2000, description: 'Vehicle age bonus' }
-      ]
-    };
+    try {
+      // Simulate pricing calculation or call actual pricing API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const basePrice = Math.floor(Math.random() * 5000) + 2000;
+      return {
+        basePrice,
+        totalPrice: basePrice,
+        breakdown: {
+          scrapValue: basePrice * 0.8,
+          transportFee: basePrice * 0.2
+        }
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to calculate price';
+      setPricingError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsCalculatingPrice(false);
+    }
   }, []);
 
   const updateOrderPricing = useCallback(async (orderId: string, vehicleInfo: any, basePrice?: number) => {
-    console.log('Updating order pricing:', orderId, vehicleInfo, basePrice);
-    setIsCalculatingPrice(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setIsCalculatingPrice(false);
+    try {
+      const { error } = await supabase
+        .from('pickup_orders')
+        .update({ 
+          final_price: basePrice,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) {
+        throw new Error(`Failed to update order pricing: ${error.message}`);
+      }
+
+      // Update local state
+      setPickups(prev => prev.map(pickup => 
+        pickup.id === orderId 
+          ? { ...pickup, final_price: basePrice }
+          : pickup
+      ));
+
+    } catch (err) {
+      console.error('Error updating order pricing:', err);
+      throw new Error(err instanceof Error ? err.message : 'Failed to update order pricing');
+    }
   }, []);
 
   const bulkCalculatePricing = useCallback(async (orders: any[]) => {
-    console.log('Bulk calculating pricing for orders:', orders);
-    return orders; // Return as-is for now
+    // Placeholder for bulk pricing calculations
+    return orders.map(order => ({
+      orderId: order.id,
+      price: Math.floor(Math.random() * 5000) + 2000
+    }));
   }, []);
 
   const refreshData = useCallback(async () => {
-    console.log('Refreshing data...');
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
-  }, []);
+    setError(null);
+    
+    try {
+      await loadDriverInfo();
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadDriverInfo]);
+
+  // Initialize data on mount
+  useEffect(() => {
+    const initializeData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        await loadDriverInfo();
+      } catch (err) {
+        console.error('Error initializing data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
+  }, [loadDriverInfo]);
+
+  // Load pickups and status history when driver changes
+  useEffect(() => {
+    if (driver?.driver_id) {
+      loadPickups(driver.driver_id);
+      loadStatusHistory(driver.driver_id);
+    }
+  }, [driver?.driver_id, loadPickups, loadStatusHistory]);
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!driver?.driver_id) return;
+
+    const driverId = driver.driver_id;
+
+    // Subscribe to driver status changes
+    const driverStatusChannel = supabase
+      .channel(`driver-status-${driverId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'drivers',
+          filter: `id=eq.${driverId}`
+        },
+        (payload) => {
+          console.log('Driver status updated:', payload);
+          if (payload.new && typeof payload.new === 'object') {
+            const newData = payload.new as any;
+            setDriver(prev => prev ? {
+              ...prev,
+              ...newData,
+              driver_id: newData.id || prev.driver_id,
+              status: newData.driver_status || prev.status
+            } : null);
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to pickup order changes
+    const pickupsChannel = supabase
+      .channel(`driver-pickups-${driverId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pickup_orders',
+          filter: `assigned_driver_id=eq.${driverId}`
+        },
+        (payload) => {
+          console.log('Pickup orders updated:', payload);
+          // Reload pickups when changes occur
+          loadPickups(driverId);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to status history changes
+    const statusHistoryChannel = supabase
+      .channel(`driver-history-${driverId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'driver_status_history',
+          filter: `driver_id=eq.${driverId}`
+        },
+        (payload) => {
+          console.log('Status history updated:', payload);
+          if (payload.new) {
+            setStatusHistory(prev => [payload.new as StatusHistoryItem, ...prev.slice(0, 9)]);
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      supabase.removeChannel(driverStatusChannel);
+      supabase.removeChannel(pickupsChannel);
+      supabase.removeChannel(statusHistoryChannel);
+    };
+  }, [driver?.driver_id, loadPickups]);
 
   return {
-    // Core data (matches PantaBilenDriverApp expectations)
     pickups,
-    driver, // This will have driver_status, full_name, etc.
+    driver,
     loading,
     error,
-    
-    // Status management
-    updateDriverStatus,
-    updatePickupStatus,
-    
-    // Status history
     statusHistory,
     historyLoading,
-    
-    // Driver assignment
+    isCalculatingPrice,
+    pricingError,
+    updateDriverStatus,
+    updatePickupStatus,
     assignDriver,
     unassignDriver,
-    
-    // Pricing functions
     calculateOrderPrice,
     updateOrderPricing,
     bulkCalculatePricing,
-    
-    // Pricing state
-    isCalculatingPrice,
-    pricingError,
-    
-    // Data refresh
     refreshData
   };
 };
