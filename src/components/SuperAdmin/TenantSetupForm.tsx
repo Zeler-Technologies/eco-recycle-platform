@@ -34,8 +34,8 @@ const tenantFormSchema = z.object({
   address: z.string().optional(),
   postalCode: z.string().optional(),
   city: z.string().optional(),
-  adminName: z.string().min(2, 'Administrator name is required'),
-  adminEmail: z.string().email('Please enter a valid email address'),
+  adminName: z.string().optional(),
+  adminEmail: z.string().optional(),
   invoiceEmail: z.string().email('Please enter a valid invoice email address'),
 });
 
@@ -43,6 +43,19 @@ type TenantFormData = z.infer<typeof tenantFormSchema>;
 
 interface TenantSetupFormProps {
   onTenantCreated?: (tenant: any) => void;
+  editTenant?: Tenant | null;
+  onTenantUpdated?: (tenant: any) => void;
+}
+
+interface Tenant {
+  tenants_id: number;
+  name: string;
+  country: string;
+  service_type: string | null;
+  base_address: string | null;
+  invoice_email: string | null;
+  created_at: string;
+  updated_at?: string;
 }
 
 const countries = [
@@ -50,92 +63,161 @@ const countries = [
   'Belgium', 'France', 'United Kingdom', 'Spain', 'Italy', 'Poland'
 ];
 
-export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
+export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }: TenantSetupFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
+  const isEditing = !!editTenant;
+  
+  // Open dialog when editing
+  React.useEffect(() => {
+    if (editTenant) {
+      setOpen(true);
+    }
+  }, [editTenant]);
+  
   const form = useForm<TenantFormData>({
     resolver: zodResolver(tenantFormSchema),
     defaultValues: {
-      companyName: '',
-      country: '',
-      serviceType: '',
-      address: '',
+      companyName: editTenant?.name || '',
+      country: editTenant?.country || '',
+      serviceType: editTenant?.service_type || '',
+      address: editTenant?.base_address || '',
       postalCode: '',
       city: '',
       adminName: '',
       adminEmail: '',
-      invoiceEmail: '',
+      invoiceEmail: editTenant?.invoice_email || '',
     },
   });
 
+  // Reset form values when editTenant changes
+  React.useEffect(() => {
+    if (editTenant) {
+      form.reset({
+        companyName: editTenant.name,
+        country: editTenant.country,
+        serviceType: editTenant.service_type || '',
+        address: editTenant.base_address || '',
+        postalCode: '',
+        city: '',
+        adminName: '',
+        adminEmail: '',
+        invoiceEmail: editTenant.invoice_email || '',
+      });
+    }
+  }, [editTenant, form]);
+
   const onSubmit = async (data: TenantFormData) => {
-  setLoading(true);
-  try {
-    console.log('Creating tenant with data:', data);
-    
-    // Single call - creates tenant and scrapyard (our working function)
-    const { data: result, error } = await supabase.rpc('create_tenant_complete', {
-      p_name: data.companyName,
-      p_country: data.country,
-      p_admin_name: data.adminName,
-      p_admin_email: data.adminEmail,
-      p_invoice_email: data.invoiceEmail,
-      p_service_type: data.serviceType || null,
-      p_address: data.address || null,
-      p_postal_code: data.postalCode || null,
-      p_city: data.city || null,
-    }) as { data: any; error: any };
+    setLoading(true);
+    try {
+      if (isEditing) {
+        // Update existing tenant
+        const { data: result, error } = await supabase
+          .from('tenants')
+          .update({
+            name: data.companyName,
+            country: data.country,
+            service_type: data.serviceType || null,
+            base_address: data.address || null,
+            invoice_email: data.invoiceEmail,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('tenants_id', editTenant!.tenants_id)
+          .select()
+          .single();
 
-    if (error) {
-      throw new Error(error.message || 'Failed to create tenant');
+        if (error) {
+          throw new Error(error.message || 'Failed to update tenant');
+        }
+
+        console.log('Tenant updated successfully:', result);
+
+        toast({
+          title: "Tenant Updated Successfully",
+          description: `${data.companyName} has been updated.`,
+        });
+        
+        onTenantUpdated?.(result);
+        setOpen(false);
+        form.reset();
+      } else {
+        // Create new tenant - validate admin fields
+        if (!data.adminName || data.adminName.length < 2) {
+          throw new Error('Administrator name is required and must be at least 2 characters');
+        }
+        if (!data.adminEmail || !data.adminEmail.includes('@')) {
+          throw new Error('Administrator email is required and must be valid');
+        }
+        
+        console.log('Creating tenant with data:', data);
+        
+        const { data: result, error } = await supabase.rpc('create_tenant_complete', {
+          p_name: data.companyName,
+          p_country: data.country,
+          p_admin_name: data.adminName,
+          p_admin_email: data.adminEmail,
+          p_invoice_email: data.invoiceEmail,
+          p_service_type: data.serviceType || null,
+          p_address: data.address || null,
+          p_postal_code: data.postalCode || null,
+          p_city: data.city || null,
+        }) as { data: any; error: any };
+
+        if (error) {
+          throw new Error(error.message || 'Failed to create tenant');
+        }
+
+        if (!result?.success) {
+          throw new Error(result?.error || 'Failed to create tenant');
+        }
+
+        console.log('Tenant and scrapyard created successfully:', result);
+
+        toast({
+          title: "Tenant Created Successfully",
+          description: `${data.companyName} has been added to the system. Generated password: ${result.generated_password}`,
+        });
+        
+        onTenantCreated?.(result);
+        setOpen(false);
+        form.reset();
+      }
+
+    } catch (error) {
+      console.error('Error with tenant operation:', error);
+      toast({
+        title: isEditing ? "Error Updating Tenant" : "Error Creating Tenant",
+        description: error instanceof Error ? error.message : "There was an error. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // Check if the function returned an error
-    if (!result?.success) {
-      throw new Error(result?.error || 'Failed to create tenant');
-    }
-
-    console.log('Tenant and scrapyard created successfully:', result);
-
-    toast({
-      title: "Tenant Created Successfully",
-      description: `${data.companyName} has been added to the system. Generated password: ${result.generated_password}`,
-    });
-    
-    onTenantCreated?.(result);
-    setOpen(false);
-    form.reset();
-
-  } catch (error) {
-    console.error('Error creating tenant:', error);
-    toast({
-      title: "Error Creating Tenant",
-      description: error instanceof Error ? error.message : "There was an error creating the tenant. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Tenant
-        </Button>
-      </DialogTrigger>
+      {!isEditing && (
+        <DialogTrigger asChild>
+          <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Tenant
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Add New Tenant
+            {isEditing ? 'Edit Tenant' : 'Add New Tenant'}
           </DialogTitle>
           <DialogDescription>
-            Create a new tenant account with company information and administrator access.
+            {isEditing 
+              ? 'Update tenant account information and settings.'
+              : 'Create a new tenant account with company information and administrator access.'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -263,52 +345,54 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
 
             <Separator />
 
-            {/* Administrator Information Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Administrator Information</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="adminName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Administrator Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Administrator Information Section - Only show for new tenants */}
+            {!isEditing && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Administrator Information</h3>
+                </div>
                 
-                <FormField
-                  control={form.control}
-                  name="adminEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Administrator Email *</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="admin@company.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="adminName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Administrator Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="adminEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Administrator Email *</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="admin@company.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    A secure password will be automatically generated for the administrator account. 
+                    The admin will be able to change it after first login.
+                  </p>
+                </div>
               </div>
-              
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  A secure password will be automatically generated for the administrator account. 
-                  The admin will be able to change it after first login.
-                </p>
-              </div>
-            </div>
+            )}
 
-            <Separator />
+            {!isEditing && <Separator />}
 
             {/* Invoice Information Section */}
             <div className="space-y-4">
@@ -336,7 +420,12 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => {
+                setOpen(false);
+                if (isEditing) {
+                  onTenantUpdated?.(null); // Signal to close edit mode
+                }
+              }} disabled={loading}>
                 Cancel
               </Button>
               <Button 
@@ -350,7 +439,7 @@ export const TenantSetupForm = ({ onTenantCreated }: TenantSetupFormProps) => {
                     Creating...
                   </>
                 ) : (
-                  'Create Tenant'
+                  isEditing ? 'Update Tenant' : 'Create Tenant'
                 )}
               </Button>
             </div>

@@ -39,6 +39,7 @@ export const TenantList = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
 
   const fetchTenants = async () => {
@@ -79,6 +80,17 @@ export const TenantList = () => {
       title: "Success",
       description: "Tenant created successfully and list refreshed.",
     });
+  };
+
+  const handleTenantUpdated = (result: any) => {
+    fetchTenants(); // Refresh the list when a tenant is updated
+    setEditingTenant(null); // Close the edit dialog
+    if (result) { // Only show success if result is not null (null means cancelled)
+      toast({
+        title: "Success",
+        description: "Tenant updated successfully and list refreshed.",
+      });
+    }
   };
 
   const getCountryFlag = (country: string) => {
@@ -146,6 +158,13 @@ export const TenantList = () => {
       </Card>
     );
   }
+
+  // Handle opening the edit dialog
+  React.useEffect(() => {
+    if (editingTenant) {
+      // We'll trigger the dialog to open by passing the editing tenant to TenantSetupForm
+    }
+  }, [editingTenant]);
 
   return (
     <Card className="w-full">
@@ -258,11 +277,7 @@ export const TenantList = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              // TODO: Implement edit functionality
-                              toast({
-                                title: "Edit Tenant",
-                                description: `Editing ${tenant.name}`,
-                              });
+                              setEditingTenant(tenant);
                             }}
                           >
                             <Edit className="h-4 w-4" />
@@ -275,6 +290,14 @@ export const TenantList = () => {
               </Table>
             </div>
           </div>
+        )}
+        
+        {/* Edit Tenant Dialog */}
+        {editingTenant && (
+          <TenantSetupForm 
+            editTenant={editingTenant}
+            onTenantUpdated={handleTenantUpdated}
+          />
         )}
       </CardContent>
     </Card>
