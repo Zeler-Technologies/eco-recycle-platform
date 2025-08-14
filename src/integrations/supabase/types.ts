@@ -4174,7 +4174,15 @@ export type Database = {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
+      export_all_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       export_all_tables_data: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      export_security_functions: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -4241,6 +4249,10 @@ export type Database = {
         Args:
           | { p_scrapyard_id: number }
           | { p_scrapyard_id: number; p_tenant_id: number }
+        Returns: string
+      }
+      generate_rls_policy_export: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       generate_secure_password: {
