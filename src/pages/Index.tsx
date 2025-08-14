@@ -66,6 +66,8 @@ const Index = () => {
       return <TenantDashboard />;
     case 'driver':
       return <Navigate to="/driver-app" replace />;
+    case 'customer':
+      return <Navigate to="/customer-app" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
