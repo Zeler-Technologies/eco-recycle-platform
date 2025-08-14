@@ -18,11 +18,12 @@ import {
   PieChart,
   ArrowLeft
 } from 'lucide-react';
-import { PricingCatalog } from './PricingCatalog';
-import { InvoiceManagement } from './InvoiceManagement';
-import { UsageMetering } from './UsageMetering';
-import { BillingAnalytics } from './BillingAnalytics';
-import { BillingSettings } from './BillingSettings';
+// Temporarily disable billing components that cause crashes
+// import { PricingCatalog } from './PricingCatalog';
+// import { InvoiceManagement } from './InvoiceManagement';
+// import { UsageMetering } from './UsageMetering';
+// import { BillingAnalytics } from './BillingAnalytics';
+// import { BillingSettings } from './BillingSettings';
 
 export const BillingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -239,7 +240,9 @@ export const BillingDashboard = () => {
           </TabsContent>
 
           <TabsContent value="pricing">
-            <PricingCatalog />
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">Pricing catalog temporarily disabled</p>
+            </div>
           </TabsContent>
 
           <TabsContent value="per-tenant">
@@ -400,19 +403,27 @@ export const BillingDashboard = () => {
           </TabsContent>
 
           <TabsContent value="invoices">
-            <InvoiceManagement />
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">Invoice management temporarily disabled</p>
+            </div>
           </TabsContent>
 
           <TabsContent value="usage">
-            <UsageMetering />
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">Usage metering temporarily disabled</p>
+            </div>
           </TabsContent>
 
           <TabsContent value="analytics">
-            <BillingAnalytics />
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">Analytics temporarily disabled</p>
+            </div>
           </TabsContent>
 
           <TabsContent value="settings">
-            <BillingSettings />
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">Settings temporarily disabled</p>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
