@@ -9,6 +9,7 @@ import { TenantList } from './TenantList';
 import APIConnectionsPanel from './API/APIConnectionsPanel';
 import TenantManagement from './TenantManagement';
 import UserManagement from './UserManagement';
+import { BillingDashboard } from './Billing/BillingDashboard';
 import DriverManagement from './DriverManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -37,6 +38,7 @@ const SuperAdminDashboard = () => {
   const [showAPIConnections, setShowAPIConnections] = useState(false);
   const [showTenantManagement, setShowTenantManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showBillingManagement, setShowBillingManagement] = useState(false);
   const [showTenantList, setShowTenantList] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -252,6 +254,10 @@ const SuperAdminDashboard = () => {
 
   if (showUserManagement) {
     return <UserManagement onBack={() => setShowUserManagement(false)} />;
+  }
+
+  if (showBillingManagement) {
+    return <BillingDashboard />;
   }
 
   if (showTenantList) {
@@ -475,7 +481,7 @@ const SuperAdminDashboard = () => {
                 <Users className="h-4 w-4 mr-2" />
                 Hantera Förare
               </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/billing'}>
+              <Button variant="outline" className="w-full justify-start" onClick={() => setShowBillingManagement(true)}>
                 <CreditCard className="h-4 w-4 mr-2" />
                 Billing & Invoices
               </Button>
