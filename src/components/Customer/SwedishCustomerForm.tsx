@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AccessibleInput, AccessibleTextarea } from '@/components/Common/AccessibleForm';
 import { validateSwedishPNR, validateSwedishOrgNumber } from '@/utils/swedishValidation';
-import { formatSwedishPhone, formatSwedishPostalCode } from '@/utils/swedishFormatting';
+import { formatSwedishPhone, formatSwedishPostalCode, formatSwedishCurrency } from '@/utils/swedishFormatting';
 import { GDPRConsent } from '@/components/Legal/GDPRConsent';
-import { Car, User, MapPin } from 'lucide-react';
+import { ProgressIndicator } from './ProgressIndicator';
+import { EnhancedQuoteDisplay } from './EnhancedQuoteDisplay';
+import { Car, User, MapPin, Calendar, Settings2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,7 +31,29 @@ interface FormData {
   registrationNumber: string;
   controlNumber: string;
   notes: string;
+  pickupAddress: string;
+  pickupPostalCode: string;
+  pickupCity: string;
+  preferredPickupDate: string;
+  contactMethod: 'phone' | 'email' | 'sms';
 }
+
+interface QuoteDisplay {
+  baseValue: number;
+  memberBonus?: number;
+  transportFee: number;
+  finalQuote: number;
+  pickupDate: string;
+  estimatedDistance: number;
+  carInfo: {
+    brand: string;
+    model: string;
+    year: number;
+    registration: string;
+  };
+}
+
+type FormStep = 'form' | 'quote' | 'gdpr' | 'success';
 
 interface FormErrors {
   [key: string]: string;
@@ -40,7 +64,7 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
   onBack,
   registrationNumber = ''
 }) => {
-  const [currentStep, setCurrentStep] = useState<'form' | 'gdpr' | 'success'>('form');
+  const [currentStep, setCurrentStep] = useState<FormStep>('form');
   const [formData, setFormData] = useState<FormData>({
     ownerName: '',
     pnr: '',
@@ -54,29 +78,68 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
     carYear: '',
     registrationNumber: registrationNumber,
     controlNumber: '',
-    notes: ''
+    notes: '',
+    pickupAddress: '',
+    pickupPostalCode: '',
+    pickupCity: '',
+    preferredPickupDate: '',
+    contactMethod: 'phone'
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quote, setQuote] = useState<QuoteDisplay | null>(null);
+  const [formProgress, setFormProgress] = useState(10);
   const { toast } = useToast();
 
-  const updateField = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Enhanced field formatters
+  const formatRegistrationNumber = useCallback((value: string): string => {
+    return value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6);
+  }, []);
+
+  const validateRegistrationNumber = useCallback((regNr: string): boolean => {
+    const patterns = [
+      /^[A-Z]{3}[0-9]{3}$/, // ABC123
+      /^[A-Z]{3}[0-9]{2}[A-Z]$/, // ABC12D
+      /^[0-9]{3}[A-Z]{3}$/, // 123ABC
+    ];
+    return patterns.some(pattern => pattern.test(regNr));
+  }, []);
+
+  const updateField = useCallback((field: keyof FormData, value: string) => {
+    let processedValue = value;
+    
+    // Real-time formatting
+    if (field === 'registrationNumber') {
+      processedValue = formatRegistrationNumber(value);
+    } else if (field === 'phone') {
+      processedValue = formatSwedishPhone(value);
+    } else if (field === 'postalCode' || field === 'pickupPostalCode') {
+      processedValue = formatSwedishPostalCode(value);
+    }
+
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
+    
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  };
 
-  const validateForm = (): boolean => {
+    // Update progress
+    const requiredFields = ['ownerName', 'pnr', 'phone', 'email', 'address', 'carBrand', 'carModel', 'registrationNumber'];
+    const updatedData = { ...formData, [field]: processedValue };
+    const filledFields = requiredFields.filter(f => updatedData[f as keyof FormData]?.toString().trim());
+    setFormProgress((filledFields.length / requiredFields.length) * 100);
+  }, [formatRegistrationNumber, errors, formData]);
+
+  const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
 
-    // Required fields
+    // Enhanced validations
     if (!formData.ownerName.trim()) {
       newErrors.ownerName = 'Namn är obligatoriskt';
     }
 
-    // PNR validation
+    // Enhanced PNR validation
     if (!formData.pnr.trim()) {
       newErrors.pnr = 'Personnummer är obligatoriskt';
     } else {
@@ -86,7 +149,14 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
       }
     }
 
-    // Phone validation
+    // Enhanced registration number validation
+    if (!formData.registrationNumber.trim()) {
+      newErrors.registrationNumber = 'Registreringsnummer är obligatoriskt';
+    } else if (!validateRegistrationNumber(formData.registrationNumber)) {
+      newErrors.registrationNumber = 'Ogiltigt registreringsnummer format (ABC123, ABC12D eller 123ABC)';
+    }
+
+    // Enhanced phone validation
     if (!formData.phone.trim()) {
       newErrors.phone = 'Telefonnummer är obligatoriskt';
     } else {
@@ -110,15 +180,15 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
 
     if (!formData.postalCode.trim()) {
       newErrors.postalCode = 'Postnummer är obligatoriskt';
-    } else if (!/^\d{5}$/.test(formData.postalCode.replace(/\s/g, ''))) {
-      newErrors.postalCode = 'Postnummer måste vara 5 siffror';
+    } else if (!/^\d{3}\s?\d{2}$/.test(formData.postalCode)) {
+      newErrors.postalCode = 'Postnummer måste vara i format 123 45';
     }
 
     if (!formData.city.trim()) {
       newErrors.city = 'Ort är obligatorisk';
     }
 
-    // Car information
+    // Car information with enhanced validation
     if (!formData.carBrand.trim()) {
       newErrors.carBrand = 'Bilmärke är obligatoriskt';
     }
@@ -127,22 +197,96 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
       newErrors.carModel = 'Bilmodell är obligatorisk';
     }
 
-    if (!formData.registrationNumber.trim()) {
-      newErrors.registrationNumber = 'Registreringsnummer är obligatoriskt';
-    }
-
     if (!formData.controlNumber.trim()) {
       newErrors.controlNumber = 'Kontrollnummer är obligatoriskt';
+    } else if (!/^\d{10}$/.test(formData.controlNumber)) {
+      newErrors.controlNumber = 'Kontrollnummer måste vara 10 siffror';
+    }
+
+    // Year validation
+    if (formData.carYear) {
+      const year = parseInt(formData.carYear);
+      const currentYear = new Date().getFullYear();
+      if (year < 1950 || year > currentYear) {
+        newErrors.carYear = `Årsmodell måste vara mellan 1950 och ${currentYear}`;
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  }, [formData, validateRegistrationNumber]);
+
+  const generateQuote = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      // First, create the customer request
+      const { data: requestData, error: requestError } = await supabase
+        .from('customer_requests')
+        .insert({
+          owner_name: formData.ownerName,
+          pnr_num: formData.pnr,
+          car_registration_number: formData.registrationNumber,
+          car_brand: formData.carBrand,
+          car_model: formData.carModel,
+          car_year: parseInt(formData.carYear) || null,
+          control_number: formData.controlNumber,
+          owner_address: formData.address,
+          owner_postal_code: formData.postalCode,
+          pickup_address: formData.pickupAddress || formData.address,
+          pickup_postal_code: formData.pickupPostalCode || formData.postalCode,
+          contact_phone: formData.phone,
+          special_instructions: formData.notes,
+          preferred_contact_method: formData.contactMethod,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (requestError) throw requestError;
+
+      // Generate enhanced quote
+      const { data: quoteData, error: quoteError } = await supabase
+        .rpc('generate_enhanced_quote', {
+          p_customer_request_id: requestData.id,
+          p_pickup_location: formData.pickupAddress || formData.address,
+          p_preferred_date: formData.preferredPickupDate || null
+        });
+
+      if (quoteError) throw quoteError;
+
+      // Type assertion for the RPC function response
+      const quote = quoteData as any;
+      if (quote?.success) {
+        setQuote(quote);
+        setCurrentStep('quote');
+      } else {
+        throw new Error(quote?.error || 'Failed to generate quote');
+      }
+
+    } catch (error: any) {
+      toast({
+        title: "Fel vid offertberäkning",
+        description: error.message || "Något gick fel. Försök igen.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFormSubmit = () => {
     if (validateForm()) {
-      setCurrentStep('gdpr');
+      generateQuote();
     }
+  };
+
+  const handleQuoteAccept = () => {
+    setCurrentStep('gdpr');
+  };
+
+  const handleQuoteBack = () => {
+    setCurrentStep('form');
   };
 
   const handleGDPRConsent = async (consents: any) => {
@@ -197,15 +341,36 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
     });
   };
 
+  if (currentStep === 'quote' && quote) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-2xl mx-auto pt-8">
+          <ProgressIndicator currentStep={currentStep} progress={formProgress} />
+          <div className="mt-8">
+            <EnhancedQuoteDisplay
+              quote={quote}
+              onAccept={handleQuoteAccept}
+              onBack={handleQuoteBack}
+              isLoading={isSubmitting}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (currentStep === 'gdpr') {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-2xl mx-auto pt-8">
-          <GDPRConsent
-            onAccept={handleGDPRConsent}
-            onDecline={handleGDPRDecline}
-            companyName="Panta Bilen"
-          />
+          <ProgressIndicator currentStep={currentStep} progress={100} />
+          <div className="mt-8">
+            <GDPRConsent
+              onAccept={handleGDPRConsent}
+              onDecline={handleGDPRDecline}
+              companyName="Panta Bilen"
+            />
+          </div>
         </div>
       </div>
     );
@@ -230,10 +395,15 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
+        {/* Progress Indicator */}
+        <div className="mb-8">
+          <ProgressIndicator currentStep={currentStep} progress={formProgress} />
+        </div>
+
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Bilhämtning</h1>
-          <p className="text-gray-600">Fyll i dina uppgifter för att boka hämtning av din bil</p>
+          <p className="text-gray-600">Fyll i dina uppgifter för att få en offert på din bil</p>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); handleFormSubmit(); }} className="space-y-8">
@@ -421,9 +591,16 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-primary hover:bg-primary/90"
             >
-              {isSubmitting ? 'Skickar...' : 'Fortsätt'}
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Beräknar offert...
+                </>
+              ) : (
+                'Få offert'
+              )}
             </Button>
           </div>
         </form>
