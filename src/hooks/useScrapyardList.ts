@@ -10,6 +10,13 @@ interface Scrapyard {
   distance_km: number;
   bid_amount?: number;
   is_premium?: boolean;
+  tenant_id?: number;
+  is_active?: boolean;
+  latitude?: number;
+  longitude?: number;
+  contact_person?: string;
+  contact_email?: string;
+  contact_phone?: string;
 }
 
 interface VehicleAddress {
@@ -35,132 +42,174 @@ const mockGetVehicleAddress = async (registrationNumber: string): Promise<Vehicl
          { postal_code: '11122', city: 'Stockholm', latitude: 59.3293, longitude: 18.0686 };
 };
 
-// Function to generate dummy tenants if only one exists
-const generateDummyTenants = async (vehicleLocation: VehicleAddress) => {
-  const dummyTenants = [
-    {
-      name: 'Bil & Skrot AB',
-      country: 'Sweden',
-      service_type: 'car_recycling',
-      base_address: 'Industrivägen 15, 12345 Teststad',
-      latitude: vehicleLocation.latitude + 0.5,
-      longitude: vehicleLocation.longitude + 0.3,
-    },
-    {
-      name: 'Återvinning Nord',
-      country: 'Sweden', 
-      service_type: 'car_recycling',
-      base_address: 'Recycling Road 42, 67890 Mockville',
-      latitude: vehicleLocation.latitude - 0.3,
-      longitude: vehicleLocation.longitude - 0.2,
-    },
-  ];
-
-  for (const tenant of dummyTenants) {
-    const { error } = await supabase
-      .from('tenants')
-      .insert({
-        ...tenant,
-        date: new Date().toISOString().split('T')[0],
-      });
-    
-    if (error) {
-      console.error('Error inserting dummy tenant:', error);
-    }
-  }
-};
-
-export const useScrapyardList = (registrationNumber: string) => {
+export const useScrapyardList = (registrationNumber?: string, tenantId?: number) => {
   const [scrapyards, setScrapyards] = useState<Scrapyard[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedScrapyard, setSelectedScrapyard] = useState<Scrapyard | null>(null);
 
   useEffect(() => {
-    if (!registrationNumber) return;
-
     const fetchScrapyards = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // 1. Get vehicle address
-        const vehicleLocation = await mockGetVehicleAddress(registrationNumber);
+        let scrapyardsData: Scrapyard[] = [];
 
-        // 2. Check how many tenants exist
-        const { data: existingTenants, error: tenantsError } = await supabase
-          .from('tenants')
-          .select('*');
+        if (registrationNumber) {
+          // Fetch nearby scrapyards based on vehicle location
+          const vehicleLocation = await mockGetVehicleAddress(registrationNumber);
 
-        if (tenantsError) {
-          throw new Error('Failed to fetch tenants');
-        }
+          // Get nearby scrapyards using the RPC function
+          const { data: nearbyScrapyards, error: scrapyardsError } = await supabase
+            .rpc('find_scrapyards_by_material', {
+              p_material: 'stål', // Default material
+              p_latitude: vehicleLocation.latitude,
+              p_longitude: vehicleLocation.longitude,
+              p_max_distance: 100
+            });
 
-        // 3. If only one tenant exists, generate dummy ones
-        if (existingTenants && existingTenants.length === 1) {
-          await generateDummyTenants(vehicleLocation);
-        }
+          if (scrapyardsError) {
+            console.warn('Failed to fetch nearby scrapyards using RPC, falling back to direct query');
+            
+            // Fallback to direct query
+            const { data: directScrapyards, error: directError } = await supabase
+              .from('scrapyards')
+              .select('*')
+              .eq('is_active', true)
+              .order('name');
 
-        // 4. Get nearby scrapyards with distance calculation
-        const { data: nearbyScrapyards, error: scrapyardsError } = await supabase
-          .rpc('find_nearby_scrapyards', {
-            p_latitude: vehicleLocation.latitude,
-            p_longitude: vehicleLocation.longitude,
-            p_max_distance: 100
-          });
+            if (directError) throw directError;
+            
+            scrapyardsData = (directScrapyards || []).map(scrapyard => ({
+              id: scrapyard.id,
+              name: scrapyard.name,
+              address: scrapyard.address || '',
+              postal_code: scrapyard.postal_code || '',
+              city: scrapyard.city || '',
+              distance_km: 0, // Cannot calculate without coordinates
+              tenant_id: scrapyard.tenant_id,
+              is_active: scrapyard.is_active,
+              latitude: scrapyard.latitude ? Number(scrapyard.latitude) : undefined,
+              longitude: scrapyard.longitude ? Number(scrapyard.longitude) : undefined,
+              contact_person: scrapyard.contact_person || undefined,
+              contact_email: scrapyard.contact_email || undefined,
+              contact_phone: scrapyard.contact_phone || undefined
+            }));
+          } else {
+            scrapyardsData = (nearbyScrapyards || []).map((scrapyard: any) => ({
+              id: scrapyard.id,
+              name: scrapyard.name,
+              address: scrapyard.address,
+              postal_code: scrapyard.postal_code || '',
+              city: scrapyard.city,
+              distance_km: scrapyard.distance_km || 0,
+              tenant_id: scrapyard.tenant_id,
+              is_active: true
+            }));
+          }
 
-        if (scrapyardsError) {
-          throw new Error('Failed to fetch nearby scrapyards');
-        }
+          // Get active bidding data
+          const { data: activeBids, error: bidsError } = await supabase
+            .from('bidding_system')
+            .select('*')
+            .eq('is_active', true)
+            .gte('bid_end_date', new Date().toISOString().split('T')[0]);
 
-        // 5. Get active bidding data
-        const { data: activeBids, error: bidsError } = await supabase
-          .rpc('get_active_tenant_bids');
+          if (!bidsError && activeBids) {
+            // Add bid information to scrapyards
+            scrapyardsData = scrapyardsData.map(scrapyard => {
+              const bid = activeBids.find(b => b.tenant_id === scrapyard.tenant_id);
+              return {
+                ...scrapyard,
+                bid_amount: bid?.bid_amount ? Number(bid.bid_amount) : undefined,
+                is_premium: !!bid
+              };
+            });
 
-        if (bidsError) {
-          console.warn('Failed to fetch bidding data:', bidsError);
-        }
+            // Sort by bidding position first, then by distance
+            scrapyardsData.sort((a, b) => {
+              if (a.is_premium && !b.is_premium) return -1;
+              if (!a.is_premium && b.is_premium) return 1;
+              
+              if (a.bid_amount && b.bid_amount) {
+                return b.bid_amount - a.bid_amount;
+              }
+              
+              return a.distance_km - b.distance_km;
+            });
+          }
+        } else if (tenantId) {
+          // Fetch scrapyards for a specific tenant
+          const { data: tenantScrapyards, error: tenantError } = await supabase
+            .from('scrapyards')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .order('name');
 
-        // 6. Combine and sort data
-        const scrapyardsWithBids = (nearbyScrapyards || []).map((scrapyard: any) => {
-          const bid = activeBids?.find((b: any) => b.scrapyard_id === scrapyard.id);
-          return {
+          if (tenantError) throw tenantError;
+
+          scrapyardsData = (tenantScrapyards || []).map(scrapyard => ({
             id: scrapyard.id,
             name: scrapyard.name,
-            address: scrapyard.address,
-            postal_code: scrapyard.postal_code,
-            city: scrapyard.city,
-            distance_km: scrapyard.distance_km,
-            bid_amount: bid?.bid_amount,
-            is_premium: !!bid,
-          };
-        });
+            address: scrapyard.address || '',
+            postal_code: scrapyard.postal_code || '',
+            city: scrapyard.city || '',
+            distance_km: 0,
+            tenant_id: scrapyard.tenant_id,
+            is_active: scrapyard.is_active,
+            latitude: scrapyard.latitude ? Number(scrapyard.latitude) : undefined,
+            longitude: scrapyard.longitude ? Number(scrapyard.longitude) : undefined,
+            contact_person: scrapyard.contact_person || undefined,
+            contact_email: scrapyard.contact_email || undefined,
+            contact_phone: scrapyard.contact_phone || undefined
+          }));
+        } else {
+          // Fetch all active scrapyards
+          const { data: allScrapyards, error: allError } = await supabase
+            .from('scrapyards')
+            .select('*')
+            .eq('is_active', true)
+            .order('name');
 
-        // 7. Sort by bidding position first, then by distance
-        const sortedScrapyards = scrapyardsWithBids.sort((a, b) => {
-          // Premium (bidding) partners first
-          if (a.is_premium && !b.is_premium) return -1;
-          if (!a.is_premium && b.is_premium) return 1;
-          
-          // If both have bids, sort by bid amount (highest first)
-          if (a.bid_amount && b.bid_amount) {
-            return b.bid_amount - a.bid_amount;
-          }
-          
-          // Otherwise sort by distance (closest first)
-          return a.distance_km - b.distance_km;
-        });
+          if (allError) throw allError;
 
-        setScrapyards(sortedScrapyards);
+          scrapyardsData = (allScrapyards || []).map(scrapyard => ({
+            id: scrapyard.id,
+            name: scrapyard.name,
+            address: scrapyard.address || '',
+            postal_code: scrapyard.postal_code || '',
+            city: scrapyard.city || '',
+            distance_km: 0,
+            tenant_id: scrapyard.tenant_id,
+            is_active: scrapyard.is_active,
+            latitude: scrapyard.latitude ? Number(scrapyard.latitude) : undefined,
+            longitude: scrapyard.longitude ? Number(scrapyard.longitude) : undefined,
+            contact_person: scrapyard.contact_person || undefined,
+            contact_email: scrapyard.contact_email || undefined,
+            contact_phone: scrapyard.contact_phone || undefined
+          }));
+        }
+
+        setScrapyards(scrapyardsData);
       } catch (err) {
+        console.error('Error fetching scrapyards:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
+        setScrapyards([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchScrapyards();
-  }, [registrationNumber]);
+  }, [registrationNumber, tenantId]);
+
+  const refreshScrapyards = () => {
+    // Trigger re-fetch by changing a dependency or calling fetchScrapyards directly
+    setLoading(true);
+    // The useEffect will handle the refetch
+  };
 
   return {
     scrapyards,
@@ -168,5 +217,6 @@ export const useScrapyardList = (registrationNumber: string) => {
     error,
     selectedScrapyard,
     setSelectedScrapyard,
+    refreshScrapyards
   };
 };

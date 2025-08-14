@@ -167,8 +167,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // Map mock tenant_id to actual database tenant_id
-  const tenantId = user?.tenant_id === 'tenant_1' ? 1234 : null;
+  // Use tenant_id directly from user
+  const tenantId = user?.tenant_id || null;
 
   const handleSaveTemplate = (template: MessageTemplate) => {
     setTemplates(prev => prev.map(t => t.id === template.id ? template : t));

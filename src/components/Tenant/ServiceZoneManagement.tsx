@@ -78,8 +78,8 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // Map mock tenant_id to actual database tenant_id
-  const tenantId = user?.tenant_id === 'tenant_1' ? 1234 : null;
+  // Use tenant_id directly from user
+  const tenantId = user?.tenant_id || null;
 
   // Load data on component mount
   useEffect(() => {

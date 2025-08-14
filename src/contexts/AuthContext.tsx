@@ -1,36 +1,31 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// import { useToast } from '@/hooks/use-toast';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { DatabaseUserProfile } from '@/types/database';
 
-export type UserRole = 'super_admin' | 'tenant_admin' | 'driver' | 'customer';
+export type UserRole = 'super_admin' | 'tenant_admin' | 'scrapyard_admin' | 'scrapyard_staff' | 'driver' | 'customer';
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: UserRole;
-  tenant_id?: string;
+  tenant_id?: number;
+  scrapyard_id?: number;
   tenant_name?: string;
-  permissions?: string[];
-  is_active: boolean;
-  language?: string;
+  tenant_country?: string;
 }
-
-// Local type for whoami RPC
-type WhoAmIRow = {
-  user_id: string;
-  role: 'super_admin' | 'tenant_admin' | 'driver' | 'customer' | 'user' | string;
-  tenant_id: number | null;
-};
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
+  isAnonymous: boolean;
   isAuthenticated: boolean;
-  theme: 'admin' | 'tenant' | 'customer' | 'default';
+  theme: string;
+  hasPermission: (action: string, resource: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,189 +33,149 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    console.error('useAuth must be used within an AuthProvider');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-// Mock user data for development
-const mockUsers: User[] = [
-  {
-    id: '00000000-0000-0000-0000-000000000001',
-    email: 'admin@superadmin.com',
-    name: 'Super Admin',
-    role: 'super_admin',
-    permissions: ['full_access'],
-    is_active: true,
-    language: 'en'
-  },
-  {
-    id: '2',
-    email: 'admin@scrapyard.se',
-    name: 'Scrap Yard Admin',
-    role: 'tenant_admin',
-    tenant_id: 'tenant_1',
-    tenant_name: 'Panta Bilen Stockholm',
-    permissions: ['manage_orders', 'manage_drivers', 'view_analytics'],
-    is_active: true,
-    language: 'sv'
-  },
-  {
-    id: '3',
-    email: 'driver@scrapyard.se',
-    name: 'Erik Andersson',
-    role: 'driver',
-    tenant_id: 'tenant_1',
-    tenant_name: 'Panta Bilen Stockholm',
-    permissions: ['view_assigned_orders', 'update_order_status'],
-    is_active: true,
-    language: 'sv'
-  },
-  {
-    id: '4',
-    email: 'customer@demo.se',
-    name: 'Anna Larsson',
-    role: 'customer',
-    permissions: ['request_pickup', 'view_quotes', 'track_orders'],
-    is_active: true,
-    language: 'sv'
-  }
-];
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  // const { toast } = useToast();
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
-  console.log('AuthProvider rendered, user:', user, 'loading:', loading);
-
-  const logWhoAmI = async (context: string) => {
-    try {
-      const { data: who, error: whoErr } = await supabase
-        .rpc('whoami' as any)
-        .returns<WhoAmIRow[]>();
-      const me = who?.[0] ?? null;
-      if (whoErr) {
-        console.warn(`[whoami][${context}] error:`, whoErr.message);
-      } else {
-        console.info(`[whoami][${context}]`, me);
-      }
-    } catch (e) {
-      console.warn(`[whoami][${context}] failed`, e);
-    }
-  };
-
-  // Real Supabase authentication check - SIMPLIFIED to bypass auth_users table issues
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
-      
-      if (session?.user) {
-        // Create user data directly from Supabase session without querying auth_users table
-        let userRole: UserRole = 'super_admin';
-        let tenantId: string | undefined = undefined;
+    // Handle both authenticated and anonymous sessions
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        // Map demo emails to roles
-        if (session.user.email === 'admin@scrapyard.se') {
-          userRole = 'tenant_admin';
-          tenantId = '1';
-        } else if (session.user.email === 'driver@scrapyard.se' || session.user.email === 'mikaela@scrapyard.se') {
-          userRole = 'driver';
-          tenantId = '1';
-        } else if (session.user.email === 'customer@demo.se') {
-          userRole = 'customer';
+        if (currentSession?.user) {
+          setSession(currentSession);
+          await fetchUserProfile(currentSession.user.id);
+        } else {
+          // Check if we're on customer-facing routes that allow anonymous access
+          const isCustomerRoute = window.location.pathname.startsWith('/customer') || 
+                                window.location.pathname === '/';
+          setIsAnonymous(isCustomerRoute);
         }
-
-        const userData: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.email?.split('@')[0] || 'User',
-          role: userRole,
-          tenant_id: tenantId,
-          is_active: true,
-          language: 'en'
-        };
-        
-        console.log('Setting user:', userData);
-        setUser(userData);
-
-        // Log whoami for debugging RLS context
-        logWhoAmI('onAuthStateChange');
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // Handle existing session same way as above
-        let userRole: UserRole = 'super_admin';
-        let tenantId: string | undefined = undefined;
-        
-        if (session.user.email === 'admin@scrapyard.se') {
-          userRole = 'tenant_admin';
-          tenantId = '1';
-        } else if (session.user.email === 'driver@scrapyard.se' || session.user.email === 'mikaela@scrapyard.se') {
-          userRole = 'driver';
-          tenantId = '1';
-        } else if (session.user.email === 'customer@demo.se') {
-          userRole = 'customer';
+    initializeAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        try {
+          setSession(newSession);
+          
+          if (newSession?.user) {
+            await fetchUserProfile(newSession.user.id);
+            setIsAnonymous(false);
+          } else {
+            setUser(null);
+            const isCustomerRoute = window.location.pathname.startsWith('/customer') || 
+                                  window.location.pathname === '/';
+            setIsAnonymous(isCustomerRoute);
+          }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+        } finally {
+          setLoading(false);
         }
-
-        const userData: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.email?.split('@')[0] || 'User',
-          role: userRole,
-          tenant_id: tenantId,
-          is_active: true,
-          language: 'en'
-        };
-        
-        console.log('Setting user from existing session:', userData);
-        setUser(userData);
-
-        // Log whoami for debugging RLS context
-        logWhoAmI('getSession');
       }
-      setLoading(false);
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    setLoading(true);
+  // For now, use mock data since user_profiles table may not be fully set up
+  const fetchUserProfile = async (userId: string) => {
     try {
-      // Super admin demo bypass (no Supabase call)
-      if (email === 'admin@superadmin.com' && password === 'admin123') {
-        const superAdminUser: User = {
-          id: '00000000-0000-0000-0000-000000000001',
-          email: 'admin@superadmin.com',
+      // Get user from auth
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser.user) return;
+
+      // For now, determine role based on email patterns since user_profiles may not exist yet
+      let role: UserRole = 'customer';
+      let tenantId: number | undefined = undefined;
+      let tenantName: string | undefined = undefined;
+
+      if (authUser.user.email?.includes('admin@pantabilen.se')) {
+        role = 'super_admin';
+        tenantId = 1;
+        tenantName = 'PantaBilen AB';
+      } else if (authUser.user.email?.includes('@scrapyard.se')) {
+        role = 'tenant_admin';
+        tenantId = 1;
+        tenantName = 'Panta Bilen Stockholm';
+      } else if (authUser.user.email?.includes('driver@')) {
+        role = 'driver';
+        tenantId = 1;
+        tenantName = 'Panta Bilen Stockholm';
+      }
+
+      setUser({
+        id: userId,
+        email: authUser.user.email || '',
+        name: authUser.user.user_metadata?.full_name || authUser.user.email?.split('@')[0] || 'User',
+        role,
+        tenant_id: tenantId,
+        tenant_name: tenantName,
+        tenant_country: 'Sverige'
+      });
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Set fallback user data
+      const { data: authUser } = await supabase.auth.getUser();
+      if (authUser.user) {
+        setUser({
+          id: userId,
+          email: authUser.user.email || '',
+          name: authUser.user.email?.split('@')[0] || 'User',
+          role: 'customer'
+        });
+      }
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      
+      // Special handling for super admin bypass during development
+      if (email === 'admin@pantabilen.se' && password === 'admin123') {
+        const mockUser: User = {
+          id: 'mock-super-admin',
+          email: 'admin@pantabilen.se',
           name: 'Super Admin',
           role: 'super_admin',
-          is_active: true,
-          language: 'en'
+          tenant_id: 1,
+          tenant_name: 'PantaBilen AB',
+          tenant_country: 'Sverige'
         };
-        setUser(superAdminUser);
-        console.log('Super admin login successful');
+        setUser(mockUser);
+        setIsAnonymous(false);
         return;
       }
 
-      // For all other accounts, only attempt sign-in.
-      // IMPORTANT: Do NOT auto sign-up to avoid token churn and unexpected emails.
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        throw new Error(error.message || 'Invalid credentials');
-      }
+      // Real Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      // onAuthStateChange will populate the user state on success
-      console.log('Authentication successful for:', email);
+      if (error) throw error;
+
+      // Session and user will be set by the onAuthStateChange listener
+      
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Login error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -228,28 +183,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    console.log('Logged out successfully');
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setIsAnonymous(window.location.pathname.startsWith('/customer') || window.location.pathname === '/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Helper for checking permissions
+  const hasPermission = (action: string, resource: string): boolean => {
+    if (!user && isAnonymous) {
+      // Anonymous users can only submit customer requests
+      return resource === 'customer_request' && action === 'create';
+    }
+    
+    if (!user) return false;
+
+    // Permission logic based on role
+    switch (user.role) {
+      case 'super_admin':
+        return true; // Super admin can do everything
+      case 'tenant_admin':
+        return resource.includes('tenant') || resource.includes('driver') || resource.includes('customer');
+      case 'driver':
+        return resource === 'pickup_request' || (resource === 'driver' && action === 'update_own');
+      case 'customer':
+        return resource === 'customer_request';
+      default:
+        return false;
+    }
+  };
+
+  // Theme based on user role
   const theme = user?.role === 'super_admin' ? 'admin' : 
-               user?.role === 'tenant_admin' ? 'tenant' : 
-               user?.role === 'customer' ? 'customer' : 'default';
-
-  const value: AuthContextType = {
-    user,
-    login,
-    logout,
-    loading,
-    isAuthenticated: !!user,
-    theme
-  };
-
-  console.log('AuthProvider providing value:', value);
+               user?.role === 'driver' ? 'driver' : 'default';
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session,
+      login, 
+      logout, 
+      loading, 
+      isAnonymous,
+      isAuthenticated: !!user,
+      theme,
+      hasPermission
+    }}>
       {children}
     </AuthContext.Provider>
   );
