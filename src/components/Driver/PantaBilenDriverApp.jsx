@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDriverIntegration } from '@/hooks/useDriverIntegration';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { 
   STATUS_TEXTS, 
   STATUS_COLORS, 
@@ -12,7 +13,13 @@ import {
 } from '@/constants/driverAppConstants';
 import { normalizeDriverStatus } from '@/utils/driverStatus';
 import RecentStatusChanges from '@/components/Driver/RecentStatusChanges';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { LogOut, CheckCircle } from 'lucide-react';
 const PantaBilenDriverApp = () => {
+  // Use real Supabase authentication
+  const { user, logout } = useSupabaseAuth();
+  
   // Use the driver integration hook 
   const { 
     pickups,
@@ -141,6 +148,35 @@ const PantaBilenDriverApp = () => {
       </div>
     );
   }
+
+  const AuthStatusBar = () => (
+    <Card className="m-4 border-green-200 bg-green-50">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <div>
+              <p className="text-sm font-semibold text-green-900">
+                ✅ Real Supabase Authentication Active
+              </p>
+              <p className="text-xs text-green-700">
+                Logged in as: {user?.email} | Role: {user?.role} | Driver: {currentDriver?.full_name}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={logout}
+            className="border-green-300 text-green-700 hover:bg-green-100"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   const StatusBar = () => (
     <div className="bg-gray-900 text-white px-5 py-2 flex justify-between items-center text-base font-semibold">
@@ -452,6 +488,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <AuthStatusBar />
       <StatusBar />
       <AppHeader />
       <TabBar />

@@ -1,41 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Shield, Car, Recycle, Smartphone } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Building2, Shield, Car, Recycle, Smartphone, Loader2 } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, user, loading } = useAuth();
+  const [error, setError] = useState('');
+  const { login, user, loading } = useSupabaseAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user && !loading) {
-      console.log('User is already logged in, redirecting to home');
-      navigate('/', { replace: true });
+      console.log('User is already logged in, redirecting to driver app');
+      navigate('/driver-app', { replace: true });
     }
   }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
     
     try {
       console.log('Login attempt with:', email);
-      await login(email, password);
-      console.log('Login successful, navigating to home');
-      // Navigate will happen automatically via auth state change
-    } catch (error: any) {
-      console.error('Login failed:', error);
-      // Show error to user
-      alert(error?.message || 'Login failed. Please check your credentials.');
+      const { error: loginError } = await login(email, password);
+      
+      if (loginError) {
+        setError(loginError.message || 'An error occurred during login');
+      } else {
+        console.log('Login successful, will redirect automatically');
+      }
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      setError(err?.message || 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -43,60 +49,20 @@ const Login = () => {
 
   const demoAccounts = [
     {
-      role: 'Super Admin',
-      email: 'admin@pantabilen.se',
-      password: 'admin123',
-      description: 'Full platform access - all tenants, users, and system configuration',
-      icon: Shield,
-      color: 'bg-red-600'
-    },
-    {
-      role: 'Tenant Admin - Stockholm',
-      email: 'admin@stockholm.pantabilen.se',
-      password: 'stockholm123',
-      description: 'Stockholm tenant management - drivers, customers, orders',
-      icon: Building2,
-      color: 'bg-blue-600'
-    },
-    {
-      role: 'Tenant Admin - Göteborg',
-      email: 'admin@goteborg.pantabilen.se',
-      password: 'goteborg123',
-      description: 'Göteborg tenant management - separate tenant operations',
-      icon: Building2,
-      color: 'bg-green-600'
-    },
-    {
-      role: 'Scrapyard Admin',
-      email: 'admin@skrot.stockholm.se',
-      password: 'skrot123',
-      description: 'Scrapyard operations - vehicle processing and logistics',
-      icon: Recycle,
-      color: 'bg-orange-600'
-    },
-    {
       role: 'Driver - Erik',
       email: 'erik@pantabilen.se',
-      password: 'driver123',
-      description: 'Vehicle pickup driver - mobile app and route management',
+      password: 'SecurePass123!',
+      description: 'Real Supabase auth user - Erik Andersson driver account',
       icon: Car,
       color: 'bg-purple-600'
     },
     {
       role: 'Driver - Anna',
       email: 'anna@pantabilen.se',
-      password: 'driver123',
-      description: 'Vehicle pickup driver - alternative driver account',
+      password: 'SecurePass123!',
+      description: 'Real Supabase auth user - Anna Johansson driver account',
       icon: Car,
       color: 'bg-indigo-600'
-    },
-    {
-      role: 'Customer',
-      email: 'customer@example.se',
-      password: 'customer123',
-      description: 'Customer portal - submit car recycling requests and track status',
-      icon: Car,
-      color: 'bg-teal-600'
     }
   ];
 
@@ -104,6 +70,14 @@ const Login = () => {
     setEmail(email);
     setPassword(password);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
@@ -113,15 +87,21 @@ const Login = () => {
           <CardHeader className="space-y-1">
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="h-8 w-8 text-brand-blue" />
-              <h1 className="text-2xl font-bold">Car Recycling Platform</h1>
+              <h1 className="text-2xl font-bold">Driver App - Real Auth</h1>
             </div>
-            <CardTitle className="text-2xl">Sign in to your account</CardTitle>
+            <CardTitle className="text-2xl">Sign in with Supabase</CardTitle>
             <CardDescription>
-              Enter your credentials to access the platform
+              Real authentication powered by Supabase
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -131,6 +111,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -142,6 +123,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <Button
@@ -149,18 +131,25 @@ const Login = () => {
                 className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Demo Accounts */}
+        {/* Real Test Accounts */}
         <Card className="shadow-custom-xl bg-white/95 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Test Accounts</CardTitle>
+            <CardTitle className="text-xl">Real Test Accounts</CardTitle>
             <CardDescription>
-              Click on any account to automatically fill credentials. Each account provides different access levels for testing functionality.
+              These are actual Supabase Auth users linked to driver records in the database. Click to auto-fill credentials.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -187,6 +176,12 @@ const Login = () => {
                 {index < demoAccounts.length - 1 && <Separator />}
               </div>
             ))}
+            
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✅ These users are now stored in Supabase Auth and linked to driver records via UUIDs
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

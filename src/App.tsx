@@ -3,77 +3,41 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import CustomerApp from "./pages/CustomerApp";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { BillingDashboard } from "./components/SuperAdmin/Billing/BillingDashboard";
-import BankIDLogin from "./components/BankID/BankIDLogin";
+import ProtectedDriverRoute from "./components/ProtectedDriverRoute";
 import PantaBilenDriverApp from './components/Driver/PantaBilenDriverApp';
-import TenantCustomersPage from './pages/TenantCustomers';
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <SupabaseAuthProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route 
-                path="/" 
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/billing" 
-                element={
-                  <ProtectedRoute>
-                    <BillingDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="/bankid" element={<BankIDLogin onLoginSuccess={() => {}} />} />
-              <Route 
-                path="/customer-app" 
-                element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <CustomerApp />
-                  </ProtectedRoute>
-                } 
-              />
+              <Route path="/" element={<Login />} />
               <Route 
                 path="/driver-app" 
                 element={
-                  <ProtectedRoute allowedRoles={['driver']}>
+                  <ProtectedDriverRoute>
                     <PantaBilenDriverApp />
-                  </ProtectedRoute>
+                  </ProtectedDriverRoute>
                 } 
               />
-              <Route 
-                path="/tenant-customers" 
-                element={
-                  <ProtectedRoute allowedRoles={['tenant_admin']}>
-                    <TenantCustomersPage />
-                  </ProtectedRoute>
-                } 
-              />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              {/* Catch-all route for any unmatched paths */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </AuthProvider>
+      </SupabaseAuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );
