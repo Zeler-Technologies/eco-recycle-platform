@@ -296,8 +296,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Check for test account login
       const testAccount = testAccounts[email as keyof typeof testAccounts];
       if (testAccount && password === testAccount.password) {
+        console.log('Test account login successful:', testAccount.user);
         setUser(testAccount.user);
         setIsAnonymous(false);
+        
+        // Small delay to ensure state is set before navigation
+        setTimeout(() => {
+          console.log('User state should be set now');
+        }, 100);
+        
         return;
       }
 

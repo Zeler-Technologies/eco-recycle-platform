@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,20 +12,30 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !loading) {
+      console.log('User is already logged in, redirecting to home');
+      navigate('/', { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      console.log('Login attempt with:', email);
       await login(email, password);
-      // Navigate to main dashboard after successful login
-      navigate('/');
-    } catch (error) {
+      console.log('Login successful, navigating to home');
+      // Navigate will happen automatically via auth state change
+    } catch (error: any) {
       console.error('Login failed:', error);
-      // Error handling is done in AuthContext
+      // Show error to user
+      alert(error?.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
