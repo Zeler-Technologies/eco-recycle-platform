@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Save, RotateCcw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { fixSwedishEncoding } from '@/utils/swedishEncoding';
 
 interface PricingManagementProps {
   onBack?: () => void;
@@ -128,8 +129,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
         });
         setLastSaved(new Date());
         toast({
-          title: "Inställningar laddade",
-          description: "Sparade prisinställningar har laddats från minnet.",
+          title: fixSwedishEncoding("Inställningar laddade"),
+          description: fixSwedishEncoding("Sparade prisinställningar har laddats från minnet."),
         });
       } else {
         console.log('No existing pricing settings found, using defaults');
@@ -138,8 +139,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
           tenantId
         });
         toast({
-          title: "Standardinställningar",
-          description: "Använder standardvärden för prisinställningar.",
+          title: fixSwedishEncoding("Standardinställningar"),
+          description: fixSwedishEncoding("Använder standardvärden för prisinställningar."),
         });
       }
     } catch (err) {
@@ -170,15 +171,15 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       setLastSaved(new Date());
 
       toast({
-        title: "Sparades framgångsrikt",
-        description: "Prisinställningarna har sparats och är nu aktiva för prisberäkningar.",
+        title: fixSwedishEncoding("Sparades framgångsrikt"),
+        description: fixSwedishEncoding("Prisinställningarna har sparats och är nu aktiva för prisberäkningar."),
       });
 
     } catch (err) {
       console.error('Error saving pricing settings:', err);
       toast({
-        title: "Fel vid sparning",
-        description: "Kunde inte spara prisinställningarna. Försök igen.",
+        title: fixSwedishEncoding("Fel vid sparning"),
+        description: fixSwedishEncoding("Kunde inte spara prisinställningarna. Försök igen."),
         variant: "destructive"
       });
     } finally {
@@ -218,11 +219,11 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
     );
 
     if (!isValid) {
-      toast({
-        title: "Valideringsfel",
-        description: "Kontrollera att alla värden är inom tillåtna intervall.",
-        variant: "destructive"
-      });
+    toast({
+      title: fixSwedishEncoding("Valideringsfel"),
+      description: fixSwedishEncoding("Kontrollera att alla värden är inom tillåtna intervall."),
+      variant: "destructive"
+    });
       return;
     }
 
@@ -237,8 +238,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
     setHasChanges(true);
     
     toast({
-      title: "Återställt till standard",
-      description: "Alla värden har återställts till grundinställningar. Klicka på Spara för att bekräfta.",
+      title: fixSwedishEncoding("Återställt till standard"),
+      description: fixSwedishEncoding("Alla värden har återställts till grundinställningar. Klicka på Spara för att bekräfta."),
     });
   };
 
@@ -250,7 +251,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
     max: number;
     unit?: string;
     disabled?: boolean;
-  }> = ({ label, value, onChange, min, max, unit = "KR", disabled = false }) => {
+  }> = ({ label, value, onChange, min, max, unit = "kr", disabled = false }) => {
     const isValid = validateValue(value, min, max);
     
     return (

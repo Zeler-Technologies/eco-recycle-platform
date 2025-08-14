@@ -1901,13 +1901,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_customers"
-            referencedColumns: ["customer_id"]
-          },
-          {
             foreignKeyName: "payments_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
@@ -3578,108 +3571,6 @@ export type Database = {
           },
         ]
       }
-      v_tenant_customers: {
-        Row: {
-          brand: string | null
-          car_id: string | null
-          created_at: string | null
-          customer_id: string | null
-          email: string | null
-          license_plate: string | null
-          masked_pnr: string | null
-          model: string | null
-          name: string | null
-          phone: string | null
-          scrapyard_id: number | null
-          tenant_id: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cars_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "cars_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "cars_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "cars_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "customers_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["car_id"]
-          },
-          {
-            foreignKeyName: "customers_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
-            referencedRelation: "cars"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "available_scrapyards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_cancelled_invoices"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_reports"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
       _driver_status_to_enum: {
@@ -4484,7 +4375,7 @@ export type Database = {
         Returns: unknown
       }
       get_accessible_scrapyards: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { p_tenant_id?: number }
         Returns: {
           address: string
           city: string
@@ -4790,13 +4681,17 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_user_role: {
+      get_user_role_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
       get_user_scrapyard_ids: {
         Args: Record<PropertyKey, never>
         Returns: number[]
+      }
+      get_user_tenant_id_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       gettransactionid: {
         Args: Record<PropertyKey, never>
@@ -4814,7 +4709,7 @@ export type Database = {
         Args: { pickup_order_uuid: string }
         Returns: boolean
       }
-      is_super_admin: {
+      is_super_admin_safe: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }

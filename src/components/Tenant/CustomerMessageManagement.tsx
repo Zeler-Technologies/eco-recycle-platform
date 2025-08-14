@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatSwedishDateTime, formatSwedishPhone, formatSwedishDate, formatSwedishCurrency } from '@/utils/swedishFormatting';
 import { validateSwedishPNR } from '@/utils/swedishValidation';
+import { fixSwedishEncoding, fixObjectEncoding, getUTF8Headers } from '@/utils/swedishEncoding';
 
 interface CustomerMessageManagementProps {
   onBack: () => void;
@@ -247,7 +248,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 
   const validateRequiredVariables = (content: string): boolean => {
     const requiredVariables = ['[namn]', '[registreringsnummer]', '[kontrollnummer]', '[datum]'];
-    return requiredVariables.every(variable => content.includes(variable));
+    const fixedContent = fixSwedishEncoding(content);
+    return requiredVariables.every(variable => fixedContent.includes(variable));
   };
 
   const handleSaveCustomTemplate = async (template: CustomMessageTemplate) => {
@@ -255,8 +257,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 
     if (!validateRequiredVariables(template.content)) {
       toast({
-        title: "Saknade variabler",
-        description: "Mallen måste innehålla [namn], [registreringsnummer], [kontrollnummer] och [datum].",
+        title: fixSwedishEncoding("Saknade variabler"),
+        description: fixSwedishEncoding("Mallen måste innehålla [namn], [registreringsnummer], [kontrollnummer] och [datum]."),
         variant: "destructive",
       });
       return;
@@ -269,8 +271,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           id: template.id,
           tenant_id: tenantId,
           template_type: template.template_type,
-          template_name: template.template_name,
-          content: template.content,
+          template_name: fixSwedishEncoding(template.template_name),
+          content: fixSwedishEncoding(template.content),
           is_active: template.is_active
         });
 
@@ -280,8 +282,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       setEditingCustomTemplate(null);
       
       toast({
-        title: "Mall sparad",
-        description: "Anpassad mall har uppdaterats framgångsrikt.",
+        title: fixSwedishEncoding("Mall sparad"),
+        description: fixSwedishEncoding("Anpassad mall har uppdaterats framgångsrikt."),
       });
     } catch (error) {
       toast({

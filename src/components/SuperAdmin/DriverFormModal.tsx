@@ -8,6 +8,7 @@ import { X, User, Phone, Mail, Car } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { fixSwedishEncoding } from '@/utils/swedishEncoding';
 
 interface Driver {
   id: string;
@@ -97,15 +98,15 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     try {
       setScrapyardsLoading(true);
 
-      // First try the RPC function, fallback to direct query
+      // Use the new safe RPC function
       let scrapyardData: any[] = [];
       
       try {
         const { data: rpcData, error: rpcError } = await supabase
-          .rpc('list_scrapyards_for_current_user');
+          .rpc('get_accessible_scrapyards', { p_tenant_id: tenantId });
 
         if (rpcError) {
-          console.error('RPC list_scrapyards_for_current_user error:', rpcError);
+          console.error('RPC get_accessible_scrapyards error:', rpcError);
           throw rpcError;
         }
 
@@ -129,9 +130,17 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       // Filter by tenantId when provided
       const filtered = tenantId ? scrapyardData.filter((s: any) => Number(s.tenant_id) === Number(tenantId)) : scrapyardData;
 
-      setScrapyards(filtered);
-      if (autoAssignIfSingle && filtered.length === 1) {
-        setFormData(prev => ({ ...prev, scrapyard_id: filtered[0].id }));
+      // Fix encoding in scrapyard data
+      const fixedData = filtered.map(s => ({
+        ...s,
+        name: fixSwedishEncoding(s.name),
+        city: fixSwedishEncoding(s.city || ''),
+        address: fixSwedishEncoding(s.address || '')
+      }));
+      
+      setScrapyards(fixedData);
+      if (autoAssignIfSingle && fixedData.length === 1) {
+        setFormData(prev => ({ ...prev, scrapyard_id: fixedData[0].id }));
       }
     } catch (error) {
       console.error('Error fetching scrapyards:', error);
