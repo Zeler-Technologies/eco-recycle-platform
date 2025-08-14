@@ -97,26 +97,45 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     try {
       setScrapyardsLoading(true);
 
-      // Prefer a secure RPC to avoid RLS/recursion issues
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('list_scrapyards_for_current_user' as any);
+      // First try the RPC function, fallback to direct query
+      let scrapyardData: any[] = [];
+      
+      try {
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('list_scrapyards_for_current_user');
 
-      if (rpcError) {
-        console.error('RPC list_scrapyards_for_current_user error:', rpcError);
-        setScrapyards([]);
-        return;
+        if (rpcError) {
+          console.error('RPC list_scrapyards_for_current_user error:', rpcError);
+          throw rpcError;
+        }
+
+        scrapyardData = rpcData || [];
+      } catch (rpcError) {
+        console.log('Falling back to direct scrapyards query...');
+        // Fallback to direct query
+        const { data: directData, error: directError } = await supabase
+          .from('scrapyards')
+          .select('id, name, tenant_id')
+          .eq('is_active', true);
+
+        if (directError) {
+          console.error('Direct scrapyards query error:', directError);
+          throw directError;
+        }
+
+        scrapyardData = directData || [];
       }
 
-      // rpcData may include multiple tenants for super_admin; filter by tenantId when provided
-      const list = (rpcData as any[] | null) ?? [];
-      const filtered = tenantId ? list.filter((s: any) => Number(s.tenant_id) === Number(tenantId)) : list;
+      // Filter by tenantId when provided
+      const filtered = tenantId ? scrapyardData.filter((s: any) => Number(s.tenant_id) === Number(tenantId)) : scrapyardData;
 
       setScrapyards(filtered);
       if (autoAssignIfSingle && filtered.length === 1) {
-        setFormData(prev => ({ ...prev, scrapyard_id: (filtered[0] as any).id }));
+        setFormData(prev => ({ ...prev, scrapyard_id: filtered[0].id }));
       }
     } catch (error) {
-      console.error('Error fetching scrapyards via RPC:', error);
+      console.error('Error fetching scrapyards:', error);
+      toast.error('Failed to load scrapyards');
       setScrapyards([]);
     } finally {
       setScrapyardsLoading(false);
@@ -146,19 +165,25 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
       if (driver) {
         // Update existing driver
         const { error } = await supabase
-          .from('drivers' as any)
+          .from('drivers')
           .update(payload)
           .eq('id', driver.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Driver update error:', error);
+          throw error;
+        }
         toast.success('Driver updated successfully');
       } else {
         // Create new driver
         const { error } = await supabase
-          .from('drivers' as any)
+          .from('drivers')
           .insert([payload]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Driver create error:', error);
+          throw error;
+        }
         toast.success('Driver created successfully');
       }
 
