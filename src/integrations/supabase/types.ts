@@ -700,6 +700,7 @@ export type Database = {
           car_model: string | null
           car_registration_number: string
           car_year: number | null
+          contact_phone: string | null
           control_number: string | null
           created_at: string
           customer_id: string | null
@@ -709,15 +710,20 @@ export type Database = {
           owner_name: string | null
           owner_postal_code: string | null
           pickup_address: string | null
+          pickup_date: string | null
           pickup_latitude: number | null
+          pickup_location: string | null
           pickup_longitude: number | null
           pickup_postal_code: string | null
           pnr_num: string | null
           pnr_num_norm: string | null
+          preferred_contact_method: string | null
           quote_amount: number | null
           scrapyard_id: number | null
+          special_instructions: string | null
           status: string | null
           tenant_id: number | null
+          transport_fee: number | null
           updated_at: string
         }
         Insert: {
@@ -725,6 +731,7 @@ export type Database = {
           car_model?: string | null
           car_registration_number: string
           car_year?: number | null
+          contact_phone?: string | null
           control_number?: string | null
           created_at?: string
           customer_id?: string | null
@@ -734,15 +741,20 @@ export type Database = {
           owner_name?: string | null
           owner_postal_code?: string | null
           pickup_address?: string | null
+          pickup_date?: string | null
           pickup_latitude?: number | null
+          pickup_location?: string | null
           pickup_longitude?: number | null
           pickup_postal_code?: string | null
           pnr_num?: string | null
           pnr_num_norm?: string | null
+          preferred_contact_method?: string | null
           quote_amount?: number | null
           scrapyard_id?: number | null
+          special_instructions?: string | null
           status?: string | null
           tenant_id?: number | null
+          transport_fee?: number | null
           updated_at?: string
         }
         Update: {
@@ -750,6 +762,7 @@ export type Database = {
           car_model?: string | null
           car_registration_number?: string
           car_year?: number | null
+          contact_phone?: string | null
           control_number?: string | null
           created_at?: string
           customer_id?: string | null
@@ -759,15 +772,20 @@ export type Database = {
           owner_name?: string | null
           owner_postal_code?: string | null
           pickup_address?: string | null
+          pickup_date?: string | null
           pickup_latitude?: number | null
+          pickup_location?: string | null
           pickup_longitude?: number | null
           pickup_postal_code?: string | null
           pnr_num?: string | null
           pnr_num_norm?: string | null
+          preferred_contact_method?: string | null
           quote_amount?: number | null
           scrapyard_id?: number | null
+          special_instructions?: string | null
           status?: string | null
           tenant_id?: number | null
+          transport_fee?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -4204,6 +4222,14 @@ export type Database = {
           website: string
           zip_code: string
         }[]
+      }
+      generate_enhanced_quote: {
+        Args: {
+          p_customer_request_id: string
+          p_pickup_location?: string
+          p_preferred_date?: string
+        }
+        Returns: Json
       }
       generate_invoice_number: {
         Args:
