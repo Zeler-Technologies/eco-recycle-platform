@@ -25,6 +25,7 @@ import {
 // import { BillingAnalytics } from './BillingAnalytics';
 // import { BillingSettings } from './BillingSettings';
 import { BillingTest } from './BillingTest';
+import { QuickAuth } from './QuickAuth';
 
 export const BillingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -242,6 +243,7 @@ export const BillingDashboard = () => {
 
           <TabsContent value="pricing">
             <div className="space-y-6">
+              <QuickAuth />
               <BillingTest />
               <div className="p-6 text-center">
                 <p className="text-muted-foreground">Pricing catalog temporarily disabled</p>
