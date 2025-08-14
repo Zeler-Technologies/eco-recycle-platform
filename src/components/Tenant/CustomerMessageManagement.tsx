@@ -31,6 +31,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatSwedishDateTime, formatSwedishPhone, formatSwedishDate, formatSwedishCurrency } from '@/utils/swedishFormatting';
+import { validateSwedishPNR } from '@/utils/swedishValidation';
 
 interface CustomerMessageManagementProps {
   onBack: () => void;
@@ -159,7 +161,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     namn: 'Anna Andersson',
     registreringsnummer: 'ABC123',
     kontrollnummer: 'CTRL456789',
-    datum: '2024-01-25'
+    datum: '2024-01-25',
+    telefon: '+46701234567'
   });
   const { toast } = useToast();
   const { user } = useAuth();
@@ -352,9 +355,16 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       .replace(/\[namn\]/g, previewData.namn)
       .replace(/\[registreringsnummer\]/g, previewData.registreringsnummer)
       .replace(/\[kontrollnummer\]/g, previewData.kontrollnummer)
-      .replace(/\[datum\]/g, previewData.datum)
+      .replace(/\[datum\]/g, formatSwedishDate(previewData.datum))
+      .replace(/\[telefon\]/g, formatSwedishPhone(previewData.telefon))
       .replace(/\[basadress\]/g, 'Ekenäsvägen 28, 863 37 Sundsvall')
-      .replace(/\[bonusbelopp\]/g, '500');
+      .replace(/\[bonusbelopp\]/g, formatSwedishCurrency(50000)); // 500 SEK in öre
+  };
+
+  // Add phone number validation
+  const validatePhoneNumber = (phone: string): boolean => {
+    const digits = phone.replace(/\D/g, '');
+    return digits.length >= 10 && (digits.startsWith('07') || digits.startsWith('4607'));
   };
 
   const getTemplateTypeDisplayName = (type: string): string => {

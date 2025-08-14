@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Clock, Star } from 'lucide-react';
 import { useScrapyardList } from '@/hooks/useScrapyardList';
+import { formatSwedishCurrency } from '@/utils/swedishFormatting';
 
 interface Scrapyard {
   id: number;
@@ -114,7 +115,7 @@ export const ScrapyardListScreen: React.FC<ScrapyardListScreenProps> = ({
 
                   {scrapyard.bid_amount && (
                     <div className="mt-2 text-xs text-green-700">
-                      Högsta bud: {scrapyard.bid_amount.toLocaleString()} SEK
+                      Högsta bud: {formatSwedishCurrency(scrapyard.bid_amount)}
                     </div>
                   )}
                 </CardContent>
