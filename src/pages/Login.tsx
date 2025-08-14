@@ -79,6 +79,14 @@ const Login = () => {
       description: 'Vehicle pickup driver - alternative driver account',
       icon: Car,
       color: 'bg-indigo-600'
+    },
+    {
+      role: 'Customer',
+      email: 'customer@example.se',
+      password: 'customer123',
+      description: 'Customer portal - submit car recycling requests and track status',
+      icon: Car,
+      color: 'bg-teal-600'
     }
   ];
 

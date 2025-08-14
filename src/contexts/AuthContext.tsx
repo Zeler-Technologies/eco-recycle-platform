@@ -244,6 +244,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tenant_name: 'PantaBilen Stockholm',
             tenant_country: 'Sverige'
           }
+        },
+        // Customer
+        'customer@example.se': {
+          password: 'customer123',
+          user: {
+            id: 'customer-001',
+            email: 'customer@example.se',
+            name: 'Test Customer',
+            role: 'customer' as UserRole,
+            tenant_id: undefined,
+            tenant_name: undefined,
+            tenant_country: 'Sverige'
+          }
         }
       };
 
