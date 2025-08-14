@@ -232,13 +232,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                   {user?.role === 'tenant_admin' ? (
                     <Input
                       id="tenant_id"
-                      value={
-                        tenantsLoading
-                          ? 'Loading...'
-                          : tenants.find(t => t.tenants_id === Number(formData.tenant_id))?.name ||
-                            tenants[0]?.name ||
-                            'No tenant found'
-                      }
+                      value={user?.tenant_name || 'Loading...'}
                       disabled
                       className="bg-muted cursor-not-allowed"
                     />

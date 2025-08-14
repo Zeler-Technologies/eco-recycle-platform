@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,8 @@ import {
   Plus
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   onBack: () => void;
@@ -54,6 +56,7 @@ interface Driver {
 
 const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
   const [filterLocation, setFilterLocation] = useState('');
@@ -62,6 +65,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isAddPickupDialogOpen, setIsAddPickupDialogOpen] = useState(false);
   const [selectedRequestForScheduling, setSelectedRequestForScheduling] = useState<Request | null>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [driversLoading, setDriversLoading] = useState(true);
 
   // Mock data - in real app this would come from database
   const [requests, setRequests] = useState<Request[]>([
@@ -105,12 +110,53 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   ]);
 
-  const drivers: Driver[] = [
-    { id: 'D001', name: 'Erik Andersson', phone: '070-123 45 67', status: 'Tillgänglig' },
-    { id: 'D002', name: 'Maria Larsson', phone: '070-234 56 78', status: 'Upptagen' },
-    { id: 'D003', name: 'Johan Svensson', phone: '070-345 67 89', status: 'Tillgänglig' },
-    { id: 'D004', name: 'Anna Petersson', phone: '070-456 78 90', status: 'Tillgänglig' }
-  ];
+  // Fetch drivers for the current tenant
+  useEffect(() => {
+    if (user?.tenant_id) {
+      fetchDrivers();
+    }
+  }, [user?.tenant_id]);
+
+  const fetchDrivers = async () => {
+    if (!user?.tenant_id) return;
+    
+    try {
+      setDriversLoading(true);
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, full_name, phone_number, driver_status')
+        .eq('tenant_id', user.tenant_id)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching drivers:', error);
+        toast({
+          title: "Fel",
+          description: "Kunde inte ladda förare",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const formattedDrivers: Driver[] = (data || []).map(driver => ({
+        id: driver.id,
+        name: driver.full_name,
+        phone: driver.phone_number,
+        status: driver.driver_status === 'available' || driver.driver_status === 'on_duty' ? 'Tillgänglig' : 'Upptagen'
+      }));
+
+      setDrivers(formattedDrivers);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      toast({
+        title: "Fel", 
+        description: "Kunde inte ladda förare",
+        variant: "destructive"
+      });
+    } finally {
+      setDriversLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
