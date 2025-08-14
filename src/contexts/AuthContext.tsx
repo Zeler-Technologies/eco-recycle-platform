@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         'admin@pantabilen.se': {
           password: 'admin123',
           user: {
-            id: 'super-admin-001',
+            id: '00000000-0000-0000-0000-000000000001', // Match database UUID
             email: 'admin@pantabilen.se',
             name: 'Super Admin',
             role: 'super_admin' as UserRole,
