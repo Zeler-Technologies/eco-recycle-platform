@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Shield, Car, Recycle, Smartphone, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -44,6 +45,19 @@ const Login = () => {
       setError(err?.message || 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const createTestUsersIfNeeded = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-test-users');
+      if (error) {
+        console.error('Error creating test users:', error);
+      } else {
+        console.log('Test users setup completed:', data);
+      }
+    } catch (error) {
+      console.error('Error invoking create-test-users function:', error);
     }
   };
 
@@ -177,10 +191,18 @@ const Login = () => {
               </div>
             ))}
             
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                ✅ These users are now stored in Supabase Auth and linked to driver records via UUIDs
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                ✅ These users are stored in Supabase Auth and linked to driver records
               </p>
+              <Button 
+                onClick={createTestUsersIfNeeded} 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+              >
+                Create/Update Test Users
+              </Button>
             </div>
           </CardContent>
         </Card>
