@@ -53,17 +53,26 @@ const SuperAdminDashboard = () => {
   const fetchTenants = async () => {
     try {
       setLoading(true);
+      console.log('SuperAdmin: Fetching tenants...');
+      
       const { data, error } = await supabase
         .from('tenants')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(4); // Only get the 4 most recent for the dashboard
 
-      if (error) throw error;
+      console.log('SuperAdmin: Tenants query result:', { data, error });
+      
+      if (error) {
+        console.error('SuperAdmin: Error fetching tenants:', error);
+        throw error;
+      }
+      
+      console.log('SuperAdmin: Setting tenants:', data);
       setTenants(data || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
-      toast.error('Failed to load tenants');
+      toast.error(`Failed to load tenants: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -72,14 +81,17 @@ const SuperAdminDashboard = () => {
   const fetchRecentActivity = async () => {
     try {
       setActivitiesLoading(true);
+      console.log('SuperAdmin: Fetching recent activity...');
       const activities: ActivityItem[] = [];
 
       // Fetch recent tenants
-      const { data: recentTenants } = await supabase
+      const { data: recentTenants, error: tenantsError } = await supabase
         .from('tenants')
         .select('tenants_id, name, created_at')
         .order('created_at', { ascending: false })
         .limit(3);
+
+      console.log('SuperAdmin: Recent tenants result:', { recentTenants, tenantsError });
 
       if (recentTenants) {
         recentTenants.forEach(tenant => {
