@@ -276,13 +276,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     try {
       setLoading(true);
+      
+      // Clear mock user data immediately for test accounts
+      if (user && ['super-admin-001', '00000000-0000-0000-0000-000000000001', 'tenant-admin-001', 'tenant-admin-002', 'scrapyard-admin-001', 'driver-001', 'driver-002'].includes(user.id)) {
+        setUser(null);
+        setSession(null);
+        setIsAnonymous(false);
+        setLoading(false);
+        return;
+      }
+      
+      // For real Supabase users
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
-      setIsAnonymous(window.location.pathname.startsWith('/customer') || window.location.pathname === '/');
+      setIsAnonymous(false);
     } catch (error) {
       console.error('Logout error:', error);
-      throw error;
+      // Even if logout fails, clear the user state
+      setUser(null);
+      setSession(null);
+      setIsAnonymous(false);
     } finally {
       setLoading(false);
     }
