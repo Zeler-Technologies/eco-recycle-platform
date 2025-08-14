@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Driver {
   id: string;
@@ -72,28 +72,24 @@ export const useDriverIntegration = () => {
   const [pricingError, setPricingError] = useState<string | null>(null);
 
   // Load current driver information
+  const { user } = useAuth();
+  
   const loadDriverInfo = useCallback(async () => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!user?.email) {
+        throw new Error('No user email found');
+      }
       
-      if (authError) {
-        throw new Error(`Authentication error: ${authError.message}`);
-      }
-
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
-
-      // Get driver info directly from the drivers table
+      // Find driver by email from mock auth context
       const { data: directDriverData, error: directError } = await supabase
         .from('drivers')
         .select('*')
-        .eq('auth_user_id', user.id)
+        .eq('email', user.email)
         .eq('is_active', true)
         .single();
 
       if (directError) {
-        throw new Error(`No driver found for current user: ${directError.message}`);
+        throw new Error(`No driver found for email ${user.email}: ${directError.message}`);
       }
 
       // Map the direct query result to match expected format
@@ -108,7 +104,7 @@ export const useDriverIntegration = () => {
       console.error('Error loading driver info:', err);
       setError(err instanceof Error ? err.message : 'Failed to load driver information');
     }
-  }, []);
+  }, [user?.email]);
 
   // Load pickup orders for the driver
   const loadPickups = useCallback(async (driverId?: string) => {
