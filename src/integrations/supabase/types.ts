@@ -6195,7 +6195,7 @@ export type Database = {
         | "busy"
         | "offline"
       treatment_type: "pickup" | "drivein"
-      user_role: "super_admin" | "tenant_admin" | "user" | "customer"
+      user_role: "super_admin" | "tenant_admin" | "user" | "customer" | "driver"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -6351,7 +6351,7 @@ export const Constants = {
         "offline",
       ],
       treatment_type: ["pickup", "drivein"],
-      user_role: ["super_admin", "tenant_admin", "user", "customer"],
+      user_role: ["super_admin", "tenant_admin", "user", "customer", "driver"],
     },
   },
 } as const
