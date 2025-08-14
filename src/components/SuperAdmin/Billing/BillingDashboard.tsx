@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,9 +26,12 @@ import {
 import { BillingTest } from './BillingTest';
 import { QuickAuth } from './QuickAuth';
 
-export const BillingDashboard = () => {
+interface BillingDashboardProps {
+  onBack?: () => void;
+}
+
+export const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const navigate = useNavigate();
 
   const billingStats = [
     {
@@ -104,7 +106,7 @@ export const BillingDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/")}
+                onClick={onBack}
                 className="!border !border-white/30 !bg-transparent !text-white hover:!bg-white/20 hover:!text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />

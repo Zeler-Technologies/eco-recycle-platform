@@ -257,7 +257,7 @@ const SuperAdminDashboard = () => {
   }
 
   if (showBillingManagement) {
-    return <BillingDashboard />;
+    return <BillingDashboard onBack={() => setShowBillingManagement(false)} />;
   }
 
   if (showTenantList) {
