@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate login delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Test accounts - simple and safe
+      // Test accounts - complete set matching login UI
       if (email === 'admin@pantabilen.se' && password === 'admin123') {
         setUser({
           id: '00000000-0000-0000-0000-000000000001',
@@ -64,6 +64,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: 'tenant_admin',
           tenant_id: 1,
           tenant_name: 'PantaBilen Stockholm',
+          tenant_country: 'Sverige'
+        });
+      } else if (email === 'admin@goteborg.pantabilen.se' && password === 'goteborg123') {
+        setUser({
+          id: 'tenant-admin-002',
+          email: 'admin@goteborg.pantabilen.se',
+          name: 'Göteborg Admin',
+          role: 'tenant_admin',
+          tenant_id: 2,
+          tenant_name: 'PantaBilen Göteborg',
+          tenant_country: 'Sverige'
+        });
+      } else if (email === 'admin@skrot.stockholm.se' && password === 'skrot123') {
+        setUser({
+          id: 'scrapyard-admin-001',
+          email: 'admin@skrot.stockholm.se',
+          name: 'Scrapyard Admin',
+          role: 'scrapyard_admin',
+          scrapyard_id: 1,
+          tenant_id: 1,
+          tenant_name: 'Stockholm Skrot AB',
+          tenant_country: 'Sverige'
+        });
+      } else if (email === 'erik@pantabilen.se' && password === 'driver123') {
+        setUser({
+          id: 'driver-001',
+          email: 'erik@pantabilen.se',
+          name: 'Erik Andersson',
+          role: 'driver',
+          tenant_id: 1,
+          tenant_name: 'PantaBilen Stockholm',
+          tenant_country: 'Sverige'
+        });
+      } else if (email === 'anna@pantabilen.se' && password === 'driver123') {
+        setUser({
+          id: 'driver-002',
+          email: 'anna@pantabilen.se',
+          name: 'Anna Johansson',
+          role: 'driver',
+          tenant_id: 1,
+          tenant_name: 'PantaBilen Stockholm',
+          tenant_country: 'Sverige'
+        });
+      } else if (email === 'customer@example.se' && password === 'customer123') {
+        setUser({
+          id: 'customer-001',
+          email: 'customer@example.se',
+          name: 'Test Customer',
+          role: 'customer',
           tenant_country: 'Sverige'
         });
       } else {
