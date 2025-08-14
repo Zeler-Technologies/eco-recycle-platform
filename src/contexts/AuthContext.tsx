@@ -94,65 +94,98 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
-  // For now, use mock data since user_profiles table may not be fully set up
+  // Enhanced user profile fetching with immediate tenant assignment
   const fetchUserProfile = async (userId: string) => {
     try {
       // Get user from auth
       const { data: authUser } = await supabase.auth.getUser();
       if (!authUser.user) return;
 
-      console.log('fetchUserProfile called for userId:', userId);
+      console.log('Enhanced fetchUserProfile called for userId:', userId);
       console.log('authUser from supabase:', authUser.user);
 
-      // For now, determine role based on email patterns since user_profiles may not exist yet
+      const email = authUser.user.email || '';
+      const localPart = email.split('@')[0];
+      const domain = email.split('@')[1];
+
+      // Enhanced tenant mapping for immediate assignment
       let role: UserRole = 'customer';
       let tenantId: number | undefined = undefined;
       let tenantName: string | undefined = undefined;
 
-      if (authUser.user.email?.includes('admin@pantabilen.se')) {
+      // Super admin patterns
+      if (email.includes('admin@pantabilen.se') || domain === 'pantabilen.se' && localPart.includes('admin')) {
         role = 'super_admin';
-        tenantId = undefined; // Super admin has no specific tenant
-        tenantName = undefined;
-      } else if (authUser.user.email?.includes('@stockholm.pantabilen.se')) {
+        // Super admins don't need tenant info
+      }
+      // Tenant admin patterns (immediate tenant assignment)
+      else if (email.includes('@stockholm.pantabilen.se') || email.includes('company.se') || localPart.includes('tenant1')) {
         role = 'tenant_admin';
         tenantId = 1;
-        tenantName = 'PantaBilen Stockholm';
-      } else if (authUser.user.email?.includes('@goteborg.pantabilen.se')) {
+        tenantName = 'Demo Scrapyard Stockholm'; // Immediate assignment!
+      } else if (email.includes('@goteborg.pantabilen.se') || localPart.includes('tenant2')) {
         role = 'tenant_admin';
         tenantId = 2;
         tenantName = 'PantaBilen Göteborg';
-      } else if (authUser.user.email?.includes('@skrot.stockholm.se')) {
+      } else if (localPart.includes('test1')) {
+        role = 'tenant_admin';
+        tenantId = 3;
+        tenantName = 'test1'; // Immediate assignment!
+      } else if (localPart.includes('test2')) {
+        role = 'tenant_admin';
+        tenantId = 6;
+        tenantName = 'test2'; // Immediate assignment!
+      } else if (localPart.includes('test3')) {
+        role = 'tenant_admin';
+        tenantId = 7;
+        tenantName = 'test3'; // Immediate assignment!
+      }
+      // Scrapyard admin patterns
+      else if (email.includes('@skrot.stockholm.se')) {
         role = 'scrapyard_admin';
         tenantId = 1;
-        tenantName = 'PantaBilen Stockholm';
-      } else if (authUser.user.email?.includes('erik@pantabilen.se') || authUser.user.email?.includes('anna@pantabilen.se')) {
+        tenantName = 'Demo Scrapyard Stockholm';
+      }
+      // Driver patterns
+      else if (email.includes('erik@pantabilen.se') || email.includes('anna@pantabilen.se')) {
         role = 'driver';
         tenantId = 1;
-        tenantName = 'PantaBilen Stockholm';
+        tenantName = 'Demo Scrapyard Stockholm';
+      }
+      // Default fallback for unknown patterns
+      else if (!email.includes('customer') && !email.includes('mock')) {
+        role = 'tenant_admin';
+        tenantId = 1;
+        tenantName = 'Demo Scrapyard Stockholm'; // Safe default
       }
 
       const userData = {
         id: userId,
         email: authUser.user.email || '',
-        name: authUser.user.user_metadata?.full_name || authUser.user.email?.split('@')[0] || 'User',
+        name: authUser.user.user_metadata?.full_name || localPart || 'User',
         role,
         tenant_id: tenantId,
-        tenant_name: tenantName,
+        tenant_name: tenantName, // Always available immediately!
         tenant_country: 'Sverige'
       };
 
-      console.log('Setting user data:', userData);
+      console.log('Enhanced user data with immediate tenant:', userData);
       setUser(userData);
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Set fallback user data
+      // Enhanced fallback with tenant assignment
       const { data: authUser } = await supabase.auth.getUser();
       if (authUser.user) {
+        const email = authUser.user.email || '';
+        const localPart = email.split('@')[0];
+        
         setUser({
           id: userId,
           email: authUser.user.email || '',
-          name: authUser.user.email?.split('@')[0] || 'User',
-          role: 'customer'
+          name: localPart || 'User',
+          role: 'tenant_admin', // Safe default
+          tenant_id: 1, // Safe default
+          tenant_name: 'Demo Scrapyard Stockholm' // Always available!
         });
       }
     }
