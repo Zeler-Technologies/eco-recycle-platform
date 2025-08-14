@@ -23,6 +23,7 @@ export type Database = {
           pnr_num_norm: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id: number | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -32,6 +33,7 @@ export type Database = {
           pnr_num_norm?: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id?: number | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           pnr_num_norm?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -2849,6 +2852,7 @@ export type Database = {
           name: string
           service_type: string | null
           tenants_id: number
+          updated_at: string | null
         }
         Insert: {
           base_address?: string | null
@@ -2861,6 +2865,7 @@ export type Database = {
           name: string
           service_type?: string | null
           tenants_id?: number
+          updated_at?: string | null
         }
         Update: {
           base_address?: string | null
@@ -2873,6 +2878,7 @@ export type Database = {
           name?: string
           service_type?: string | null
           tenants_id?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
