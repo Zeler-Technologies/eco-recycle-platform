@@ -26,6 +26,20 @@ const Login = () => {
     }
   }, [user, loading, navigate]);
 
+  // Create test users on component mount if they don't exist
+  useEffect(() => {
+    const initializeTestUsers = async () => {
+      try {
+        console.log('Initializing test users...');
+        await createTestUsersIfNeeded();
+      } catch (error) {
+        console.error('Failed to initialize test users:', error);
+      }
+    };
+    
+    initializeTestUsers();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
