@@ -44,8 +44,13 @@ const SuperAdminDashboard = () => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
 
+  console.log('SuperAdminDashboard - Current user:', user);
+  console.log('SuperAdminDashboard - User role:', user?.role);
+  console.log('SuperAdminDashboard - Tenants state:', tenants);
+
   // Fetch data on component mount
   useEffect(() => {
+    console.log('SuperAdminDashboard useEffect triggered');
     fetchTenants();
     fetchRecentActivity();
   }, []);

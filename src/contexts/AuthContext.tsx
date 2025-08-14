@@ -101,6 +101,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data: authUser } = await supabase.auth.getUser();
       if (!authUser.user) return;
 
+      console.log('fetchUserProfile called for userId:', userId);
+      console.log('authUser from supabase:', authUser.user);
+
       // For now, determine role based on email patterns since user_profiles may not exist yet
       let role: UserRole = 'customer';
       let tenantId: number | undefined = undefined;
@@ -108,19 +111,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (authUser.user.email?.includes('admin@pantabilen.se')) {
         role = 'super_admin';
-        tenantId = 1;
-        tenantName = 'PantaBilen AB';
-      } else if (authUser.user.email?.includes('@scrapyard.se')) {
+        tenantId = undefined; // Super admin has no specific tenant
+        tenantName = undefined;
+      } else if (authUser.user.email?.includes('@stockholm.pantabilen.se')) {
         role = 'tenant_admin';
         tenantId = 1;
-        tenantName = 'Panta Bilen Stockholm';
-      } else if (authUser.user.email?.includes('driver@')) {
+        tenantName = 'PantaBilen Stockholm';
+      } else if (authUser.user.email?.includes('@goteborg.pantabilen.se')) {
+        role = 'tenant_admin';
+        tenantId = 2;
+        tenantName = 'PantaBilen Göteborg';
+      } else if (authUser.user.email?.includes('@skrot.stockholm.se')) {
+        role = 'scrapyard_admin';
+        tenantId = 1;
+        tenantName = 'PantaBilen Stockholm';
+      } else if (authUser.user.email?.includes('erik@pantabilen.se') || authUser.user.email?.includes('anna@pantabilen.se')) {
         role = 'driver';
         tenantId = 1;
-        tenantName = 'Panta Bilen Stockholm';
+        tenantName = 'PantaBilen Stockholm';
       }
 
-      setUser({
+      const userData = {
         id: userId,
         email: authUser.user.email || '',
         name: authUser.user.user_metadata?.full_name || authUser.user.email?.split('@')[0] || 'User',
@@ -128,7 +139,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tenant_id: tenantId,
         tenant_name: tenantName,
         tenant_country: 'Sverige'
-      });
+      };
+
+      console.log('Setting user data:', userData);
+      setUser(userData);
     } catch (error) {
       console.error('Error fetching user profile:', error);
       // Set fallback user data
