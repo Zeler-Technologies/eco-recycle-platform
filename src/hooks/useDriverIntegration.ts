@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 // Mock data to match what PantaBilenDriverApp expects
 const MOCK_DRIVER = {
-  driver_id: 'driver-123',
+  driver_id: 'driver-001',
   full_name: 'Test Driver',
   driver_status: 'available',
   email: 'driver@scrapyard.se',
@@ -80,7 +80,7 @@ const MOCK_STATUS_HISTORY = [
   {
     id: 'history-1',
     pickup_order_id: 'pickup-1',
-    driver_id: 'driver-123',
+    driver_id: 'driver-001',
     old_status: 'pending',
     new_status: 'scheduled',
     notes: 'Driver assigned and scheduled',
@@ -140,7 +140,7 @@ export const useDriverIntegration = (tenantId?: string | number, driverId?: stri
     const historyItem = {
       id: `history-${Date.now()}`,
       pickup_order_id: pickupId,
-      driver_id: driver?.driver_id || 'driver-123',
+      driver_id: driver?.driver_id || 'driver-001',
       old_status: 'previous_status',
       new_status: status,
       notes: notes || '',
