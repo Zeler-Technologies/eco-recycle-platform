@@ -195,16 +195,16 @@ const Login = () => {
     },
     {
       role: 'Tenant Admin',
-      email: 'tenant@demo.se', 
-      password: 'tenant123',
+      email: 'admin@demoscrapyard.se', 
+      password: 'admin123',
       description: 'Manage tenant operations',
       icon: <Users className="h-4 w-4" />,
       color: 'bg-blue-100 text-blue-700'
     },
     {
       role: 'Driver',
-      email: 'driver@demo.se',
-      password: 'driver123', 
+      email: 'erik@pantabilen.se',
+      password: 'admin123', 
       description: 'Driver app access',
       icon: <Truck className="h-4 w-4" />,
       color: 'bg-green-100 text-green-700'
