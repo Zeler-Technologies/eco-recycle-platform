@@ -188,7 +188,7 @@ const Login = () => {
     {
       role: 'Super Admin',
       email: 'admin@pantabilen.se',
-      password: 'admin123',
+      password: 'SecurePass123!',
       description: 'Full system access',
       icon: <Shield className="h-4 w-4" />,
       color: 'bg-red-100 text-red-700'
@@ -196,7 +196,7 @@ const Login = () => {
     {
       role: 'Tenant Admin',
       email: 'admin@demoscrapyard.se', 
-      password: 'admin123',
+      password: 'SecurePass123!',
       description: 'Manage tenant operations',
       icon: <Users className="h-4 w-4" />,
       color: 'bg-blue-100 text-blue-700'
@@ -204,7 +204,7 @@ const Login = () => {
     {
       role: 'Driver',
       email: 'erik@pantabilen.se',
-      password: 'admin123', 
+      password: 'SecurePass123!', 
       description: 'Driver app access',
       icon: <Truck className="h-4 w-4" />,
       color: 'bg-green-100 text-green-700'
