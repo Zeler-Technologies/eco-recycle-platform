@@ -134,9 +134,10 @@ const Login = () => {
     setDebugInfo('Creating development users...');
     
     const users = [
-      { email: 'admin@pantabilen.se', password: 'admin123', role: 'super_admin', tenantId: null },
-      { email: 'tenant@demo.se', password: 'tenant123', role: 'tenant_admin', tenantId: 1 },
-      { email: 'driver@demo.se', password: 'driver123', role: 'driver', tenantId: 1 }
+      { email: 'admin@pantabilen.se', password: 'SecurePass123!', role: 'super_admin', tenantId: null },
+      { email: 'admin@demoscrapyard.se', password: 'SecurePass123!', role: 'tenant_admin', tenantId: 1 },
+      { email: 'test@customer.se', password: 'SecurePass123!', role: 'customer', tenantId: 1 },
+      { email: 'erik@pantabilen.se', password: 'SecurePass123!', role: 'driver', tenantId: 1 }
     ];
     
     for (const userData of users) {
@@ -204,7 +205,7 @@ const Login = () => {
     {
       role: 'Customer',
       email: 'test@customer.se',
-      password: 'customer123',
+      password: 'SecurePass123!',
       description: 'Customer app access',
       icon: <User className="h-4 w-4" />,
       color: 'bg-purple-100 text-purple-700'
@@ -216,6 +217,14 @@ const Login = () => {
       description: 'Driver app access',
       icon: <Truck className="h-4 w-4" />,
       color: 'bg-green-100 text-green-700'
+    },
+    {
+      role: 'Debug User',
+      email: 'test@debug.com',
+      password: 'debug123456',
+      description: 'Debug test user',
+      icon: <AlertCircle className="h-4 w-4" />,
+      color: 'bg-yellow-100 text-yellow-700'
     }
   ];
 
