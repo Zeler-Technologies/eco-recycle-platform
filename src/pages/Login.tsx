@@ -1,115 +1,133 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Building2, Shield, Car, Recycle, Smartphone, Loader2 } from 'lucide-react';
+import { Shield, User, Truck, Users, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Login = () => {
+  const { signIn, devCreateUser, user, profile, error: authError, refetchProfile } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn, devCreateUser, user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user && !loading) {
-      console.log('User is already logged in, redirecting home');
-      navigate('/', { replace: true });
-    }
-  }, [user, loading, navigate]);
+  const [debugInfo, setDebugInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     setError('');
-    setIsLoading(true);
-    
+
     try {
-      console.log('Login attempt with:', email);
-      const { error: loginError } = await signIn(email, password);
+      const { data, error } = await signIn(email, password);
       
-      if (loginError) {
-        setError(loginError.message || 'An error occurred during login');
+      if (error) {
+        setError(error.message);
+        toast.error(error.message);
+        setDebugInfo(`Login error: ${error.message}`);
       } else {
-        console.log('Login successful, will redirect automatically');
         toast.success('Logged in successfully!');
-        navigate('/');
+        setDebugInfo('Login successful, waiting for profile...');
+        
+        // Wait a moment then check profile
+        setTimeout(() => {
+          refetchProfile();
+          navigate('/');
+        }, 1000);
       }
-    } catch (err: any) {
-      console.error('Login failed:', err);
-      setError(err?.message || 'An unexpected error occurred');
+    } catch (err) {
+      setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
+      setDebugInfo(`Unexpected error: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Development functions - remove in production
-  const createDevUsers = async () => {
+  // DEVELOPMENT ONLY: Create development users for testing
+  const createAllDevUsers = async () => {
     setIsLoading(true);
-    try {
-      await devCreateUser('admin@pantabilen.se', 'SecurePass123!', 'super_admin');
-      await devCreateUser('admin@demoscrapyard.se', 'SecurePass123!', 'tenant_admin', 1);
-      await devCreateUser('erik@pantabilen.se', 'SecurePass123!', 'driver', 1);
-      await devCreateUser('anna@pantabilen.se', 'SecurePass123!', 'driver', 1);
-      toast.success('Development users created! You can now log in with them.');
-    } catch (error) {
-      console.error('Error creating dev users:', error);
-      toast.error('Error creating development users');
-    } finally {
-      setIsLoading(false);
+    setDebugInfo('Creating development users...');
+    
+    const users = [
+      { email: 'admin@pantabilen.se', password: 'admin123', role: 'super_admin', tenantId: null },
+      { email: 'tenant@demo.se', password: 'tenant123', role: 'tenant_admin', tenantId: 1 },
+      { email: 'driver@demo.se', password: 'driver123', role: 'driver', tenantId: 1 }
+    ];
+    
+    for (const userData of users) {
+      const success = await devCreateUser(
+        userData.email, 
+        userData.password, 
+        userData.role as any, 
+        userData.tenantId
+      );
+      
+      if (!success) {
+        setDebugInfo(`Failed to create ${userData.email}`);
+        break;
+      }
     }
+    
+    setDebugInfo('All development users created!');
+    setIsLoading(false);
   };
 
+  // Quick login helper
   const quickLogin = async (email: string, password: string) => {
     setIsLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      navigate('/');
+    setEmail(email);
+    setPassword(password);
+    
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        toast.error(error.message);
+        setDebugInfo(`Quick login error: ${error.message}`);
+      } else {
+        setDebugInfo('Quick login successful!');
+        setTimeout(() => {
+          refetchProfile();
+          navigate('/');
+        }, 1000);
+      }
+    } catch (err) {
+      toast.error('Login failed');
+      setDebugInfo(`Login failed: ${err.message}`);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const demoAccounts = [
     {
       role: 'Super Admin',
       email: 'admin@pantabilen.se',
-      password: 'SecurePass123!',
-      description: 'Full system access - Can manage all tenants and data',
-      icon: Shield,
-      color: 'bg-red-600'
+      password: 'admin123',
+      description: 'Full system access',
+      icon: <Shield className="h-4 w-4" />,
+      color: 'bg-red-100 text-red-700'
     },
     {
-      role: 'Tenant Admin - Pantabilen',
-      email: 'admin@demoscrapyard.se',
-      password: 'SecurePass123!',
-      description: 'Manage tenant operations, drivers, and scrapyards',
-      icon: Building2,
-      color: 'bg-blue-600'
+      role: 'Tenant Admin',
+      email: 'tenant@demo.se', 
+      password: 'tenant123',
+      description: 'Manage tenant operations',
+      icon: <Users className="h-4 w-4" />,
+      color: 'bg-blue-100 text-blue-700'
     },
     {
-      role: 'Driver - Erik',
-      email: 'erik@pantabilen.se',
-      password: 'SecurePass123!',
-      description: 'Driver with PNR - Can use driver app for pickups',
-      icon: Car,
-      color: 'bg-purple-600'
-    },
-    {
-      role: 'Driver - Anna',
-      email: 'anna@pantabilen.se',
-      password: 'SecurePass123!',
-      description: 'Driver with PNR - Can use driver app for pickups',
-      icon: Car,
-      color: 'bg-indigo-600'
+      role: 'Driver',
+      email: 'driver@demo.se',
+      password: 'driver123', 
+      description: 'Driver app access',
+      icon: <Truck className="h-4 w-4" />,
+      color: 'bg-green-100 text-green-700'
     }
   ];
 
@@ -118,162 +136,127 @@ const Login = () => {
     setPassword(password);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 flex items-center justify-center p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl w-full">
         {/* Login Form */}
-        <Card className="shadow-custom-xl bg-white/95 backdrop-blur-sm">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-8 w-8 text-brand-blue" />
-              <h1 className="text-2xl font-bold">Driver App - Real Auth</h1>
-            </div>
-            <CardTitle className="text-2xl">Sign in with Supabase</CardTitle>
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle>🚨 Emergency Login</CardTitle>
             <CardDescription>
-              Real authentication powered by Supabase
+              Emergency auth system with debugging
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+          <CardContent className="space-y-4">
+            {/* Debug Information */}
+            <div className="p-3 bg-gray-100 rounded text-sm">
+              <strong>Debug Info:</strong><br/>
+              User: {user ? `${user.email} (${user.id})` : 'None'}<br/>
+              Profile: {profile ? `${profile.role} (tenant: ${profile.tenant_id})` : 'None'}<br/>
+              Error: {authError || 'None'}<br/>
+              Status: {debugInfo || 'Ready'}
+            </div>
+
+            {/* Emergency Actions */}
+            <div className="space-y-2">
+              <Button 
+                onClick={createAllDevUsers} 
+                className="w-full bg-red-600 hover:bg-red-700"
+                disabled={isLoading}
+              >
+                🚨 Create All Dev Users
+              </Button>
               
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <Button 
+                onClick={refetchProfile} 
+                variant="outline" 
+                className="w-full"
+                disabled={!user}
+              >
+                🔄 Refetch Profile
+              </Button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
                 <Input
-                  id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="E-post"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div>
                 <Input
-                  id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Lösenord"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
                 />
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
+              
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
+                {isLoading ? 'Loggar in...' : 'Logga in'}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Real Test Accounts */}
-        <Card className="shadow-custom-xl bg-white/95 backdrop-blur-sm">
+        {/* Quick Login Buttons */}
+        <Card className="w-full max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-xl">Real Test Accounts</CardTitle>
+            <CardTitle>Quick Login Options</CardTitle>
             <CardDescription>
-              These are actual Supabase Auth users linked to driver records in the database. Click to auto-fill credentials.
+              Emergency login buttons for testing
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Demo Accounts */}
             {demoAccounts.map((account, index) => (
               <div key={index} className="space-y-2">
-                <div
-                  className="p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer transition-colors"
+                <Button
                   onClick={() => fillCredentials(account.email, account.password)}
+                  variant="outline"
+                  className="w-full justify-start p-4 h-auto"
+                  disabled={isLoading}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${account.color} text-white`}>
-                      <account.icon className="h-5 w-5" />
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-full ${account.color}`}>
+                      {account.icon}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{account.role}</h3>
-                      <p className="text-sm text-muted-foreground">{account.description}</p>
+                    <div className="text-left">
+                      <div className="font-medium">{account.role}</div>
+                      <div className="text-sm text-gray-500">{account.description}</div>
+                      <div className="text-xs text-gray-400">{account.email}</div>
                     </div>
                   </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    <p><strong>Email:</strong> {account.email}</p>
-                    <p><strong>Password:</strong> {account.password}</p>
-                  </div>
-                </div>
-                {index < demoAccounts.length - 1 && <Separator />}
-              </div>
-            ))}
-            
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                ✅ Real Supabase authentication with proper roles and permissions
-              </p>
-              <div className="space-y-2 mt-2">
-                <Button 
-                  onClick={createDevUsers} 
-                  variant="outline" 
-                  size="sm" 
+                </Button>
+                
+                <Button
+                  onClick={() => quickLogin(account.email, account.password)}
+                  size="sm"
                   className="w-full"
                   disabled={isLoading}
                 >
-                  Create Development Users
+                  Quick Login as {account.role}
                 </Button>
-                <div className="grid grid-cols-2 gap-1">
-                  <Button 
-                    onClick={() => quickLogin('admin@pantabilen.se', 'SecurePass123!')}
-                    variant="outline" 
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    Quick: Admin
-                  </Button>
-                  <Button 
-                    onClick={() => quickLogin('admin@demoscrapyard.se', 'SecurePass123!')}
-                    variant="outline" 
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    Quick: Tenant
-                  </Button>
-                  <Button 
-                    onClick={() => quickLogin('erik@pantabilen.se', 'SecurePass123!')}
-                    variant="outline" 
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    Quick: Erik
-                  </Button>
-                  <Button 
-                    onClick={() => quickLogin('anna@pantabilen.se', 'SecurePass123!')}
-                    variant="outline" 
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    Quick: Anna
-                  </Button>
-                </div>
               </div>
-            </div>
+            ))}
           </CardContent>
         </Card>
       </div>
