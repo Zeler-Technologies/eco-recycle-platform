@@ -282,6 +282,33 @@ const Login = () => {
                 onClick={async () => {
                   setIsLoading(true);
                   try {
+                    const { data, error } = await supabase.functions.invoke('debug-login', {
+                      body: { email: 'admin@pantabilen.se', password: 'SecurePass123!' }
+                    });
+                    if (error) {
+                      toast.error(`Debug error: ${error.message}`);
+                      setDebugInfo(`Debug error: ${error.message}`);
+                    } else {
+                      toast.success('Debug complete - check logs');
+                      setDebugInfo(`Debug result: ${JSON.stringify(data, null, 2)}`);
+                    }
+                  } catch (err) {
+                    toast.error('Debug failed');
+                    setDebugInfo(`Debug failed: ${err.message}`);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+                disabled={isLoading}
+              >
+                🐛 Debug Login Process
+              </Button>
+
+              <Button 
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
                     const { data, error } = await supabase.functions.invoke('fix-auth-users');
                     if (error) {
                       toast.error(`Error: ${error.message}`);
