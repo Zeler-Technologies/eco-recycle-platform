@@ -96,30 +96,33 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const fetchScrapyards = async () => {
     try {
-      // Use RPC to avoid RLS recursion and get only accessible scrapyards
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('list_scrapyards_for_current_user' as any);
+      let query = supabase.from('scrapyards').select('id, name, tenant_id');
+      
+      // Filter by tenant if user is not super admin
+      if (user?.role !== 'super_admin' && user?.tenant_id) {
+        query = query.eq('tenant_id', user.tenant_id);
+      } else if (user?.role === 'super_admin' && selectedTenant) {
+        // Super admin with specific tenant selected
+        query = query.eq('tenant_id', selectedTenant);
+      }
+      // If super admin with no selectedTenant, fetch all scrapyards
 
-      if (rpcError) {
-        console.error('RPC list_scrapyards_for_current_user error:', rpcError);
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching scrapyards:', error);
         setScrapyards([]);
         return;
       }
 
-      const list: any[] = (rpcData as any[] | null) ?? [];
-      // For super admin, optionally filter by selected tenant if provided
-      const filtered = (user?.role === 'super_admin' && selectedTenant)
-        ? list.filter((s: any) => Number(s.tenant_id) === Number(selectedTenant))
-        : list;
-
-      const mappedData: Scrapyard[] = filtered.map((s: any) => ({
+      const mappedData: Scrapyard[] = (data || []).map((s: any) => ({
         id: Number(s.id),
         name: s.name,
         tenant_id: Number(s.tenant_id),
       }));
       setScrapyards(mappedData);
     } catch (error) {
-      console.error('Error fetching scrapyards via RPC:', error);
+      console.error('Error fetching scrapyards:', error);
       setScrapyards([]);
     }
   };
