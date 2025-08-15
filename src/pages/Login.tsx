@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, User, Truck, Users, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const { signIn, devCreateUser, user, profile, error: authError, refetchProfile } = useAuth();
@@ -16,6 +17,85 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [debugInfo, setDebugInfo] = useState('');
+  const [detailedDebug, setDetailedDebug] = useState('');
+
+  const comprehensiveDebugTest = async () => {
+    setDetailedDebug('Starting comprehensive debug test...\n');
+    
+    try {
+      // Test 1: Check current auth status
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      setDetailedDebug(prev => prev + `Current session: ${session ? session.user.email : 'None'}\n`);
+      if (sessionError) {
+        setDetailedDebug(prev => prev + `Session error: ${sessionError.message}\n`);
+      }
+      
+      // Test 2: Try to create ONE user step by step
+      const testEmail = 'test@debug.com';
+      const testPassword = 'debug123456';
+      
+      setDetailedDebug(prev => prev + `\nAttempting to create user: ${testEmail}\n`);
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: testEmail,
+        password: testPassword,
+        options: {
+          emailRedirectTo: undefined
+        }
+      });
+      
+      setDetailedDebug(prev => prev + `SignUp result:\n`);
+      setDetailedDebug(prev => prev + `- User created: ${signUpData.user ? 'YES' : 'NO'}\n`);
+      setDetailedDebug(prev => prev + `- User ID: ${signUpData.user?.id || 'None'}\n`);
+      setDetailedDebug(prev => prev + `- User email: ${signUpData.user?.email || 'None'}\n`);
+      setDetailedDebug(prev => prev + `- Email confirmed: ${signUpData.user?.email_confirmed_at ? 'YES' : 'NO'}\n`);
+      setDetailedDebug(prev => prev + `- Error: ${signUpError ? signUpError.message : 'None'}\n`);
+      
+      if (signUpError) {
+        setDetailedDebug(prev => prev + `SignUp failed: ${signUpError.message}\n`);
+        return;
+      }
+      
+      // Test 3: Try to sign in immediately
+      setDetailedDebug(prev => prev + `\nAttempting to sign in with: ${testEmail}\n`);
+      
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword
+      });
+      
+      setDetailedDebug(prev => prev + `SignIn result:\n`);
+      setDetailedDebug(prev => prev + `- Success: ${signInData.user ? 'YES' : 'NO'}\n`);
+      setDetailedDebug(prev => prev + `- Error: ${signInError ? signInError.message : 'None'}\n`);
+      
+      // Test 4: Try to create profile
+      if (signInData.user) {
+        setDetailedDebug(prev => prev + `\nAttempting to create profile...\n`);
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from('auth_users')
+          .insert({
+            id: signInData.user.id,
+            email: testEmail,
+            role: 'super_admin',
+            tenant_id: null
+          })
+          .select();
+        
+        setDetailedDebug(prev => prev + `Profile creation:\n`);
+        setDetailedDebug(prev => prev + `- Success: ${profileData ? 'YES' : 'NO'}\n`);
+        setDetailedDebug(prev => prev + `- Error: ${profileError ? profileError.message : 'None'}\n`);
+        
+        // Sign out after test
+        await supabase.auth.signOut();
+      }
+      
+      setDetailedDebug(prev => prev + `\n✅ Debug test complete!\n`);
+      
+    } catch (error) {
+      setDetailedDebug(prev => prev + `\n❌ Unexpected error: ${error.message}\n`);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,8 +240,16 @@ const Login = () => {
             {/* Emergency Actions */}
             <div className="space-y-2">
               <Button 
-                onClick={createAllDevUsers} 
+                onClick={comprehensiveDebugTest} 
                 className="w-full bg-red-600 hover:bg-red-700"
+                disabled={isLoading}
+              >
+                🔍 Comprehensive Debug Test
+              </Button>
+
+              <Button 
+                onClick={createAllDevUsers} 
+                className="w-full bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
               >
                 🚨 Create All Dev Users
@@ -176,6 +264,13 @@ const Login = () => {
                 🔄 Refetch Profile
               </Button>
             </div>
+
+            {/* Detailed Debug Output */}
+            {detailedDebug && (
+              <div className="bg-gray-900 text-green-400 p-4 rounded text-xs font-mono max-h-60 overflow-auto">
+                <pre>{detailedDebug}</pre>
+              </div>
+            )}
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
