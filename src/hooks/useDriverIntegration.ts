@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Driver {
   id: string;
@@ -72,7 +72,7 @@ export const useDriverIntegration = () => {
   const [pricingError, setPricingError] = useState<string | null>(null);
 
   // Load current driver information using real Supabase auth
-  const { user, session } = useSupabaseAuth();
+  const { user, session } = useAuth();
   
   const loadDriverInfo = useCallback(async () => {
     try {
