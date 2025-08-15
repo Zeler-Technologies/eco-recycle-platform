@@ -271,14 +271,14 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
                       className="bg-muted cursor-not-allowed"
                     />
                   ) : (
-                    <select
-                      id="tenant_id"
-                      value={formData.tenant_id}
-                      onChange={(e) => {
-                        const newTenantId = Number(e.target.value);
-                        setFormData({ ...formData, tenant_id: newTenantId, scrapyard_id: null });
-                        fetchScrapyards(newTenantId);
-                      }}
+                  <select
+                    id="tenant_id"
+                    value={formData.tenant_id}
+                    onChange={(e) => {
+                      const newTenantId = Number(e.target.value);
+                      setFormData({ ...formData, tenant_id: newTenantId, scrapyard_id: null });
+                      fetchScrapyards(newTenantId, true);
+                    }}
                       className="w-full px-3 py-2 border rounded-md"
                       required
                       disabled={tenantsLoading}
