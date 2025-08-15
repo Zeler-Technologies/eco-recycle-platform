@@ -189,12 +189,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      setLoading(true);
       await supabase.auth.signOut();
+      
+      // Clear all state
+      setUser(null);
       setProfile(null);
+      setSession(null);
       setError(null);
+      
+      // Force redirect to home page
+      window.location.href = '/';
     } catch (error) {
       console.error('Sign out error:', error);
       setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
