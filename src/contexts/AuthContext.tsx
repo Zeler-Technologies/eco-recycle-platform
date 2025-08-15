@@ -93,6 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           console.log('Auth state change:', event, session?.user?.email);
+          
+          // Handle explicit sign out
+          if (event === 'SIGNED_OUT') {
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            setError(null);
+            return;
+          }
+          
           setSession(session);
           setUser(session?.user ?? null);
           
@@ -190,16 +200,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setLoading(true);
-      await supabase.auth.signOut();
       
-      // Clear all state
+      // First clear all state immediately
       setUser(null);
       setProfile(null);
       setSession(null);
       setError(null);
       
-      // Force redirect to home page
-      window.location.href = '/';
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        setError(error.message);
+      }
+      
+      // Don't force reload, let React Router handle navigation
     } catch (error) {
       console.error('Sign out error:', error);
       setError(error.message);
