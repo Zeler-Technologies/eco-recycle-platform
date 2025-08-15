@@ -4461,6 +4461,10 @@ export type Database = {
           user_role: Database["public"]["Enums"]["user_role"]
         }[]
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_driver_pickups: {
         Args: { driver_auth_id: string }
         Returns: {
@@ -4707,6 +4711,10 @@ export type Database = {
       }
       is_assigned_driver: {
         Args: { pickup_order_uuid: string }
+        Returns: boolean
+      }
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       is_super_admin_bypass: {
