@@ -108,7 +108,7 @@ const TenantDashboard = () => {
                 variant="outline"
                 size="sm"
                 onClick={logout}
-                className="border-tenant-primary-foreground/30 text-tenant-primary-foreground hover:bg-tenant-primary-foreground/10"
+                className="border-white/50 text-white hover:bg-white/20 hover:text-white"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logga ut
