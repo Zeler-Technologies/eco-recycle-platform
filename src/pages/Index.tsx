@@ -7,11 +7,12 @@ import TenantDashboard from '@/components/Tenant/TenantDashboard';
 import PantaBilenDriverApp from '@/components/Driver/PantaBilenDriverApp';
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
   // Debug logging
   console.log('Index component - User:', user);
+  console.log('Index component - Profile:', profile);
   console.log('Index component - Loading:', loading);
 
   if (loading) {
@@ -58,11 +59,13 @@ const Index = () => {
     );
   }
 
-  // Role-based dashboard rendering
-  switch (user.role) {
+  // Role-based dashboard rendering using REAL user data
+  switch (profile?.role) {
     case 'super_admin':
       return <SuperAdminDashboard />;
     case 'tenant_admin':
+      return <TenantDashboard />;
+    case 'scrapyard_admin':
       return <TenantDashboard />;
     case 'driver':
       return <Navigate to="/driver-app" replace />;

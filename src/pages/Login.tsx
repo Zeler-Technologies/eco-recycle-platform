@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,37 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Shield, Car, Recycle, Smartphone, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, user, loading } = useSupabaseAuth();
+  const { signIn, devCreateUser, user, loading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user && !loading) {
-      console.log('User is already logged in, redirecting to driver app');
-      navigate('/driver-app', { replace: true });
+      console.log('User is already logged in, redirecting home');
+      navigate('/', { replace: true });
     }
   }, [user, loading, navigate]);
-
-  // Create test users on component mount if they don't exist
-  useEffect(() => {
-    const initializeTestUsers = async () => {
-      try {
-        console.log('Initializing test users...');
-        await createTestUsersIfNeeded();
-      } catch (error) {
-        console.error('Failed to initialize test users:', error);
-      }
-    };
-    
-    initializeTestUsers();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,12 +33,14 @@ const Login = () => {
     
     try {
       console.log('Login attempt with:', email);
-      const { error: loginError } = await login(email, password);
+      const { error: loginError } = await signIn(email, password);
       
       if (loginError) {
         setError(loginError.message || 'An error occurred during login');
       } else {
         console.log('Login successful, will redirect automatically');
+        toast.success('Logged in successfully!');
+        navigate('/');
       }
     } catch (err: any) {
       console.error('Login failed:', err);
@@ -62,17 +50,32 @@ const Login = () => {
     }
   };
 
-  const createTestUsersIfNeeded = async () => {
+  // Development functions - remove in production
+  const createDevUsers = async () => {
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-test-users');
-      if (error) {
-        console.error('Error creating test users:', error);
-      } else {
-        console.log('Test users setup completed:', data);
-      }
+      await devCreateUser('admin@pantabilen.se', 'SecurePass123!', 'super_admin');
+      await devCreateUser('admin@demoscrapyard.se', 'SecurePass123!', 'tenant_admin', 1);
+      await devCreateUser('erik@pantabilen.se', 'SecurePass123!', 'driver', 1);
+      await devCreateUser('anna@pantabilen.se', 'SecurePass123!', 'driver', 1);
+      toast.success('Development users created! You can now log in with them.');
     } catch (error) {
-      console.error('Error invoking create-test-users function:', error);
+      console.error('Error creating dev users:', error);
+      toast.error('Error creating development users');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const quickLogin = async (email: string, password: string) => {
+    setIsLoading(true);
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      navigate('/');
+    }
+    setIsLoading(false);
   };
 
   const demoAccounts = [
@@ -223,16 +226,53 @@ const Login = () => {
             
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                ✅ These users are stored in Supabase Auth and linked to driver records
+                ✅ Real Supabase authentication with proper roles and permissions
               </p>
-              <Button 
-                onClick={createTestUsersIfNeeded} 
-                variant="outline" 
-                size="sm" 
-                className="mt-2"
-              >
-                Create/Update Test Users
-              </Button>
+              <div className="space-y-2 mt-2">
+                <Button 
+                  onClick={createDevUsers} 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  Create Development Users
+                </Button>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button 
+                    onClick={() => quickLogin('admin@pantabilen.se', 'SecurePass123!')}
+                    variant="outline" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    Quick: Admin
+                  </Button>
+                  <Button 
+                    onClick={() => quickLogin('admin@demoscrapyard.se', 'SecurePass123!')}
+                    variant="outline" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    Quick: Tenant
+                  </Button>
+                  <Button 
+                    onClick={() => quickLogin('erik@pantabilen.se', 'SecurePass123!')}
+                    variant="outline" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    Quick: Erik
+                  </Button>
+                  <Button 
+                    onClick={() => quickLogin('anna@pantabilen.se', 'SecurePass123!')}
+                    variant="outline" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    Quick: Anna
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
