@@ -202,6 +202,14 @@ const Login = () => {
       color: 'bg-blue-100 text-blue-700'
     },
     {
+      role: 'Customer',
+      email: 'customer@example.se',
+      password: 'SecurePass123!',
+      description: 'Customer app access',
+      icon: <User className="h-4 w-4" />,
+      color: 'bg-purple-100 text-purple-700'
+    },
+    {
       role: 'Driver',
       email: 'erik@pantabilen.se',
       password: 'SecurePass123!', 
