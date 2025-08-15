@@ -66,9 +66,11 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
       // If not super admin, filter by user's tenant
       if (user?.role !== 'super_admin' && user?.tenant_id) {
         query = query.eq('tenant_id', user.tenant_id);
-      } else if (selectedTenant) {
+      } else if (user?.role === 'super_admin' && selectedTenant) {
+        // Super admin with specific tenant selected
         query = query.eq('tenant_id', selectedTenant);
       }
+      // If super admin with no selectedTenant, fetch all drivers from all tenants
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
