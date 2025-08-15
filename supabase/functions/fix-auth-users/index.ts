@@ -58,15 +58,27 @@ serve(async (req) => {
       try {
         console.log(`Processing user: ${user.email}`);
 
-        // First, try to get existing user
-        const { data: existingUsers } = await supabaseAdmin.auth.admin.getUsersByEmail(user.email);
+        // First, try to find existing user by email via listUsers (getUsersByEmail not available)
+        let existingUserId: string | null = null;
+        try {
+          let page = 1;
+          const perPage = 1000;
+          while (true) {
+            const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+            if (error) break;
+            const match = data.users.find((u: any) => (u.email || '').toLowerCase() === user.email.toLowerCase());
+            if (match) { existingUserId = match.id; break; }
+            if (!data.users || data.users.length < perPage) break;
+            page++;
+          }
+        } catch (_e) {}
         
-        if (existingUsers && existingUsers.length > 0) {
+        if (existingUserId) {
           console.log(`User ${user.email} already exists in auth, updating password...`);
           
           // Update the existing user's password
-          const { data: updateData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-            existingUsers[0].id,
+          const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            existingUserId,
             {
               password: user.password,
               email_confirm: true
@@ -87,7 +99,7 @@ serve(async (req) => {
           await supabaseAdmin
             .from('auth_users')
             .upsert({
-              id: existingUsers[0].id,
+              id: existingUserId,
               email: user.email,
               role: user.role,
               tenant_id: user.tenant_id
@@ -96,7 +108,7 @@ serve(async (req) => {
           results.push({
             email: user.email,
             status: 'password_updated',
-            user_id: existingUsers[0].id
+            user_id: existingUserId
           });
         } else {
           console.log(`Creating new user: ${user.email}`);
