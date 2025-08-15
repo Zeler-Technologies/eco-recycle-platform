@@ -100,11 +100,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('auth_users')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+      
+      console.log('Profile fetch result:', { data, error });
       
       if (!error && data) {
         // Type cast the database role to our UserRole
@@ -112,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...data,
           role: data.role as UserRole
         };
+        console.log('Setting profile:', typedProfile);
         setProfile(typedProfile);
       } else if (error) {
         console.error('Error fetching user profile:', error);
@@ -149,6 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // DEVELOPMENT ONLY: Create real users for testing
   const devCreateUser = async (email: string, password: string, role: UserRole, tenantId?: number) => {
     try {
+      console.log(`Creating dev user: ${email} with role: ${role}`);
+      
       // First create Supabase auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -164,10 +170,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (authData.user) {
+        console.log('Auth user created:', authData.user.id);
+        
         // Then create profile record
         const { error: profileError } = await supabase
           .from('auth_users')
-          .insert({
+          .upsert({
             id: authData.user.id,
             email,
             role: role as any, // Cast to match database enum
@@ -177,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileError) {
           console.error('Error creating user profile:', profileError);
         } else {
-          console.log(`Created user: ${email} with role: ${role}`);
+          console.log(`✅ Created user: ${email} with role: ${role}`);
         }
       }
     } catch (error) {
