@@ -1,3 +1,4 @@
+// Fix the Index.tsx to handle profile loading properly
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -9,7 +10,7 @@ import PantaBilenDriverApp from '@/components/Driver/PantaBilenDriverApp';
 const Index = () => {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
-
+  
   // Debug logging
   console.log('Index component - User:', user);
   console.log('Index component - Profile:', profile);
@@ -59,20 +60,60 @@ const Index = () => {
     );
   }
 
+  // NEW: Handle case where user exists but profile is still loading
+  if (user && !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+          <p className="text-sm text-gray-500 mt-2">User: {user.email}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // NEW: Add debug info for role switching
+  console.log('Switching on role:', profile?.role);
+
   // Role-based dashboard rendering using REAL user data
   switch (profile?.role) {
     case 'super_admin':
+      console.log('Rendering SuperAdminDashboard');
       return <SuperAdminDashboard />;
     case 'tenant_admin':
+      console.log('Rendering TenantDashboard for tenant_admin');
       return <TenantDashboard />;
     case 'scrapyard_admin':
+      console.log('Rendering TenantDashboard for scrapyard_admin');
       return <TenantDashboard />;
     case 'driver':
+      console.log('Navigating to driver-app');
       return <Navigate to="/driver-app" replace />;
     case 'customer':
+      console.log('Navigating to customer-app');
       return <Navigate to="/customer-app" replace />;
     default:
-      return <Navigate to="/login" replace />;
+      console.log('FALLBACK: Unknown role or no role, redirecting to login');
+      console.log('Profile data:', profile);
+      // NEW: Show error instead of immediate redirect
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center p-8 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4">Profile Error</h2>
+            <p className="mb-4">User authenticated but role not recognized:</p>
+            <pre className="bg-gray-100 p-4 rounded text-sm text-left">
+              {JSON.stringify({ user: user?.email, profile }, null, 2)}
+            </pre>
+            <Button 
+              onClick={() => navigate('/login')} 
+              className="mt-4"
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      );
   }
 };
 
