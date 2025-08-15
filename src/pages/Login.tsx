@@ -265,6 +265,31 @@ const Login = () => {
               </Button>
 
               <Button 
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke('fix-auth-users');
+                    if (error) {
+                      toast.error(`Error: ${error.message}`);
+                      setDebugInfo(`Fix auth users error: ${error.message}`);
+                    } else {
+                      toast.success('Auth users fixed successfully!');
+                      setDebugInfo(`Auth users fixed: ${JSON.stringify(data.results)}`);
+                    }
+                  } catch (err) {
+                    toast.error('Failed to fix auth users');
+                    setDebugInfo(`Fix error: ${err.message}`);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                className="w-full bg-green-600 hover:bg-green-700"
+                disabled={isLoading}
+              >
+                🔧 Fix Auth Users & Passwords
+              </Button>
+
+              <Button 
                 onClick={createAllDevUsers} 
                 className="w-full bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
