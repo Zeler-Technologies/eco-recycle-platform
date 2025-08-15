@@ -12,8 +12,8 @@ export const QuickAuth = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'admin@superadmin.com',
-        password: 'password123'
+        email: 'admin@pantabilen.se',
+        password: 'SecurePass123!'
       });
 
       if (error) {
