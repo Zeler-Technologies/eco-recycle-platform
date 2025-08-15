@@ -185,48 +185,62 @@ const Login = () => {
     }
   };
 
-  const demoAccounts = [
-    {
-      role: 'Super Admin',
+  const correctedDemoAccounts = {
+    super_admin: {
       email: 'admin@pantabilen.se',
       password: 'SecurePass123!',
+      role: 'super_admin',
+      name: 'Super Admin',
       description: 'Full system access',
       icon: <Shield className="h-4 w-4" />,
       color: 'bg-red-100 text-red-700'
     },
-    {
-      role: 'Tenant Admin',
-      email: 'admin@demoscrapyard.se', 
+    tenant_admin: {
+      email: 'admin@demoscrapyard.se',
       password: 'SecurePass123!',
-      description: 'Manage tenant operations',
+      role: 'tenant_admin', 
+      name: 'Tenant Admin',
+      description: 'Manage scrapyard operations',
       icon: <Users className="h-4 w-4" />,
       color: 'bg-blue-100 text-blue-700'
     },
-    {
-      role: 'Customer',
-      email: 'test@customer.se',
-      password: 'SecurePass123!',
-      description: 'Customer app access',
-      icon: <User className="h-4 w-4" />,
-      color: 'bg-purple-100 text-purple-700'
-    },
-    {
-      role: 'Driver',
+    driver: {
       email: 'erik@pantabilen.se',
-      password: 'SecurePass123!', 
-      description: 'Driver app access',
+      password: 'SecurePass123!',
+      role: 'driver',
+      name: 'Erik (Driver)',
+      description: 'Handle car pickups',
       icon: <Truck className="h-4 w-4" />,
       color: 'bg-green-100 text-green-700'
     },
-    {
-      role: 'Debug User',
+    customer: {
+      email: 'test@customer.se', 
+      password: 'SecurePass123!',
+      role: 'customer',
+      name: 'Demo Customer',
+      description: 'Request car pickup',
+      icon: <User className="h-4 w-4" />,
+      color: 'bg-purple-100 text-purple-700'
+    },
+    debug: {
       email: 'test@debug.com',
       password: 'debug123456',
+      role: 'super_admin',
+      name: 'Debug User',
       description: 'Debug test user',
       icon: <AlertCircle className="h-4 w-4" />,
       color: 'bg-yellow-100 text-yellow-700'
     }
-  ];
+  };
+
+  const handleDemoLogin = async (account) => {
+    try {
+      console.log(`🚀 Demo login: ${account.email} / ${account.password}`);
+      await quickLogin(account.email, account.password);
+    } catch (error) {
+      console.error('Demo login failed:', error);
+    }
+  };
 
   const fillCredentials = (email: string, password: string) => {
     setEmail(email);
@@ -363,34 +377,50 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="text-sm font-medium text-gray-700 mb-3">
+              🚀 Quick Demo Login:
+            </div>
+            
             {/* Demo Accounts */}
-            {demoAccounts.map((account, index) => (
-              <div key={index} className="space-y-2">
-                <Button
-                  onClick={() => fillCredentials(account.email, account.password)}
-                  variant="outline"
-                  className="w-full justify-start p-4 h-auto"
+            {Object.entries(correctedDemoAccounts).map(([key, account]) => (
+              <div key={key} className="space-y-2">
+                <button
+                  onClick={() => handleDemoLogin(account)}
+                  className="w-full p-3 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   disabled={isLoading}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${account.color}`}>
-                      {account.icon}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-full ${account.color}`}>
+                        {account.icon}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{account.name}</div>
+                        <div className="text-sm text-gray-500">{account.description}</div>
+                        <div className="text-xs text-blue-600 mt-1">
+                          📧 {account.email}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <div className="font-medium">{account.role}</div>
-                      <div className="text-sm text-gray-500">{account.description}</div>
-                      <div className="text-xs text-gray-400">{account.email}</div>
+                    <div className="text-right">
+                      <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded mb-1">
+                        {account.role}
+                      </div>
+                      <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono">
+                        🔑 {account.password}
+                      </div>
                     </div>
                   </div>
-                </Button>
+                </button>
                 
                 <Button
-                  onClick={() => quickLogin(account.email, account.password)}
+                  onClick={() => fillCredentials(account.email, account.password)}
                   size="sm"
+                  variant="outline"
                   className="w-full"
                   disabled={isLoading}
                 >
-                  Quick Login as {account.role}
+                  Fill Credentials Only
                 </Button>
               </div>
             ))}
