@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .insert({
             id: authData.user.id,
             email,
-            role: role as string, // Cast to match database type
+            role: role as any, // Cast to match database enum
             tenant_id: tenantId || null
           });
 
