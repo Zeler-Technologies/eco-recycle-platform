@@ -3,10 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 
 export const QuickAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { session, isAuth } = useSupabaseSession();
+
+  // Don't show if already authenticated
+  if (isAuth) {
+    return null;
+  }
 
   const loginAsAdmin = async () => {
     setIsLoading(true);
