@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDriverIntegration } from '@/hooks/useDriverIntegration';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   STATUS_TEXTS, 
   STATUS_COLORS, 
@@ -18,7 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, CheckCircle } from 'lucide-react';
 const PantaBilenDriverApp = () => {
   // Use real Supabase authentication
-  const { user, logout } = useSupabaseAuth();
+  const { user, logout } = useAuth();
   
   // Use the driver integration hook 
   const { 
