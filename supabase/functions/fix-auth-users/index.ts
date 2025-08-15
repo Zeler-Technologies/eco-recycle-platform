@@ -1,191 +1,159 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    console.log('Fixing auth users with correct passwords...');
-
+    // Create Supabase client with admin privileges
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
     );
 
-    const testUsers = [
-      {
-        email: 'admin@pantabilen.se',
-        password: 'SecurePass123!',
-        role: 'super_admin',
-        tenant_id: null
-      },
-      {
-        email: 'admin@demoscrapyard.se',
-        password: 'SecurePass123!',
-        role: 'tenant_admin',
-        tenant_id: 1
-      },
-      {
-        email: 'test@customer.se',
-        password: 'SecurePass123!',
-        role: 'customer',
-        tenant_id: 1
-      },
-      {
-        email: 'erik@pantabilen.se',
-        password: 'SecurePass123!',
-        role: 'driver',
-        tenant_id: 1
-      },
-      {
-        email: 'test@debug.com',
-        password: 'debug123456',
-        role: 'super_admin',
-        tenant_id: null
-      }
-    ];
+    console.log("Starting auth users fix process...");
 
-    const results = [];
+    // Get all profiles that should have auth users
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+      .from("auth_users")
+      .select("id, email, role, tenant_id");
 
-    for (const user of testUsers) {
+    if (profilesError) {
+      throw new Error(`Error fetching profiles: ${profilesError.message}`);
+    }
+
+    console.log(`Found ${profiles?.length || 0} profiles to process`);
+
+    const results: any[] = [];
+
+    for (const profile of profiles || []) {
       try {
-        console.log(`Processing user: ${user.email}`);
+        console.log(`Processing user: ${profile.email}`);
 
-        // First, try to find existing user by email via listUsers (getUsersByEmail not available)
-        let existingUserId: string | null = null;
-        try {
-          let page = 1;
-          const perPage = 1000;
-          while (true) {
-            const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
-            if (error) break;
-            const match = data.users.find((u: any) => (u.email || '').toLowerCase() === user.email.toLowerCase());
-            if (match) { existingUserId = match.id; break; }
-            if (!data.users || data.users.length < perPage) break;
-            page++;
-          }
-        } catch (_e) {}
-        
-        if (existingUserId) {
-          console.log(`User ${user.email} already exists in auth, updating password...`);
-          
-          // Update the existing user's password
-          const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-            existingUserId,
-            {
-              password: user.password,
-              email_confirm: true
-            }
-          );
-          
-          if (updateError) {
-            console.error(`Error updating password for ${user.email}:`, updateError);
-            results.push({
-              email: user.email,
-              status: 'error',
-              error: updateError.message
-            });
-            continue;
-          }
-
-          // Update auth_users record
-          await supabaseAdmin
-            .from('auth_users')
-            .upsert({
-              id: existingUserId,
-              email: user.email,
-              role: user.role,
-              tenant_id: user.tenant_id
-            });
-
-          results.push({
-            email: user.email,
-            status: 'password_updated',
-            user_id: existingUserId
+        // Use listUsers() to find user by email (getUsersByEmail is not available)
+        let page = 1;
+        const perPage = 1000;
+        let existingUser: any | null = null;
+        while (true) {
+          const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+            page,
+            perPage,
           });
+          if (listError) {
+            throw new Error(`Error listing users: ${listError.message}`);
+          }
+          const match = usersData.users.find((u: any) => (u.email || '').toLowerCase() === (profile.email || '').toLowerCase());
+          if (match) {
+            existingUser = match;
+            break;
+          }
+          if (!usersData.users || usersData.users.length < perPage) break;
+          page++;
+        }
+
+        if (existingUser) {
+          // User exists in auth; sync IDs if different
+          if (existingUser.id === profile.id) {
+            console.log(`✅ User ${profile.email} already properly linked`);
+            results.push({
+              email: profile.email,
+              status: "already_linked",
+              auth_id: existingUser.id,
+              profile_id: profile.id,
+            });
+          } else {
+            console.log(`🔄 Updating profile ID for ${profile.email}`);
+            const { error: updateError } = await supabaseAdmin
+              .from("auth_users")
+              .update({ id: existingUser.id })
+              .eq("email", profile.email);
+            if (updateError) {
+              throw new Error(`Error updating profile: ${updateError.message}`);
+            }
+            results.push({
+              email: profile.email,
+              status: "id_updated",
+              old_id: profile.id,
+              new_id: existingUser.id,
+            });
+          }
         } else {
-          console.log(`Creating new user: ${user.email}`);
-          
-          // Create new user
-          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: user.email,
-            password: user.password,
+          // User doesn't exist in auth; create them
+          console.log(`➕ Creating auth user for ${profile.email}`);
+          const defaultPassword = "TempPassword123!";
+          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email: profile.email,
+            password: defaultPassword,
             email_confirm: true,
             user_metadata: {
-              role: user.role
-            }
+              role: profile.role,
+              tenant_id: profile.tenant_id,
+            },
           });
-
-          if (authError) {
-            console.error(`Error creating user ${user.email}:`, authError);
-            results.push({
-              email: user.email,
-              status: 'error',
-              error: authError.message
-            });
-            continue;
+          if (createError) {
+            throw new Error(`Error creating user: ${createError.message}`);
           }
-
-          if (authData.user) {
-            // Create auth_users record
-            const { error: authUserError } = await supabaseAdmin
-              .from('auth_users')
-              .upsert({
-                id: authData.user.id,
-                email: user.email,
-                role: user.role,
-                tenant_id: user.tenant_id
-              });
-
-            if (authUserError) {
-              console.error(`Error creating auth_users record for ${user.email}:`, authUserError);
-            }
-
-            results.push({
-              email: user.email,
-              status: 'created',
-              user_id: authData.user.id
-            });
+          const { error: updateError } = await supabaseAdmin
+            .from("auth_users")
+            .update({ id: newUser.user.id })
+            .eq("email", profile.email);
+          if (updateError) {
+            throw new Error(`Error updating profile with new ID: ${updateError.message}`);
           }
+          results.push({
+            email: profile.email,
+            status: "created",
+            auth_id: newUser.user.id,
+            default_password: defaultPassword,
+          });
         }
-      } catch (error) {
-        console.error(`Error processing user ${user.email}:`, error);
+      } catch (userError: any) {
+        console.error(`Error processing user ${profile.email}:`, userError);
         results.push({
-          email: user.email,
-          status: 'error',
-          error: error.message
+          email: profile.email,
+          status: "error",
+          error: userError.message,
         });
       }
     }
 
+    console.log("Auth users fix process completed");
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Auth users fixed successfully',
-        results
+        message: "Auth users fix completed",
+        processed: profiles?.length || 0,
+        results,
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
-
-  } catch (error) {
-    console.error('Error in fix-auth-users function:', error);
+  } catch (error: any) {
+    console.error("Error in fix-auth-users function:", error);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       }
     );
