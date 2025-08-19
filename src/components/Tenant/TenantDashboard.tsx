@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock, MessageSquare } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenantCustomers } from '@/hooks/useTenantCustomers';
 import PricingManagement from './PricingManagement';
 import UserManagement from '../SuperAdmin/UserManagement';
 import SchedulingManagement from './SchedulingManagement';
@@ -17,6 +19,115 @@ const TenantDashboard = () => {
   const [showSchedulingManagement, setShowSchedulingManagement] = useState(false);
   const [showServiceZoneManagement, setShowServiceZoneManagement] = useState(false);
   const [showCustomerMessages, setShowCustomerMessages] = useState(false);
+  
+  // State for real tenant data
+  const [stats, setStats] = useState({
+    newRequests: 0,
+    inProgress: 0,
+    completed: 0,
+    activeDrivers: 0
+  });
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch tenant-specific data
+  useEffect(() => {
+    if (user?.tenant_id) {
+      fetchTenantData();
+    }
+  }, [user?.tenant_id]);
+
+  const fetchTenantData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch customer requests stats for this tenant
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('customer_requests')
+        .select('status, created_at')
+        .eq('tenant_id', user?.tenant_id);
+
+      if (requestsError) throw requestsError;
+
+      // Calculate stats from requests
+      const today = new Date().toDateString();
+      const newRequests = requestsData?.filter(r => r.status === 'pending').length || 0;
+      const inProgress = requestsData?.filter(r => ['assigned', 'in_progress'].includes(r.status)).length || 0;
+      const completed = requestsData?.filter(r => r.status === 'completed').length || 0;
+
+      // Fetch active drivers count for this tenant
+      const { data: driversData, error: driversError } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('tenant_id', user?.tenant_id)
+        .eq('is_active', true);
+
+      if (driversError) throw driversError;
+
+      setStats({
+        newRequests,
+        inProgress,
+        completed,
+        activeDrivers: driversData?.length || 0
+      });
+
+      // Fetch recent orders from tenant's customers
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('customer_requests')
+        .select(`
+          id,
+          owner_name,
+          car_brand,
+          car_model,
+          car_year,
+          pickup_address,
+          status,
+          quote_amount,
+          created_at
+        `)
+        .eq('tenant_id', user?.tenant_id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (ordersError) throw ordersError;
+
+      setRecentOrders(ordersData || []);
+
+      // Fetch today's pickup schedule
+      const today_start = new Date();
+      today_start.setHours(0, 0, 0, 0);
+      const today_end = new Date();
+      today_end.setHours(23, 59, 59, 999);
+
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from('pickup_orders')
+        .select(`
+          scheduled_pickup_date,
+          status,
+          customer_requests!inner(
+            owner_name,
+            car_brand,
+            car_model,
+            pickup_address
+          ),
+          drivers(full_name)
+        `)
+        .eq('customer_requests.tenant_id', user?.tenant_id)
+        .gte('scheduled_pickup_date', today_start.toISOString())
+        .lte('scheduled_pickup_date', today_end.toISOString())
+        .order('scheduled_pickup_date', { ascending: true });
+
+      if (!scheduleError) {
+        setTodaySchedule(scheduleData || []);
+      }
+
+    } catch (error) {
+      console.error('Error fetching tenant data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
@@ -38,52 +149,66 @@ const TenantDashboard = () => {
     return <CustomerMessageManagement onBack={() => setShowCustomerMessages(false)} />;
   }
 
-  const stats = [
+  // Create display stats array from fetched data
+  const statsDisplay = [
     {
       title: 'Nya ärenden',
-      value: '12',
-      change: '+4 idag',
+      value: loading ? '...' : stats.newRequests.toString(),
+      change: loading ? 'Laddar...' : `${stats.newRequests > 0 ? '+' : ''}${stats.newRequests} totalt`,
       icon: Car,
       color: 'bg-status-new'
     },
     {
       title: 'Pågående',
-      value: '8',
-      change: '+2 sedan igår',
+      value: loading ? '...' : stats.inProgress.toString(),
+      change: loading ? 'Laddar...' : `${stats.inProgress > 0 ? '+' : ''}${stats.inProgress} aktiva`,
       icon: Clock,
       color: 'bg-status-processing'
     },
     {
       title: 'Klara',
-      value: '34',
-      change: '+6 denna vecka',
+      value: loading ? '...' : stats.completed.toString(),
+      change: loading ? 'Laddar...' : `${stats.completed > 0 ? '+' : ''}${stats.completed} avslutade`,
       icon: Recycle,
       color: 'bg-status-completed'
     },
     {
       title: 'Aktiva förare',
-      value: '5',
-      change: 'Alla tillgängliga',
+      value: loading ? '...' : stats.activeDrivers.toString(),
+      change: loading ? 'Laddar...' : `${stats.activeDrivers} tillgängliga`,
       icon: Users,
       color: 'bg-tenant-primary'
     }
   ];
 
-  const recentOrders = [
-    { id: 'ORD001', customer: 'Anna Andersson', vehicle: 'Volvo V70 2015', location: 'Stockholm', status: 'Ny', price: '4,500 kr' },
-    { id: 'ORD002', customer: 'Erik Johansson', vehicle: 'Saab 9-3 2012', location: 'Göteborg', status: 'Pågående', price: '3,200 kr' },
-    { id: 'ORD003', customer: 'Maria Nilsson', vehicle: 'BMW X5 2018', location: 'Malmö', status: 'Hämtas', price: '8,900 kr' },
-    { id: 'ORD004', customer: 'Lars Petersson', vehicle: 'Ford Focus 2010', location: 'Uppsala', status: 'Ny', price: '2,800 kr' }
-  ];
-
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Ny': return 'bg-status-new text-white';
-      case 'Pågående': return 'bg-status-processing text-white';
-      case 'Hämtas': return 'bg-status-pending text-white';
-      case 'Klar': return 'bg-status-completed text-white';
-      default: return 'bg-muted';
+    switch (status?.toLowerCase()) {
+      case 'pending':
+      case 'ny': 
+        return 'bg-status-new text-white';
+      case 'assigned':
+      case 'in_progress':
+      case 'pågående': 
+        return 'bg-status-processing text-white';
+      case 'scheduled':
+      case 'hämtas': 
+        return 'bg-status-pending text-white';
+      case 'completed':
+      case 'klar': 
+        return 'bg-status-completed text-white';
+      default: 
+        return 'bg-muted';
     }
+  };
+
+  const formatPrice = (amount: number | null) => {
+    return amount ? `${amount.toLocaleString('sv-SE')} kr` : 'Ej värderad';
+  };
+
+  const formatOrderDisplay = (order: any) => {
+    const vehicle = `${order.car_brand} ${order.car_model}${order.car_year ? ` ${order.car_year}` : ''}`;
+    const location = order.pickup_address || 'Ej angivet';
+    return { vehicle, location };
   };
 
   return (
@@ -121,7 +246,7 @@ const TenantDashboard = () => {
       <div className="p-6">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
+          {statsDisplay.map((stat, index) => (
             <Card key={index} className="bg-white shadow-custom-sm hover:shadow-custom-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -159,32 +284,49 @@ const TenantDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentOrders.map((order, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-tenant-accent rounded-full">
-                        <Car className="h-4 w-4 text-tenant-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold">{order.id} - {order.customer}</h4>
-                        <p className="text-sm text-muted-foreground">{order.vehicle}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {order.location}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge className={getStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
-                      <div className="text-right">
-                        <p className="font-semibold">{order.price}</p>
-                        <p className="text-sm text-muted-foreground">Uppskattad</p>
-                      </div>
-                    </div>
+                {loading ? (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground">Laddar ärenden...</p>
                   </div>
-                ))}
+                ) : recentOrders.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground">Inga ärenden hittade för denna tenant</p>
+                  </div>
+                ) : (
+                  recentOrders.map((order, index) => {
+                    const { vehicle, location } = formatOrderDisplay(order);
+                    return (
+                      <div key={order.id || index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-tenant-accent rounded-full">
+                            <Car className="h-4 w-4 text-tenant-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold">{order.id?.slice(0, 8)} - {order.owner_name}</h4>
+                            <p className="text-sm text-muted-foreground">{vehicle}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {location}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status === 'pending' ? 'Ny' : 
+                             order.status === 'assigned' ? 'Tilldelad' :
+                             order.status === 'in_progress' ? 'Pågående' :
+                             order.status === 'completed' ? 'Klar' : 
+                             order.status}
+                          </Badge>
+                          <div className="text-right">
+                            <p className="font-semibold">{formatPrice(order.quote_amount)}</p>
+                            <p className="text-sm text-muted-foreground">Uppskattad</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -248,27 +390,49 @@ const TenantDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { time: '09:00', driver: 'Erik Andersson', task: 'Hämta Volvo V70 - Stockholm', status: 'Pågående' },
-                { time: '11:30', driver: 'Maria Larsson', task: 'Värdera BMW X5 - Malmö', status: 'Schemalagd' },
-                { time: '14:00', driver: 'Johan Svensson', task: 'Hämta Saab 9-3 - Göteborg', status: 'Schemalagd' },
-                { time: '16:30', driver: 'Anna Petersson', task: 'Leverera delar - Återvinning', status: 'Schemalagd' }
-              ].map((schedule, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-tenant-accent/20 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="text-center">
-                      <p className="font-bold text-tenant-primary">{schedule.time}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">{schedule.task}</p>
-                      <p className="text-sm text-muted-foreground">{schedule.driver}</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-tenant-primary border-tenant-primary">
-                    {schedule.status}
-                  </Badge>
+              {loading ? (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">Laddar schema...</p>
                 </div>
-              ))}
+              ) : todaySchedule.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">Inga schemalagda aktiviteter för idag</p>
+                </div>
+              ) : (
+                todaySchedule.map((schedule, index) => {
+                  const scheduledDate = new Date(schedule.scheduled_pickup_date);
+                  const time = scheduledDate.toLocaleTimeString('sv-SE', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  });
+                  const driverName = schedule.drivers?.full_name || 'Ingen förare tilldelad';
+                  const customerName = schedule.customer_requests?.owner_name || 'Okänd kund';
+                  const vehicle = `${schedule.customer_requests?.car_brand || ''} ${schedule.customer_requests?.car_model || ''}`.trim();
+                  const location = schedule.customer_requests?.pickup_address || 'Okänd plats';
+                  const task = `Hämta ${vehicle} - ${location}`;
+                  const status = schedule.status === 'scheduled' ? 'Schemalagd' : 
+                               schedule.status === 'in_progress' ? 'Pågående' : 
+                               schedule.status === 'completed' ? 'Klar' : 
+                               schedule.status;
+
+                  return (
+                    <div key={schedule.id || index} className="flex items-center justify-between p-3 bg-tenant-accent/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <p className="font-bold text-tenant-primary">{time}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">{task}</p>
+                          <p className="text-sm text-muted-foreground">{driverName}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-tenant-primary border-tenant-primary">
+                        {status}
+                      </Badge>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>
