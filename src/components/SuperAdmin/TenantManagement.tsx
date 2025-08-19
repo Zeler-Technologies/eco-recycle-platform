@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useTenantUsers } from '@/hooks/useTenantUsers';
+import UserManagementModal from './UserManagementModal';
 import { 
   Building2, 
   Users, 
@@ -61,9 +62,11 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
   
   // Fetch users for the selected tenant
-  const { data: tenantUsers = [], isLoading: usersLoading } = useTenantUsers(selectedTenant);
+  const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
 
   // Set selected tenant when prop changes
   useEffect(() => {
@@ -217,6 +220,21 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
         setTenants(updatedTenants);
       }
     }
+  };
+
+  const handleAddUser = () => {
+    setSelectedUser(null);
+    setUserModalOpen(true);
+  };
+
+  const handleEditUser = (user: any) => {
+    setSelectedUser(user);
+    setUserModalOpen(true);
+  };
+
+  const handleUserModalSuccess = () => {
+    refetchUsers();
+    toast.success('User management completed successfully');
   };
 
   return (
@@ -486,7 +504,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                           <CardTitle className="text-admin-primary">User Management</CardTitle>
                           <CardDescription>Manage users and their access rights</CardDescription>
                         </div>
-                        <Button size="sm">
+                        <Button size="sm" onClick={handleAddUser}>
                           <Plus className="h-4 w-4 mr-2" />
                           Add User
                         </Button>
@@ -540,14 +558,14 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm">
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button variant="outline" size="sm" className="text-red-600">
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
+                               <div className="flex items-center gap-2">
+                                 <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
+                                   <Edit className="h-3 w-3" />
+                                 </Button>
+                                 <Button variant="outline" size="sm" className="text-red-600">
+                                   <Trash2 className="h-3 w-3" />
+                                 </Button>
+                               </div>
                             </div>
                           ))}
                         </div>
@@ -1027,6 +1045,18 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
           </div>
         </div>
       </div>
+
+      {/* User Management Modal */}
+      {selectedTenant && (
+        <UserManagementModal
+          isOpen={userModalOpen}
+          onClose={() => setUserModalOpen(false)}
+          user={selectedUser}
+          tenantId={selectedTenant}
+          tenantName={selectedTenantData?.name || 'Unknown Tenant'}
+          onSuccess={handleUserModalSuccess}
+        />
+      )}
     </div>
   );
 };
