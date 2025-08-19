@@ -8,6 +8,8 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import CustomerApp from "./pages/CustomerApp";
+import ProtectedRoute from "./components/ProtectedRoute";
 import ProtectedDriverRoute from "./components/ProtectedDriverRoute";
 import PantaBilenDriverApp from './components/Driver/PantaBilenDriverApp';
 
@@ -24,6 +26,14 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Index />} />
+              <Route 
+                path="/customer-app" 
+                element={
+                  <ProtectedRoute allowedRoles={['customer']}>
+                    <CustomerApp />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/driver-app" 
                 element={
