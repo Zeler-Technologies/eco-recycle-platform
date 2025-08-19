@@ -134,6 +134,10 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
   }, [editTenant, form]);
 
   const onSubmit = async (data: TenantFormData) => {
+    console.log('=== TENANT UPDATE STARTED ===');
+    console.log('Form data submitted:', data);
+    console.log('Editing tenant:', editTenant);
+    
     setLoading(true);
     try {
       if (isEditing) {
