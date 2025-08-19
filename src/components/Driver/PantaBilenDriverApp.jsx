@@ -13,6 +13,7 @@ import {
 } from '@/constants/driverAppConstants';
 import { normalizeDriverStatus } from '@/utils/driverStatus';
 import RecentStatusChanges from '@/components/Driver/RecentStatusChanges';
+import SimpleMap from '@/components/Common/SimpleMap';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, CheckCircle } from 'lucide-react';
@@ -391,13 +392,12 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
         </div>
       </div>
       
-      <div className="bg-gray-200 h-96 rounded-xl flex items-center justify-center">
-        <div className="text-gray-600 text-center">
-          <div className="text-2xl mb-2">🗺️</div>
-          <div>{UI_LABELS.googleMapsIntegration}</div>
-          <div className="text-sm mt-1 tracking-wide capitalize">{UI_LABELS.showOnMap} {filteredPickups.length} {UI_LABELS.tasks}</div>
-        </div>
-      </div>
+      <SimpleMap
+        center={{ lat: 59.3293, lng: 18.0686 }}
+        pickups={filteredPickups}
+        onPickupSelect={openPickupDetail}
+        className="h-96 rounded-xl"
+      />
     </div>
   );
 

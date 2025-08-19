@@ -3,13 +3,22 @@ import { useEffect, useRef, useState } from "react";
 interface SimpleMapProps {
   center: { lat: number; lng: number };
   onLocationSelect?: (coordinates: { lat: number; lng: number }) => void;
+  pickups?: any[];
+  onPickupSelect?: (pickup: any) => void;
   className?: string;
 }
 
-export default function SimpleMap({ center, onLocationSelect, className = "" }: SimpleMapProps) {
+export default function SimpleMap({ 
+  center, 
+  onLocationSelect, 
+  pickups = [], 
+  onPickupSelect, 
+  className = "" 
+}: SimpleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const pickupMarkersRef = useRef<google.maps.Marker[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
 
@@ -77,10 +86,70 @@ export default function SimpleMap({ center, onLocationSelect, className = "" }: 
       if (markerRef.current) {
         markerRef.current.setMap(null);
       }
+      // Clear pickup markers
+      pickupMarkersRef.current.forEach(marker => marker.setMap(null));
+      pickupMarkersRef.current = [];
       mapInstanceRef.current = null;
       markerRef.current = null;
     };
   }, []);
+
+  // Update pickup markers when pickups change
+  useEffect(() => {
+    if (!mapInstanceRef.current || !isLoaded) return;
+
+    // Clear existing pickup markers
+    pickupMarkersRef.current.forEach(marker => marker.setMap(null));
+    pickupMarkersRef.current = [];
+
+    // Add markers for each pickup
+    pickups.forEach((pickup) => {
+      if (!pickup.pickup_latitude || !pickup.pickup_longitude) return;
+
+      const marker = new window.google.maps.Marker({
+        position: { lat: pickup.pickup_latitude, lng: pickup.pickup_longitude },
+        map: mapInstanceRef.current,
+        title: pickup.car_registration_number || 'Pickup',
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: getPickupStatusColor(pickup.status),
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+        }
+      });
+
+      // Add click listener for pickup selection
+      marker.addListener('click', () => {
+        onPickupSelect?.(pickup);
+      });
+
+      pickupMarkersRef.current.push(marker);
+    });
+
+    // Fit map bounds to show all pickups
+    if (pickups.length > 0) {
+      const bounds = new window.google.maps.LatLngBounds();
+      pickups.forEach((pickup) => {
+        if (pickup.pickup_latitude && pickup.pickup_longitude) {
+          bounds.extend({ lat: pickup.pickup_latitude, lng: pickup.pickup_longitude });
+        }
+      });
+      mapInstanceRef.current.fitBounds(bounds);
+    }
+  }, [pickups, isLoaded, onPickupSelect]);
+
+  const getPickupStatusColor = (status: string): string => {
+    const colors = {
+      'scheduled': '#3b82f6', // blue
+      'in_progress': '#eab308', // yellow  
+      'completed': '#22c55e', // green
+      'cancelled': '#ef4444', // red
+      default: '#6b7280' // gray
+    };
+    return colors[status as keyof typeof colors] || colors.default;
+  };
 
   // Update marker position when center changes
   useEffect(() => {
@@ -92,7 +161,7 @@ export default function SimpleMap({ center, onLocationSelect, className = "" }: 
 
   if (error) {
     return (
-      <div className={`w-full h-64 bg-muted rounded-lg flex items-center justify-center ${className}`}>
+      <div className={`w-full h-96 bg-muted rounded-lg flex items-center justify-center ${className}`}>
         <p className="text-destructive">Kunde inte ladda karta</p>
       </div>
     );
@@ -100,9 +169,9 @@ export default function SimpleMap({ center, onLocationSelect, className = "" }: 
 
   return (
     <div className={className}>
-      <div ref={mapRef} className="w-full h-64 rounded-lg border border-border">
+      <div ref={mapRef} className="w-full h-96 rounded-lg border border-border">
         {!isLoaded && (
-          <div className="w-full h-64 bg-muted rounded-lg flex items-center justify-center">
+          <div className="w-full h-96 bg-muted rounded-lg flex items-center justify-center">
             <p className="text-muted-foreground">Laddar karta...</p>
           </div>
         )}
