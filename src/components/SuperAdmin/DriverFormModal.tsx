@@ -104,11 +104,13 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
   const fetchScrapyards = async (tenantId: number, autoAssignIfSingle: boolean = false) => {
     try {
       setScrapyardsLoading(true);
+      console.log('DriverFormModal - Fetching scrapyards for tenantId:', tenantId, 'user role:', user?.role, 'user tenant_id:', user?.tenant_id);
 
       // For tenant_admin users, ALWAYS use their tenant_id - never allow access to other tenants
       let filterTenantId = tenantId;
       if (user?.role === 'tenant_admin' && user.tenant_id) {
         filterTenantId = Number(user.tenant_id);
+        console.log('DriverFormModal - Forcing tenant_id to user tenant_id:', filterTenantId);
       }
 
       // Direct query with strict tenant filtering
@@ -118,6 +120,8 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         .eq('is_active', true)
         .eq('tenant_id', filterTenantId);
 
+      console.log('DriverFormModal - Scrapyard query result:', { data: scrapyardData, error, filterTenantId });
+
       if (error) {
         console.error('Scrapyards query error:', error);
         throw error;
@@ -125,6 +129,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
 
       // Ensure strict tenant isolation - only return scrapyards for the specific tenant
       const filtered = (scrapyardData || []).filter((s: any) => Number(s.tenant_id) === Number(filterTenantId));
+      console.log('DriverFormModal - Filtered scrapyards:', filtered);
 
       // Fix encoding in scrapyard data
       const fixedData = filtered.map(s => ({
@@ -134,6 +139,7 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         address: fixSwedishEncoding(s.address || '')
       }));
       
+      console.log('DriverFormModal - Final scrapyard data:', fixedData);
       setScrapyards(fixedData);
       if (autoAssignIfSingle && fixedData.length === 1) {
         setFormData(prev => ({ ...prev, scrapyard_id: fixedData[0].id }));
