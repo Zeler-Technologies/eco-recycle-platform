@@ -149,6 +149,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     }
 
     try {
+      const tenantId = newUser.tenant_id === 'none' ? null : parseInt(newUser.tenant_id) || null;
+      
       // Create auth user first
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: newUser.email,
@@ -172,7 +174,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
           id: authData.user.id,
           email: newUser.email,
           role: newUser.role,
-          tenant_id: newUser.tenant_id ? parseInt(newUser.tenant_id) : null
+          tenant_id: tenantId
         });
 
       if (profileError) {
@@ -240,7 +242,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     setEditForm({ 
       email: user.email, 
       role: user.role,
-      tenant_id: user.tenant_id?.toString() || ''
+      tenant_id: user.tenant_id?.toString() || 'none'
     });
   };
 
@@ -257,12 +259,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     if (!editingUser) return;
 
     try {
+      const tenantId = editForm.tenant_id === 'none' ? null : parseInt(editForm.tenant_id) || null;
+      
       const { error } = await supabase
         .from('auth_users')
         .update({
           email: editForm.email,
           role: editForm.role,
-          tenant_id: editForm.tenant_id ? parseInt(editForm.tenant_id) : null,
+          tenant_id: tenantId,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingUser.id);
@@ -415,7 +419,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                           <SelectValue placeholder="Select tenant" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No Tenant</SelectItem>
+                          <SelectItem value="none">No Tenant</SelectItem>
                           {tenants.map((tenant) => (
                             <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
                               {tenant.name}
@@ -631,7 +635,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         <SelectValue placeholder="Select tenant" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Tenant</SelectItem>
+                        <SelectItem value="none">No Tenant</SelectItem>
                         {tenants.map((tenant) => (
                           <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
                             {tenant.name}
