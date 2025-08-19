@@ -21,12 +21,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId, email, firstName, lastName, role, pnrNum } = await req.json();
+    const { tenantId, email, firstName, lastName, role, pnrNum } = await req.json();
 
-    console.log('Updating user with params:', { userId, email, firstName, lastName, role, pnrNum });
+    console.log('Updating user with params:', { tenantId, email, firstName, lastName, role, pnrNum });
 
     // Validate required fields
-    if (!userId || !email || !firstName || !lastName || !role) {
+    if (!tenantId || !email || !firstName || !lastName || !role) {
       console.error('Missing required fields');
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
@@ -36,6 +36,27 @@ serve(async (req) => {
         }
       );
     }
+
+    // Find the existing admin user for this tenant
+    const { data: existingAdmin, error: findError } = await supabaseAdmin
+      .from('auth_users')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'scrapyard_admin')
+      .single();
+
+    if (findError || !existingAdmin) {
+      console.error('Could not find admin user for tenant:', findError);
+      return new Response(
+        JSON.stringify({ error: 'Could not find admin user for this tenant' }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const userId = existingAdmin.id;
 
     // Check for duplicate PNR number if provided (excluding current user)
     if (pnrNum && pnrNum.trim()) {
