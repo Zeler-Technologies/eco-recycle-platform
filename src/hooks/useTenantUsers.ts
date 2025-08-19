@@ -18,6 +18,8 @@ export function useTenantUsers(tenantId: number | null) {
     queryFn: async () => {
       if (!tenantId) return [];
       
+      console.log(`Fetching users for tenant_id: ${tenantId}`);
+      
       const { data, error } = await supabase
         .from('auth_users')
         .select('*')
@@ -29,6 +31,7 @@ export function useTenantUsers(tenantId: number | null) {
         throw error;
       }
 
+      console.log(`Found ${data?.length || 0} users for tenant_id: ${tenantId}`, data);
       return data as TenantUser[];
     },
   });

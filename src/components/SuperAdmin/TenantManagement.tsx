@@ -497,10 +497,22 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                          <div className="flex justify-center py-8">
                            <div className="text-muted-foreground">Loading users...</div>
                          </div>
+                       ) : !selectedTenant ? (
+                         <div className="text-center py-8">
+                           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                           <p className="text-muted-foreground">Please select a tenant to view users</p>
+                         </div>
                        ) : tenantUsers.length === 0 ? (
                          <div className="text-center py-8">
                            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                            <p className="text-muted-foreground">No users found for this tenant</p>
+                           <p className="text-sm text-muted-foreground mt-2">
+                             Tenant ID: {selectedTenant} | 
+                             Tenant: {tenants.find(t => t.tenants_id === selectedTenant)?.name || 'Unknown'}
+                           </p>
+                           <p className="text-xs text-muted-foreground mt-1">
+                             Users must have tenant_id = {selectedTenant} in auth_users table
+                           </p>
                          </div>
                        ) : (
                          <div className="space-y-4">
