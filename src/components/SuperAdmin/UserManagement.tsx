@@ -38,6 +38,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
@@ -54,19 +55,61 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     last_name: ''
   });
 
-  // Fetch users from Supabase
+  // Get current user's information
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return null;
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('auth_users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        return null;
+      }
+
+      return userProfile;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  };
+
+  // Fetch users from Supabase with tenant filtering
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const currentUserProfile = await getCurrentUser();
+      if (!currentUserProfile) return;
+
+      setCurrentUser(currentUserProfile);
+
+      // Build query with tenant filtering
+      let query = supabase
         .from('auth_users')
         .select(`
           *,
           tenants:tenant_id (
             name
           )
-        `)
-        .order('created_at', { ascending: false });
+        `);
+
+      // If user is not super_admin, filter by their tenant only
+      if (currentUserProfile.role !== 'super_admin') {
+        if (currentUserProfile.tenant_id) {
+          query = query.eq('tenant_id', currentUserProfile.tenant_id);
+        } else {
+          // If tenant_admin has no tenant_id, they can't see any users
+          setUsers([]);
+          return;
+        }
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         toast({
@@ -94,13 +137,28 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     }
   };
 
-  // Fetch tenants for dropdowns
+  // Fetch tenants with filtering based on user role
   const fetchTenants = async () => {
     try {
-      const { data, error } = await supabase
+      const currentUserProfile = await getCurrentUser();
+      if (!currentUserProfile) return;
+
+      let query = supabase
         .from('tenants')
-        .select('tenants_id, name')
-        .order('name', { ascending: true });
+        .select('tenants_id, name');
+
+      // If user is not super_admin, only show their own tenant
+      if (currentUserProfile.role !== 'super_admin') {
+        if (currentUserProfile.tenant_id) {
+          query = query.eq('tenants_id', currentUserProfile.tenant_id);
+        } else {
+          // If no tenant_id, they can't see any tenants
+          setTenants([]);
+          return;
+        }
+      }
+
+      const { data, error } = await query.order('name', { ascending: true });
 
       if (error) {
         console.error('Error fetching tenants:', error);
@@ -154,8 +212,32 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       return;
     }
 
+    // Ensure tenant admins can only create users in their own tenant
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "Unable to verify current user permissions.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      const tenantId = newUser.tenant_id === 'none' ? null : parseInt(newUser.tenant_id) || null;
+      let tenantId = newUser.tenant_id === 'none' ? null : parseInt(newUser.tenant_id) || null;
+      
+      // Enforce tenant restrictions for non-super admins
+      if (currentUser.role !== 'super_admin') {
+        if (!currentUser.tenant_id) {
+          toast({
+            title: "Error",
+            description: "You don't have permission to create users.",
+            variant: "destructive"
+          });
+          return;
+        }
+        // Force tenant_admin to only create users in their own tenant
+        tenantId = currentUser.tenant_id;
+      }
       
       // Create auth user first
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -266,10 +348,34 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       return;
     }
     
-    if (!editingUser) return;
+    if (!editingUser || !currentUser) return;
 
     try {
-      const tenantId = editForm.tenant_id === 'none' ? null : parseInt(editForm.tenant_id) || null;
+      let tenantId = editForm.tenant_id === 'none' ? null : parseInt(editForm.tenant_id) || null;
+      
+      // Enforce tenant restrictions for non-super admins
+      if (currentUser.role !== 'super_admin') {
+        if (!currentUser.tenant_id) {
+          toast({
+            title: "Error",
+            description: "You don't have permission to edit users.",
+            variant: "destructive"
+          });
+          return;
+        }
+        // Force tenant_admin to only edit users in their own tenant
+        tenantId = currentUser.tenant_id;
+        
+        // Verify the user being edited belongs to their tenant
+        if (editingUser.tenant_id !== currentUser.tenant_id) {
+          toast({
+            title: "Error",
+            description: "You can only edit users in your own tenant.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
       
       const { error } = await supabase
         .from('auth_users')
@@ -443,25 +549,39 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="tenant_id" className="text-purple-700">Tenant (optional)</Label>
-                      <Select 
-                        value={newUser.tenant_id} 
-                        onValueChange={(value) => setNewUser({ ...newUser, tenant_id: value })}
-                      >
-                        <SelectTrigger className="border-purple-200 focus:border-purple-500">
-                          <SelectValue placeholder="Select tenant" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No Tenant</SelectItem>
-                          {tenants.map((tenant) => (
-                            <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
-                              {tenant.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Only show tenant selection for super admins */}
+                    {currentUser?.role === 'super_admin' && (
+                      <div>
+                        <Label htmlFor="tenant_id" className="text-purple-700">Tenant (optional)</Label>
+                        <Select 
+                          value={newUser.tenant_id} 
+                          onValueChange={(value) => setNewUser({ ...newUser, tenant_id: value })}
+                        >
+                          <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                            <SelectValue placeholder="Select tenant" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Tenant</SelectItem>
+                            {tenants.map((tenant) => (
+                              <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
+                                {tenant.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {/* Show readonly tenant for non-super admins */}
+                    {currentUser?.role !== 'super_admin' && currentUser?.tenant_id && (
+                      <div>
+                        <Label className="text-purple-700">Tenant</Label>
+                        <Input
+                          value={tenants.find(t => t.tenants_id === currentUser.tenant_id)?.name || 'Loading...'}
+                          disabled
+                          className="bg-muted cursor-not-allowed border-purple-200"
+                        />
+                      </div>
+                    )}
                     <div className="flex gap-2 pt-4">
                       <Button 
                         onClick={handleAddUser}
@@ -681,25 +801,39 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="edit-tenant-id" className="text-purple-700">Tenant (optional)</Label>
-                    <Select 
-                      value={editForm.tenant_id} 
-                      onValueChange={(value) => setEditForm({ ...editForm, tenant_id: value })}
-                    >
-                      <SelectTrigger className="border-purple-200 focus:border-purple-500">
-                        <SelectValue placeholder="Select tenant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Tenant</SelectItem>
-                        {tenants.map((tenant) => (
-                          <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
-                            {tenant.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Only show tenant selection for super admins */}
+                  {currentUser?.role === 'super_admin' && (
+                    <div>
+                      <Label htmlFor="edit-tenant-id" className="text-purple-700">Tenant (optional)</Label>
+                      <Select 
+                        value={editForm.tenant_id} 
+                        onValueChange={(value) => setEditForm({ ...editForm, tenant_id: value })}
+                      >
+                        <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                          <SelectValue placeholder="Select tenant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Tenant</SelectItem>
+                          {tenants.map((tenant) => (
+                            <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
+                              {tenant.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {/* Show readonly tenant for non-super admins */}
+                  {currentUser?.role !== 'super_admin' && currentUser?.tenant_id && (
+                    <div>
+                      <Label className="text-purple-700">Tenant</Label>
+                      <Input
+                        value={tenants.find(t => t.tenants_id === currentUser.tenant_id)?.name || 'Loading...'}
+                        disabled
+                        className="bg-muted cursor-not-allowed border-purple-200"
+                      />
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-4">
                     <Button 
                       onClick={handleSaveEdit}
