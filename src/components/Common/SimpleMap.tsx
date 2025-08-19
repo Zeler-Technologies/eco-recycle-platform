@@ -24,65 +24,74 @@ export default function SimpleMap({
 
   useEffect(() => {
     let mounted = true;
+    // Add a small delay to avoid conflicts with browser extensions during page load
+    const initTimer = setTimeout(() => {
+      if (!mounted) return;
+      
+      const initMap = () => {
+        if (!mounted || !window.google?.maps || !mapRef.current) return;
 
-    const initMap = () => {
-      if (!mounted || !window.google?.maps || !mapRef.current) return;
+        try {
+          mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+            center,
+            zoom: 12,
+            clickableIcons: false,
+          });
 
-      try {
-        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-          center,
-          zoom: 12,
-          clickableIcons: false,
-        });
+          markerRef.current = new window.google.maps.Marker({
+            position: center,
+            map: mapInstanceRef.current,
+          });
 
-        markerRef.current = new window.google.maps.Marker({
-          position: center,
-          map: mapInstanceRef.current,
-        });
+          const clickListener = mapInstanceRef.current.addListener("click", (e: google.maps.MapMouseEvent) => {
+            if (!mounted || !e.latLng) return;
+            
+            const lat = e.latLng.lat();
+            const lng = e.latLng.lng();
+            
+            if (markerRef.current) {
+              markerRef.current.setPosition({ lat, lng });
+            }
+            
+            onLocationSelect?.({ lat, lng });
+          });
 
-        const clickListener = mapInstanceRef.current.addListener("click", (e: google.maps.MapMouseEvent) => {
-          if (!mounted || !e.latLng) return;
-          
-          const lat = e.latLng.lat();
-          const lng = e.latLng.lng();
-          
-          if (markerRef.current) {
-            markerRef.current.setPosition({ lat, lng });
+          if (mounted) {
+            setIsLoaded(true);
+            setError(false);
           }
-          
-          onLocationSelect?.({ lat, lng });
-        });
 
-        if (mounted) {
-          setIsLoaded(true);
-          setError(false);
-        }
-
-        return () => {
-          if (clickListener) {
-            window.google?.maps?.event?.removeListener(clickListener);
+          return () => {
+            if (clickListener) {
+              try {
+                window.google?.maps?.event?.removeListener(clickListener);
+              } catch (e) {
+                console.warn('Error removing click listener:', e);
+              }
+            }
+          };
+        } catch (err) {
+          console.error("Map initialization error:", err);
+          if (mounted) {
+            setError(true);
           }
-        };
-      } catch (err) {
-        console.error("Map initialization error:", err);
-        if (mounted) {
-          setError(true);
         }
-      }
-    };
+      };
 
-    const checkAndInit = () => {
-      if (window.google?.maps) {
-        initMap();
-      } else {
-        setTimeout(checkAndInit, 100);
-      }
-    };
+      const checkAndInit = () => {
+        if (window.google?.maps) {
+          initMap();
+        } else {
+          setTimeout(checkAndInit, 100);
+        }
+      };
 
-    checkAndInit();
+      checkAndInit();
+    }, 100); // Small delay to avoid extension conflicts
 
     return () => {
       mounted = false;
+      clearTimeout(initTimer);
       try {
         if (markerRef.current) {
           markerRef.current.setMap(null);

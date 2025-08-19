@@ -14,6 +14,7 @@ import {
 import { normalizeDriverStatus } from '@/utils/driverStatus';
 import RecentStatusChanges from '@/components/Driver/RecentStatusChanges';
 import SimpleMap from '@/components/Common/SimpleMap';
+import MapErrorBoundary from '@/components/Common/MapErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, CheckCircle } from 'lucide-react';
@@ -392,12 +393,14 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
         </div>
       </div>
       
-      <SimpleMap
-        center={{ lat: 59.3293, lng: 18.0686 }}
-        pickups={filteredPickups}
-        onPickupSelect={openPickupDetail}
-        className="h-96 rounded-xl"
-      />
+      <MapErrorBoundary>
+        <SimpleMap
+          center={{ lat: 59.3293, lng: 18.0686 }}
+          pickups={filteredPickups}
+          onPickupSelect={openPickupDetail}
+          className="h-96 rounded-xl"
+        />
+      </MapErrorBoundary>
     </div>
   );
 
