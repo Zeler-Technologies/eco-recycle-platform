@@ -43,14 +43,61 @@ serve(async (req) => {
       .select('id')
       .eq('tenant_id', tenantId)
       .eq('role', 'scrapyard_admin')
-      .single();
+      .maybeSingle();
 
-    if (findError || !existingAdmin) {
-      console.error('Could not find admin user for tenant:', findError);
+    if (findError) {
+      console.error('Error finding admin user for tenant:', findError);
       return new Response(
-        JSON.stringify({ error: 'Could not find admin user for this tenant' }),
+        JSON.stringify({ error: `Database error: ${findError.message}` }),
         {
-          status: 404,
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (!existingAdmin) {
+      console.log('No admin user found for tenant', tenantId, 'creating new admin user');
+      
+      // Create a new admin user if none exists
+      const { data: newUser, error: createError } = await supabaseAdmin
+        .from('auth_users')
+        .insert({
+          tenant_id: tenantId,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          role,
+          pnr_num: pnrNum && pnrNum.trim() ? pnrNum.trim() : null,
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Failed to create admin user:', createError);
+        return new Response(
+          JSON.stringify({ error: `Failed to create admin user: ${createError.message}` }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      console.log('Admin user created successfully');
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          user: {
+            id: newUser.id,
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            role,
+            pnr_num: pnrNum && pnrNum.trim() ? pnrNum.trim() : null,
+          }
+        }),
+        {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );

@@ -161,7 +161,7 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         }
 
         // Update tenant admin user information
-        const { error: userUpdateError } = await supabase.functions.invoke('update-tenant-user', {
+        const { data: userUpdateResult, error: userUpdateError } = await supabase.functions.invoke('update-tenant-user', {
           body: {
             tenantId: editTenant!.tenants_id,
             firstName: data.adminFirstName,
@@ -172,9 +172,11 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         });
 
         if (userUpdateError) {
-          console.warn('Failed to update admin user:', userUpdateError);
-          // Don't throw error here, tenant update succeeded
+          console.error('Failed to update admin user:', userUpdateError);
+          throw new Error(`Failed to update administrator information: ${userUpdateError.message}`);
         }
+
+        console.log('Admin user updated successfully:', userUpdateResult);
 
         console.log('Tenant updated successfully:', result);
 
