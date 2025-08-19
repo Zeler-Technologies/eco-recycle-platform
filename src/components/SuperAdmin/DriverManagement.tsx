@@ -96,13 +96,17 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
 
   const fetchScrapyards = async () => {
     try {
+      console.log('Fetching scrapyards for user:', { role: user?.role, tenant_id: user?.tenant_id });
+      
       let query = supabase.from('scrapyards').select('id, name, tenant_id');
       
-      // Restrict access based on user role - only show user's own tenant scrapyards
+      // For tenant admins, ONLY show their own tenant's scrapyards
       if (user?.tenant_id) {
         query = query.eq('tenant_id', user.tenant_id);
+        console.log('Filtering scrapyards by tenant_id:', user.tenant_id);
       } else {
         // If no tenant_id, return empty (shouldn't happen for tenant/scrapyard admins)
+        console.log('No tenant_id found, returning empty scrapyards');
         setScrapyards([]);
         return;
       }
@@ -115,11 +119,13 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
         return;
       }
 
+      console.log('Fetched scrapyards:', data);
       const mappedData: Scrapyard[] = (data || []).map((s: any) => ({
         id: Number(s.id),
         name: s.name,
         tenant_id: Number(s.tenant_id),
       }));
+      console.log('Mapped scrapyard data:', mappedData);
       setScrapyards(mappedData);
     } catch (error) {
       console.error('Error fetching scrapyards:', error);
