@@ -67,6 +67,7 @@ const countries = [
 export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }: TenantSetupFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formKey, setFormKey] = useState(0); // Add key to force form re-render
   const { toast } = useToast();
   
   const isEditing = !!editTenant;
@@ -214,83 +215,14 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         console.log('=== TENANT UPDATE SUCCESS ===');
         console.log('Updated tenant result:', result);
 
-        // IMMEDIATELY force complete form reset with updated data
-        const updatedFormData = {
-          companyName: result.name,
-          country: result.country,
-          serviceType: result.service_type || '',
-          address: result.base_address || '',
-          postalCode: '',
-          city: '',
-          adminFirstName: '',
-          adminLastName: '',
-          adminEmail: '',
-          invoiceEmail: result.invoice_email || '',
-        };
-
-        // Reset form completely to force re-render
-        form.reset(updatedFormData);
-
-        console.log('=== FORM RESET WITH BASIC DATA ===');
-        console.log('Form data after reset:', updatedFormData);
-
-        // Now fetch additional data and update again
-        setTimeout(async () => {
-          try {
-            console.log('=== FETCHING ADDITIONAL DATA ===');
-            
-            // Fetch admin user data
-            const { data: adminUser, error: adminError } = await supabase
-              .from('auth_users')
-              .select('first_name, last_name, email')
-              .eq('tenant_id', editTenant!.tenants_id)
-              .eq('role', 'scrapyard_admin')
-              .maybeSingle();
-
-            // Fetch scrapyard data
-            const { data: scrapyard, error: scrapyardError } = await supabase
-              .from('scrapyards')
-              .select('address, postal_code, city')
-              .eq('tenant_id', editTenant!.tenants_id)
-              .maybeSingle();
-
-            console.log('Additional data fetched:', { 
-              adminUser, 
-              adminError,
-              scrapyard, 
-              scrapyardError 
-            });
-
-            // Build complete updated form data
-            const completeFormData = {
-              companyName: result.name,
-              country: result.country,
-              serviceType: result.service_type || '',
-              address: scrapyard?.address || result.base_address || '',
-              postalCode: scrapyard?.postal_code || '',
-              city: scrapyard?.city || '',
-              adminFirstName: adminUser?.first_name || '',
-              adminLastName: adminUser?.last_name || '',
-              adminEmail: adminUser?.email || '',
-              invoiceEmail: result.invoice_email || '',
-            };
-
-            // Reset form again with complete data
-            form.reset(completeFormData);
-            
-            console.log('=== FINAL FORM RESET WITH COMPLETE DATA ===');
-            console.log('Complete form data:', completeFormData);
-
-          } catch (error) {
-            console.error('Error fetching additional data:', error);
-          }
-        }, 100);
+        // Force complete component refresh by updating form key
+        setFormKey(prev => prev + 1);
 
         toast({
-          title: "Tenant Updated Successfully",
-          description: `${result.name} has been updated. Form will refresh with latest data.`,
+          title: "Tenant Updated Successfully", 
+          description: `${result.name} has been updated successfully.`,
         });
-        
+
         // Create updated tenant object for parent component
         const updatedTenantData = {
           ...editTenant,
@@ -384,7 +316,7 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
+        <Form {...form} key={formKey}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Company Information Section */}
             <div className="space-y-4">
