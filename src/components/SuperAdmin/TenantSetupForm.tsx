@@ -214,70 +214,82 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         console.log('=== TENANT UPDATE SUCCESS ===');
         console.log('Updated tenant result:', result);
 
+        // IMMEDIATELY force complete form reset with updated data
+        const updatedFormData = {
+          companyName: result.name,
+          country: result.country,
+          serviceType: result.service_type || '',
+          address: result.base_address || '',
+          postalCode: '',
+          city: '',
+          adminFirstName: '',
+          adminLastName: '',
+          adminEmail: '',
+          invoiceEmail: result.invoice_email || '',
+        };
+
+        // Reset form completely to force re-render
+        form.reset(updatedFormData);
+
+        console.log('=== FORM RESET WITH BASIC DATA ===');
+        console.log('Form data after reset:', updatedFormData);
+
+        // Now fetch additional data and update again
+        setTimeout(async () => {
+          try {
+            console.log('=== FETCHING ADDITIONAL DATA ===');
+            
+            // Fetch admin user data
+            const { data: adminUser, error: adminError } = await supabase
+              .from('auth_users')
+              .select('first_name, last_name, email')
+              .eq('tenant_id', editTenant!.tenants_id)
+              .eq('role', 'scrapyard_admin')
+              .maybeSingle();
+
+            // Fetch scrapyard data
+            const { data: scrapyard, error: scrapyardError } = await supabase
+              .from('scrapyards')
+              .select('address, postal_code, city')
+              .eq('tenant_id', editTenant!.tenants_id)
+              .maybeSingle();
+
+            console.log('Additional data fetched:', { 
+              adminUser, 
+              adminError,
+              scrapyard, 
+              scrapyardError 
+            });
+
+            // Build complete updated form data
+            const completeFormData = {
+              companyName: result.name,
+              country: result.country,
+              serviceType: result.service_type || '',
+              address: scrapyard?.address || result.base_address || '',
+              postalCode: scrapyard?.postal_code || '',
+              city: scrapyard?.city || '',
+              adminFirstName: adminUser?.first_name || '',
+              adminLastName: adminUser?.last_name || '',
+              adminEmail: adminUser?.email || '',
+              invoiceEmail: result.invoice_email || '',
+            };
+
+            // Reset form again with complete data
+            form.reset(completeFormData);
+            
+            console.log('=== FINAL FORM RESET WITH COMPLETE DATA ===');
+            console.log('Complete form data:', completeFormData);
+
+          } catch (error) {
+            console.error('Error fetching additional data:', error);
+          }
+        }, 100);
+
         toast({
           title: "Tenant Updated Successfully",
-          description: `${result.name} has been updated successfully.`,
+          description: `${result.name} has been updated. Form will refresh with latest data.`,
         });
-
-        // FORCE form refresh with basic tenant data first
-        console.log('=== FORCING FORM REFRESH ===');
-        form.setValue('companyName', result.name);
-        form.setValue('country', result.country);
-        form.setValue('serviceType', result.service_type || '');
-        form.setValue('invoiceEmail', result.invoice_email || '');
-        
-        // Now try to fetch additional data
-        try {
-          console.log('=== FETCHING ADDITIONAL DATA ===');
-          // Fetch admin user data for this tenant - use maybeSingle to handle missing data
-          const { data: adminUser, error: adminError } = await supabase
-            .from('auth_users')
-            .select('first_name, last_name, email')
-            .eq('tenant_id', editTenant!.tenants_id)
-            .eq('role', 'scrapyard_admin')
-            .maybeSingle();
-
-          console.log('Admin user fetch result:', { adminUser, adminError });
-
-          // Fetch scrapyard data for address information - use maybeSingle to handle missing data
-          const { data: scrapyard, error: scrapyardError } = await supabase
-            .from('scrapyards')
-            .select('address, postal_code, city')
-            .eq('tenant_id', editTenant!.tenants_id)
-            .maybeSingle();
-
-          console.log('Scrapyard fetch result:', { scrapyard, scrapyardError });
-
-          // Update address fields
-          if (scrapyard) {
-            form.setValue('address', scrapyard.address || '');
-            form.setValue('postalCode', scrapyard.postal_code || '');
-            form.setValue('city', scrapyard.city || '');
-          } else {
-            // Use base_address from tenant if no scrapyard record
-            form.setValue('address', result.base_address || '');
-            form.setValue('postalCode', '');
-            form.setValue('city', '');
-          }
-
-          // Update admin fields
-          if (adminUser) {
-            form.setValue('adminFirstName', adminUser.first_name || '');
-            form.setValue('adminLastName', adminUser.last_name || '');
-            form.setValue('adminEmail', adminUser.email || '');
-          } else {
-            // Clear admin fields if no admin user found
-            form.setValue('adminFirstName', '');
-            form.setValue('adminLastName', '');
-            form.setValue('adminEmail', '');
-          }
-
-          console.log('=== FORM VALUES UPDATED ===');
-          console.log('Current form values:', form.getValues());
-
-        } catch (refreshError) {
-          console.error('Error refreshing additional data:', refreshError);
-        }
         
         // Create updated tenant object for parent component
         const updatedTenantData = {
