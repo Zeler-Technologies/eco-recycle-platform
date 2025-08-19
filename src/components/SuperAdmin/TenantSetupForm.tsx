@@ -209,50 +209,23 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
 
         console.log('Tenant updated successfully:', result);
 
-        // Reload the updated tenant data to refresh the form
-        const loadUpdatedData = async () => {
-          // Fetch admin user data for this tenant
-          const { data: adminUser } = await supabase
-            .from('auth_users')
-            .select('first_name, last_name, email')
-            .eq('tenant_id', editTenant!.tenants_id)
-            .eq('role', 'scrapyard_admin')
-            .single();
-
-          // Fetch scrapyard data for address information
-          const { data: scrapyard } = await supabase
-            .from('scrapyards')
-            .select('address, postal_code, city')
-            .eq('tenant_id', editTenant!.tenants_id)
-            .single();
-
-          // Update the form with fresh data
-          form.reset({
-            companyName: result.name,
-            country: result.country,
-            serviceType: result.service_type || '',
-            address: scrapyard?.address || result.base_address || '',
-            postalCode: scrapyard?.postal_code || '',
-            city: scrapyard?.city || '',
-            adminFirstName: adminUser?.first_name || '',
-            adminLastName: adminUser?.last_name || '',
-            adminEmail: adminUser?.email || '',
-            invoiceEmail: result.invoice_email || '',
-          });
-        };
-
-        // Reload data after successful update
-        await loadUpdatedData();
-
         toast({
           title: "Tenant Updated Successfully",
-          description: `${result.name} has been updated and refreshed.`,
+          description: `${result.name} has been updated successfully.`,
         });
         
-        onTenantUpdated?.(result);
-        // Keep the dialog open to show the updated values
-        // setOpen(false); // Removed - keep dialog open
-        // form.reset(); // Removed - already reset with fresh data above
+        // Create updated tenant object with fresh data for parent component
+        const updatedTenantData = {
+          ...editTenant,
+          ...result,
+          updated_at: new Date().toISOString()
+        };
+
+        // Call parent callback to refresh tenant list
+        onTenantUpdated?.(updatedTenantData);
+        
+        // Close dialog after successful update
+        setOpen(false);
       } else {
         // Create new tenant - validate admin fields
         if (!data.adminFirstName || data.adminFirstName.length < 2) {
