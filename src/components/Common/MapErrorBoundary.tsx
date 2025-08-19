@@ -34,7 +34,7 @@ class MapErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="h-[500px] rounded-xl border border-border overflow-hidden">
+        <div className="h-[700px] rounded-xl border border-border overflow-hidden">
           <SimpleMapFallback />
         </div>
       );
