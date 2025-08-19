@@ -211,62 +211,75 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           // Continue with success - tenant update succeeded
         }
 
-        console.log('Tenant updated successfully:', result);
+        console.log('=== TENANT UPDATE SUCCESS ===');
+        console.log('Updated tenant result:', result);
 
-        // Immediately fetch fresh data to reload the form
+        toast({
+          title: "Tenant Updated Successfully",
+          description: `${result.name} has been updated successfully.`,
+        });
+
+        // FORCE form refresh with basic tenant data first
+        console.log('=== FORCING FORM REFRESH ===');
+        form.setValue('companyName', result.name);
+        form.setValue('country', result.country);
+        form.setValue('serviceType', result.service_type || '');
+        form.setValue('invoiceEmail', result.invoice_email || '');
+        
+        // Now try to fetch additional data
         try {
+          console.log('=== FETCHING ADDITIONAL DATA ===');
           // Fetch admin user data for this tenant - use maybeSingle to handle missing data
-          const { data: adminUser } = await supabase
+          const { data: adminUser, error: adminError } = await supabase
             .from('auth_users')
             .select('first_name, last_name, email')
             .eq('tenant_id', editTenant!.tenants_id)
             .eq('role', 'scrapyard_admin')
             .maybeSingle();
 
+          console.log('Admin user fetch result:', { adminUser, adminError });
+
           // Fetch scrapyard data for address information - use maybeSingle to handle missing data
-          const { data: scrapyard } = await supabase
+          const { data: scrapyard, error: scrapyardError } = await supabase
             .from('scrapyards')
             .select('address, postal_code, city')
             .eq('tenant_id', editTenant!.tenants_id)
             .maybeSingle();
 
-          // Reset form with fresh data from database
-          form.reset({
-            companyName: result.name,
-            country: result.country,
-            serviceType: result.service_type || '',
-            address: scrapyard?.address || result.base_address || '',
-            postalCode: scrapyard?.postal_code || '',
-            city: scrapyard?.city || '',
-            adminFirstName: adminUser?.first_name || '',
-            adminLastName: adminUser?.last_name || '',
-            adminEmail: adminUser?.email || '',
-            invoiceEmail: result.invoice_email || '',
-          });
+          console.log('Scrapyard fetch result:', { scrapyard, scrapyardError });
 
-          console.log('Form refreshed with updated data:', {
-            company: result.name,
-            address: scrapyard?.address || result.base_address,
-            admin: adminUser ? `${adminUser.first_name} ${adminUser.last_name}` : 'No admin found',
-            scrapyard_exists: !!scrapyard,
-            admin_exists: !!adminUser
-          });
+          // Update address fields
+          if (scrapyard) {
+            form.setValue('address', scrapyard.address || '');
+            form.setValue('postalCode', scrapyard.postal_code || '');
+            form.setValue('city', scrapyard.city || '');
+          } else {
+            // Use base_address from tenant if no scrapyard record
+            form.setValue('address', result.base_address || '');
+            form.setValue('postalCode', '');
+            form.setValue('city', '');
+          }
+
+          // Update admin fields
+          if (adminUser) {
+            form.setValue('adminFirstName', adminUser.first_name || '');
+            form.setValue('adminLastName', adminUser.last_name || '');
+            form.setValue('adminEmail', adminUser.email || '');
+          } else {
+            // Clear admin fields if no admin user found
+            form.setValue('adminFirstName', '');
+            form.setValue('adminLastName', '');
+            form.setValue('adminEmail', '');
+          }
+
+          console.log('=== FORM VALUES UPDATED ===');
+          console.log('Current form values:', form.getValues());
 
         } catch (refreshError) {
-          console.error('Error refreshing form data:', refreshError);
-          // Even if refresh fails, show updated tenant name in form
-          form.setValue('companyName', result.name);
-          form.setValue('country', result.country);
-          form.setValue('serviceType', result.service_type || '');
-          form.setValue('invoiceEmail', result.invoice_email || '');
+          console.error('Error refreshing additional data:', refreshError);
         }
-
-        toast({
-          title: "Tenant Updated Successfully",
-          description: `${result.name} has been updated and form refreshed with latest data.`,
-        });
         
-        // Create updated tenant object with fresh data for parent component
+        // Create updated tenant object for parent component
         const updatedTenantData = {
           ...editTenant,
           ...result,
