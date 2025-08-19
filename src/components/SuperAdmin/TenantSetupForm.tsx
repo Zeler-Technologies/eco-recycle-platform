@@ -96,22 +96,34 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
     },
   });
 
-  // Reset form values when editTenant changes
+  // Reset form values when editTenant changes and fetch admin data
   React.useEffect(() => {
-    if (editTenant) {
-      form.reset({
-        companyName: editTenant.name,
-        country: editTenant.country,
-        serviceType: editTenant.service_type || '',
-        address: editTenant.base_address || '',
-        postalCode: '',
-        city: '',
-        adminFirstName: '',
-        adminLastName: '',
-        adminEmail: '',
-        invoiceEmail: editTenant.invoice_email || '',
-      });
-    }
+    const loadTenantData = async () => {
+      if (editTenant) {
+        // Fetch admin user data for this tenant
+        const { data: adminUser } = await supabase
+          .from('auth_users')
+          .select('first_name, last_name, email')
+          .eq('tenant_id', editTenant.tenants_id)
+          .eq('role', 'scrapyard_admin')
+          .single();
+
+        form.reset({
+          companyName: editTenant.name,
+          country: editTenant.country,
+          serviceType: editTenant.service_type || '',
+          address: editTenant.base_address || '',
+          postalCode: '', // Will be populated when we add scrapyard data
+          city: '', // Will be populated when we add scrapyard data
+          adminFirstName: adminUser?.first_name || '',
+          adminLastName: adminUser?.last_name || '',
+          adminEmail: adminUser?.email || '',
+          invoiceEmail: editTenant.invoice_email || '',
+        });
+      }
+    };
+
+    loadTenantData();
   }, [editTenant, form]);
 
   const onSubmit = async (data: TenantFormData) => {
