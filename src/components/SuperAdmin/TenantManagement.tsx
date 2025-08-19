@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useTenantUsers } from '@/hooks/useTenantUsers';
 import UserManagementModal from './UserManagementModal';
 import { 
@@ -69,7 +70,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [selectedScrapyardId, setSelectedScrapyardId] = useState<number | null>(null);
   const [tenantScrapyards, setTenantScrapyards] = useState<any[]>([]);
   const [scrapyardsLoading, setScrapyardsLoading] = useState(false);
-  
+  const [scrapyardError, setScrapyardError] = useState<string | null>(null);
   // Fetch users for the selected tenant
   const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
 
@@ -106,6 +107,86 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
     } catch (error) {
       console.error('Error fetching scrapyards:', error);
       toast.error('Failed to load scrapyard locations');
+    } finally {
+      setScrapyardsLoading(false);
+    }
+};
+
+  // New: fetch tenant and ensure at least one scrapyard exists
+  const fetchTenantWithScrapyards = async (tenantId: number) => {
+    try {
+      setScrapyardsLoading(true);
+      setScrapyardError(null);
+
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('tenants_id', tenantId)
+        .maybeSingle();
+
+      if (tenantError) throw tenantError;
+      if (!tenantData) {
+        setScrapyardError('Tenant not found.');
+        return;
+      }
+
+      const { data: scrapyardsInitial, error: scrapyardsError } = await supabase
+        .from('scrapyards')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: true });
+
+      if (scrapyardsError) throw scrapyardsError;
+
+      let scrapyardsData = scrapyardsInitial || [];
+
+      if (!scrapyardsData || scrapyardsData.length === 0) {
+        console.log(`Creating missing scrapyard for tenant ${tenantId}`);
+        const { data: newScrapyard, error: createError } = await supabase
+          .from('scrapyards')
+          .insert({
+            name: tenantData.name,
+            address: tenantData.base_address || '',
+            postal_code: '',
+            city: '',
+            tenant_id: tenantId,
+            is_active: true
+          })
+          .select()
+          .maybeSingle();
+
+        if (createError) {
+          console.error('Error creating scrapyard:', createError);
+          setScrapyardError('Failed to create scrapyard record');
+          toast.error('Failed to create scrapyard record');
+        } else if (newScrapyard) {
+          scrapyardsData = [newScrapyard];
+          toast.success('Created missing scrapyard record');
+        }
+      }
+
+      setTenantScrapyards(scrapyardsData);
+
+      if (scrapyardsData.length > 0) {
+        const primaryScrapyard = scrapyardsData[0];
+        setSelectedScrapyardId(primaryScrapyard.id);
+
+        setFormData((prev: any) => ({
+          ...prev,
+          address: primaryScrapyard.address || '',
+          postalCode: primaryScrapyard.postal_code || '',
+          city: primaryScrapyard.city || '',
+          companyName: tenantData.name || '',
+          country: tenantData.country || '',
+          serviceType: tenantData.service_type || '',
+          invoiceEmail: tenantData.invoice_email || '',
+          createdAt: tenantData.created_at
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching tenant with scrapyards:', error);
+      setScrapyardError('Failed to load tenant details');
+      toast.error('Failed to load tenant details');
     } finally {
       setScrapyardsLoading(false);
     }
@@ -228,7 +309,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   // Fetch scrapyards when tenant selection changes
   useEffect(() => {
     if (selectedTenant) {
-      fetchTenantScrapyards(selectedTenant);
+      fetchTenantWithScrapyards(selectedTenant);
     } else {
       setTenantScrapyards([]);
       setSelectedScrapyardId(null);
@@ -296,44 +377,76 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const handleSaveChanges = async () => {
     if (!selectedTenant || !formData) return;
 
-    // Validate address fields if editing address
-    if (editingSection === 'address' && !isAddressValid()) {
-      toast.error('Please fill in all required address fields');
+    // Address updates with validation and existence checks
+    if (editingSection === 'address') {
+      if (!isAddressValid()) {
+        toast.error('Please fill in all required address fields');
+        return;
+      }
+
+      if (!selectedScrapyardId) {
+        toast.error('No scrapyard selected. Please refresh and try again.');
+        return;
+      }
+
+      const { data: scrapyardCheck, error: checkError } = await supabase
+        .from('scrapyards')
+        .select('id')
+        .eq('id', selectedScrapyardId)
+        .maybeSingle();
+
+      if (checkError || !scrapyardCheck) {
+        toast.error('Selected scrapyard no longer exists. Please refresh the page.');
+        return;
+      }
+
+      try {
+        const address = (formData.address || '').trim();
+        const postalCode = (formData.postalCode || '').trim();
+        const city = (formData.city || '').trim();
+
+        const { error: scrapyardError } = await supabase
+          .from('scrapyards')
+          .update({
+            address,
+            postal_code: postalCode,
+            city,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedScrapyardId);
+
+        if (scrapyardError) throw scrapyardError;
+
+        const fullAddress = `${address}, ${postalCode} ${city}`;
+        const { error: tenantError } = await supabase
+          .from('tenants')
+          .update({
+            base_address: fullAddress,
+            updated_at: new Date().toISOString()
+          })
+          .eq('tenants_id', selectedTenant);
+
+        if (tenantError) throw tenantError;
+
+        toast.success('Address updated successfully');
+        setEditingSection(null);
+
+        await fetchTenantWithScrapyards(selectedTenant);
+      } catch (error) {
+        console.error('Error updating address:', error);
+        toast.error('Failed to update address');
+      }
       return;
     }
 
+    // Non-address updates
     try {
       const tenantUpdateData: any = {};
-      const scrapyardUpdateData: any = {};
-      
-      // Map form fields to appropriate tables
       if (formData.companyName) tenantUpdateData.name = formData.companyName;
       if (formData.country) tenantUpdateData.country = formData.country;
       if (formData.serviceType) tenantUpdateData.service_type = formData.serviceType;
       if (formData.invoiceEmail) tenantUpdateData.invoice_email = formData.invoiceEmail;
 
-      // Address fields go to scrapyard table
-      if (editingSection === 'address' && selectedScrapyardId) {
-        if (formData.address) scrapyardUpdateData.address = formData.address;
-        if (formData.postalCode) scrapyardUpdateData.postal_code = formData.postalCode;
-        if (formData.city) scrapyardUpdateData.city = formData.city;
-
-        // Update tenant base_address with concatenated address from primary scrapyard
-        const fullAddress = `${formData.address}, ${formData.postalCode} ${formData.city}`;
-        tenantUpdateData.base_address = fullAddress;
-      }
-
-      // Update scrapyard if address data changed
-      if (Object.keys(scrapyardUpdateData).length > 0 && selectedScrapyardId) {
-        const { error: scrapyardError } = await supabase
-          .from('scrapyards')
-          .update(scrapyardUpdateData)
-          .eq('id', selectedScrapyardId);
-
-        if (scrapyardError) throw scrapyardError;
-      }
-
-      // Update tenant
       if (Object.keys(tenantUpdateData).length > 0) {
         const { error: tenantError } = await supabase
           .from('tenants')
@@ -343,7 +456,6 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
         if (tenantError) throw tenantError;
       }
 
-      // Update local state
       setTenants(prevTenants => 
         prevTenants.map(tenant => 
           tenant.tenants_id === selectedTenant 
@@ -351,17 +463,6 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
             : tenant
         )
       );
-
-      // Update scrapyards state
-      if (Object.keys(scrapyardUpdateData).length > 0) {
-        setTenantScrapyards(prevScrapyards =>
-          prevScrapyards.map(scrapyard =>
-            scrapyard.id === selectedScrapyardId
-              ? { ...scrapyard, ...scrapyardUpdateData }
-              : scrapyard
-          )
-        );
-      }
 
       setEditingSection(null);
       toast.success('Changes saved successfully');
@@ -540,6 +641,24 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             {editingSection === 'address' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                           </Button>
                         </div>
+
+                        {scrapyardError && (
+                          <Alert variant="destructive" className="mb-4">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Scrapyard Data Issue</AlertTitle>
+                            <AlertDescription>
+                              {scrapyardError}
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="ml-2"
+                                onClick={() => selectedTenant && fetchTenantWithScrapyards(selectedTenant)}
+                              >
+                                Retry
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        )}
 
                         {/* Scrapyard Selector */}
                         <div className="space-y-3">
