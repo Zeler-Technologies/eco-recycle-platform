@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { useTenantUsers } from '@/hooks/useTenantUsers';
 import { 
   Building2, 
   Users, 
@@ -60,6 +61,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Fetch users for the selected tenant
+  const { data: tenantUsers = [], isLoading: usersLoading } = useTenantUsers(selectedTenant);
 
   // Set selected tenant when prop changes
   useEffect(() => {
@@ -488,35 +492,55 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                       <div className="space-y-4">
-                         {getMockUsers(selectedTenant?.toString() || '').map((user) => (
-                          <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-admin-accent rounded-full">
-                                <Users className="h-4 w-4 text-admin-primary" />
+                     <CardContent>
+                       {usersLoading ? (
+                         <div className="flex justify-center py-8">
+                           <div className="text-muted-foreground">Loading users...</div>
+                         </div>
+                       ) : tenantUsers.length === 0 ? (
+                         <div className="text-center py-8">
+                           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                           <p className="text-muted-foreground">No users found for this tenant</p>
+                         </div>
+                       ) : (
+                         <div className="space-y-4">
+                           {tenantUsers.map((user) => (
+                            <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-admin-accent rounded-full">
+                                  <Users className="h-4 w-4 text-admin-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold">{user.email}</h4>
+                                  <p className="text-sm text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant={user.role === 'super_admin' ? 'default' : 'secondary'}>
+                                      {user.role}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      {new Date(user.created_at).toLocaleDateString()}
+                                    </Badge>
+                                    {user.pnr_num && (
+                                      <Badge variant="secondary">
+                                        PNR: {user.pnr_num}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-semibold">{user.name}</h4>
-                                <p className="text-sm text-muted-foreground">{user.email}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Badge variant="secondary">{user.role}</Badge>
-                              <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
-                              <div className="flex gap-1">
+                              <div className="flex items-center gap-2">
                                 <Button variant="outline" size="sm">
                                   <Edit className="h-3 w-3" />
                                 </Button>
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" className="text-red-600">
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
+                          ))}
+                        </div>
+                       )}
+                     </CardContent>
                   </Card>
                 </TabsContent>
 
