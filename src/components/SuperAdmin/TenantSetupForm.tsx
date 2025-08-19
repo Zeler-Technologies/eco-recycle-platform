@@ -71,12 +71,14 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
   
   const isEditing = !!editTenant;
   
-  // Open dialog when editing
+  // Open dialog when editing - use a key to force re-opening
   React.useEffect(() => {
     if (editTenant) {
       setOpen(true);
+    } else {
+      setOpen(false);
     }
-  }, [editTenant]);
+  }, [editTenant?.tenants_id, editTenant]); // Include tenants_id to ensure re-opening for same tenant
   
   const form = useForm<TenantFormData>({
     resolver: zodResolver(tenantFormSchema),
