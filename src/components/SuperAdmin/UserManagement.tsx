@@ -23,6 +23,8 @@ interface User {
   updated_at: string;
   tenant_id?: number;
   tenant_name?: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 interface UserManagementProps {
@@ -40,12 +42,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     email: '',
     password: '',
     role: '' as User['role'] | '',
-    tenant_id: ''
+    tenant_id: '',
+    first_name: '',
+    last_name: ''
   });
   const [editForm, setEditForm] = useState({ 
     email: '', 
     role: '' as User['role'] | '',
-    tenant_id: ''
+    tenant_id: '',
+    first_name: '',
+    last_name: ''
   });
 
   // Fetch users from Supabase
@@ -174,7 +180,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
           id: authData.user.id,
           email: newUser.email,
           role: newUser.role,
-          tenant_id: tenantId
+          tenant_id: tenantId,
+          first_name: newUser.first_name || null,
+          last_name: newUser.last_name || null
         });
 
       if (profileError) {
@@ -186,7 +194,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
         return;
       }
 
-      setNewUser({ email: '', password: '', role: '', tenant_id: '' });
+      setNewUser({ email: '', password: '', role: '', tenant_id: '', first_name: '', last_name: '' });
       setIsAddModalOpen(false);
       await fetchUsers(); // Refresh the user list
       
@@ -242,7 +250,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     setEditForm({ 
       email: user.email, 
       role: user.role,
-      tenant_id: user.tenant_id?.toString() || 'none'
+      tenant_id: user.tenant_id?.toString() || 'none',
+      first_name: user.first_name || '',
+      last_name: user.last_name || ''
     });
   };
 
@@ -267,6 +277,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
           email: editForm.email,
           role: editForm.role,
           tenant_id: tenantId,
+          first_name: editForm.first_name || null,
+          last_name: editForm.last_name || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingUser.id);
@@ -378,6 +390,28 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                         placeholder="user@example.com"
+                        className="border-purple-200 focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="first-name" className="text-purple-700">First Name</Label>
+                      <Input
+                        id="first-name"
+                        type="text"
+                        value={newUser.first_name}
+                        onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+                        placeholder="Enter first name"
+                        className="border-purple-200 focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="last-name" className="text-purple-700">Last Name</Label>
+                      <Input
+                        id="last-name"
+                        type="text"
+                        value={newUser.last_name}
+                        onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+                        placeholder="Enter last name"
                         className="border-purple-200 focus:border-purple-500"
                       />
                     </div>
@@ -605,6 +639,28 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                       placeholder="user@example.com"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-first-name" className="text-purple-700">First Name</Label>
+                    <Input
+                      id="edit-first-name"
+                      type="text"
+                      value={editForm.first_name}
+                      onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                      placeholder="Enter first name"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-last-name" className="text-purple-700">Last Name</Label>
+                    <Input
+                      id="edit-last-name"
+                      type="text"
+                      value={editForm.last_name}
+                      onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                      placeholder="Enter last name"
                       className="border-purple-200 focus:border-purple-500"
                     />
                   </div>
