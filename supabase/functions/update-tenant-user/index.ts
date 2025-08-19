@@ -26,7 +26,7 @@ serve(async (req) => {
     console.log('Updating user with params:', { tenantId, email, firstName, lastName, role, pnrNum });
 
     // Validate required fields
-    if (!tenantId || !email || !firstName || !lastName || !role) {
+    if (tenantId === null || tenantId === undefined || !email || !firstName || !lastName || !role) {
       console.error('Missing required fields');
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
