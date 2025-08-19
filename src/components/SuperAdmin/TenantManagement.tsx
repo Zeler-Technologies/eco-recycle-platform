@@ -309,7 +309,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
   // Fetch scrapyards when tenant selection changes
   useEffect(() => {
-    if (selectedTenant) {
+    if (selectedTenant !== null && selectedTenant !== undefined) {
       fetchTenantWithScrapyards(selectedTenant);
     } else {
       setTenantScrapyards([]);
@@ -380,8 +380,24 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
     // Address updates with validation and existence checks
     if (editingSection === 'address') {
+      console.log('Address update attempt:', {
+        selectedTenant,
+        selectedScrapyardId,
+        formData: {
+          address: formData.address,
+          postalCode: formData.postalCode,
+          city: formData.city
+        }
+      });
+
       if (!isAddressValid()) {
         toast.error('Please fill in all required address fields');
+        return;
+      }
+
+      // Check that we have a valid tenant (including 0)
+      if (selectedTenant === null || selectedTenant === undefined) {
+        toast.error('No tenant selected');
         return;
       }
 
@@ -390,10 +406,13 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
       const postalCode = (formData.postalCode || '').trim();
       const city = (formData.city || '').trim();
 
+      console.log('Normalized address values:', { address, postalCode, city });
+
       // Ensure there is a scrapyard to update; create one if missing
       let ensureScrapyardId = selectedScrapyardId;
 
       if (!ensureScrapyardId) {
+        console.log('No scrapyard selected, creating new one for tenant:', selectedTenant);
         const { data: created, error: createErr } = await supabase
           .from('scrapyards')
           .insert({
@@ -407,23 +426,31 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
           .select('id')
           .maybeSingle();
 
+        console.log('Scrapyard creation result:', { created, createErr });
+
         if (createErr || !created) {
+          console.error('Failed to create scrapyard, proceeding with tenant update only');
           toast.error('Could not create a scrapyard record. Updating company address only.');
         } else {
           ensureScrapyardId = created.id;
           setSelectedScrapyardId(created.id);
+          console.log('Created scrapyard with ID:', ensureScrapyardId);
         }
       }
 
       if (ensureScrapyardId) {
+        console.log('Checking scrapyard exists:', ensureScrapyardId);
         const { data: scrapyardCheck, error: checkError } = await supabase
           .from('scrapyards')
           .select('id')
           .eq('id', ensureScrapyardId)
           .maybeSingle();
 
+        console.log('Scrapyard check result:', { scrapyardCheck, checkError });
+
         if (checkError || !scrapyardCheck) {
           // Try to recreate if it was deleted
+          console.log('Scrapyard not found, recreating...');
           const { data: recreated, error: recreateErr } = await supabase
             .from('scrapyards')
             .insert({
@@ -437,12 +464,16 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
             .select('id')
             .maybeSingle();
 
+          console.log('Scrapyard recreation result:', { recreated, recreateErr });
+
           if (recreateErr || !recreated) {
+            console.error('Failed to recreate scrapyard');
             toast.error('Scrapyard not available. Updating company address only.');
             ensureScrapyardId = null;
           } else {
             ensureScrapyardId = recreated.id;
             setSelectedScrapyardId(recreated.id);
+            console.log('Recreated scrapyard with ID:', ensureScrapyardId);
           }
         }
       }
@@ -453,7 +484,10 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
         const postalCode = (formData.postalCode || '').trim();
         const city = (formData.city || '').trim();
 
+        console.log('Starting update process with:', { ensureScrapyardId, address, postalCode, city });
+
         if (ensureScrapyardId) {
+          console.log('Updating scrapyard:', ensureScrapyardId);
           const { error: scrapyardError } = await supabase
             .from('scrapyards')
             .update({
@@ -464,9 +498,11 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
             })
             .eq('id', ensureScrapyardId);
 
+          console.log('Scrapyard update result:', { scrapyardError });
           if (scrapyardError) throw scrapyardError;
         }
 
+        console.log('Updating tenant base_address for tenant:', selectedTenant);
         const fullAddress = `${address}, ${postalCode} ${city}`;
         const { error: tenantError } = await supabase
           .from('tenants')
@@ -476,6 +512,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
           })
           .eq('tenants_id', selectedTenant);
 
+        console.log('Tenant update result:', { tenantError, fullAddress });
         if (tenantError) throw tenantError;
 
         toast.success('Address updated successfully');
