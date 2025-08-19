@@ -98,14 +98,14 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     try {
       let query = supabase.from('scrapyards').select('id, name, tenant_id');
       
-      // Filter by tenant if user is not super admin
-      if (user?.role !== 'super_admin' && user?.tenant_id) {
+      // Restrict access based on user role - only show user's own tenant scrapyards
+      if (user?.tenant_id) {
         query = query.eq('tenant_id', user.tenant_id);
-      } else if (user?.role === 'super_admin' && selectedTenant) {
-        // Super admin with specific tenant selected
-        query = query.eq('tenant_id', selectedTenant);
+      } else {
+        // If no tenant_id, return empty (shouldn't happen for tenant/scrapyard admins)
+        setScrapyards([]);
+        return;
       }
-      // If super admin with no selectedTenant, fetch all scrapyards
 
       const { data, error } = await query;
 
