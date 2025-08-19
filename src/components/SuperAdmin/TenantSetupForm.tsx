@@ -100,20 +100,20 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
   React.useEffect(() => {
     const loadTenantData = async () => {
       if (editTenant) {
-        // Fetch admin user data for this tenant
+        // Fetch admin user data for this tenant - use maybeSingle to handle missing data
         const { data: adminUser } = await supabase
           .from('auth_users')
           .select('first_name, last_name, email')
           .eq('tenant_id', editTenant.tenants_id)
           .eq('role', 'scrapyard_admin')
-          .single();
+          .maybeSingle();
 
-        // Fetch scrapyard data for address information
+        // Fetch scrapyard data for address information - use maybeSingle to handle missing data
         const { data: scrapyard } = await supabase
           .from('scrapyards')
           .select('address, postal_code, city')
           .eq('tenant_id', editTenant.tenants_id)
-          .single();
+          .maybeSingle();
 
         form.reset({
           companyName: editTenant.name,
@@ -215,20 +215,20 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
 
         // Immediately fetch fresh data to reload the form
         try {
-          // Fetch admin user data for this tenant
+          // Fetch admin user data for this tenant - use maybeSingle to handle missing data
           const { data: adminUser } = await supabase
             .from('auth_users')
             .select('first_name, last_name, email')
             .eq('tenant_id', editTenant!.tenants_id)
             .eq('role', 'scrapyard_admin')
-            .single();
+            .maybeSingle();
 
-          // Fetch scrapyard data for address information
+          // Fetch scrapyard data for address information - use maybeSingle to handle missing data
           const { data: scrapyard } = await supabase
             .from('scrapyards')
             .select('address, postal_code, city')
             .eq('tenant_id', editTenant!.tenants_id)
-            .single();
+            .maybeSingle();
 
           // Reset form with fresh data from database
           form.reset({
@@ -247,11 +247,18 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           console.log('Form refreshed with updated data:', {
             company: result.name,
             address: scrapyard?.address || result.base_address,
-            admin: adminUser?.first_name + ' ' + adminUser?.last_name
+            admin: adminUser ? `${adminUser.first_name} ${adminUser.last_name}` : 'No admin found',
+            scrapyard_exists: !!scrapyard,
+            admin_exists: !!adminUser
           });
 
         } catch (refreshError) {
           console.error('Error refreshing form data:', refreshError);
+          // Even if refresh fails, show updated tenant name in form
+          form.setValue('companyName', result.name);
+          form.setValue('country', result.country);
+          form.setValue('serviceType', result.service_type || '');
+          form.setValue('invoiceEmail', result.invoice_email || '');
         }
 
         toast({
