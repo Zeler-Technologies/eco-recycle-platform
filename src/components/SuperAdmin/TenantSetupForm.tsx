@@ -216,7 +216,12 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         console.log('Updated tenant result:', result);
 
         // Force complete component refresh by updating form key
-        setFormKey(prev => prev + 1);
+        console.log('=== INCREMENTING FORM KEY ===');
+        setFormKey(prev => {
+          const newKey = prev + 1;
+          console.log(`Form key changed from ${prev} to ${newKey}`);
+          return newKey;
+        });
 
         toast({
           title: "Tenant Updated Successfully", 
@@ -230,9 +235,11 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           updated_at: new Date().toISOString()
         };
 
+        console.log('=== CALLING PARENT CALLBACK ===');
         // Call parent callback to refresh tenant list
         onTenantUpdated?.(updatedTenantData);
         
+        console.log('=== TENANT UPDATE COMPLETE ===');
         // Keep dialog open to show updated values
       } else {
         // Create new tenant - validate admin fields
