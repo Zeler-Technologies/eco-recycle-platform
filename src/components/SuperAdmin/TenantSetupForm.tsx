@@ -34,8 +34,9 @@ const tenantFormSchema = z.object({
   address: z.string().optional(),
   postalCode: z.string().optional(),
   city: z.string().optional(),
-  adminName: z.string().optional(),
-  adminEmail: z.string().optional(),
+  adminFirstName: z.string().min(2, 'First name must be at least 2 characters'),
+  adminLastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  adminEmail: z.string().email('Please enter a valid administrator email address'),
   invoiceEmail: z.string().email('Please enter a valid invoice email address'),
 });
 
@@ -86,7 +87,8 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
       address: editTenant?.base_address || '',
       postalCode: '',
       city: '',
-      adminName: '',
+      adminFirstName: '',
+      adminLastName: '',
       adminEmail: '',
       invoiceEmail: editTenant?.invoice_email || '',
     },
@@ -102,7 +104,8 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         address: editTenant.base_address || '',
         postalCode: '',
         city: '',
-        adminName: '',
+        adminFirstName: '',
+        adminLastName: '',
         adminEmail: '',
         invoiceEmail: editTenant.invoice_email || '',
       });
@@ -144,8 +147,11 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         form.reset();
       } else {
         // Create new tenant - validate admin fields
-        if (!data.adminName || data.adminName.length < 2) {
-          throw new Error('Administrator name is required and must be at least 2 characters');
+        if (!data.adminFirstName || data.adminFirstName.length < 2) {
+          throw new Error('Administrator first name is required and must be at least 2 characters');
+        }
+        if (!data.adminLastName || data.adminLastName.length < 2) {
+          throw new Error('Administrator last name is required and must be at least 2 characters');
         }
         if (!data.adminEmail || !data.adminEmail.includes('@')) {
           throw new Error('Administrator email is required and must be valid');
@@ -156,7 +162,7 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         const { data: result, error } = await supabase.rpc('create_tenant_complete', {
           p_name: data.companyName,
           p_country: data.country,
-          p_admin_name: data.adminName,
+          p_admin_name: `${data.adminFirstName} ${data.adminLastName}`,
           p_admin_email: data.adminEmail,
           p_invoice_email: data.invoiceEmail,
           p_service_type: data.serviceType || null,
@@ -345,54 +351,68 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
 
             <Separator />
 
-            {/* Administrator Information Section - Only show for new tenants */}
-            {!isEditing && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">Administrator Information</h3>
-                </div>
+            {/* Administrator Information Section - Always show */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">Administrator Information</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="adminFirstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="adminName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Administrator Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="adminEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Administrator Email *</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="admin@company.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="adminLastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
+                <FormField
+                  control={form.control}
+                  name="adminEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="admin@company.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {!isEditing && (
                 <div className="bg-muted p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground">
                     A secure password will be automatically generated for the administrator account. 
                     The admin will be able to change it after first login.
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {!isEditing && <Separator />}
+            <Separator />
 
             {/* Invoice Information Section */}
             <div className="space-y-4">
