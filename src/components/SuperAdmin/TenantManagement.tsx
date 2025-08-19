@@ -237,6 +237,43 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
     toast.success('User management completed successfully');
   };
 
+  const handleSaveChanges = async () => {
+    if (!selectedTenant || !formData) return;
+
+    try {
+      const updateData: any = {};
+      
+      // Map form fields to database columns
+      if (formData.companyName) updateData.name = formData.companyName;
+      if (formData.country) updateData.country = formData.country;
+      if (formData.serviceType) updateData.service_type = formData.serviceType;
+      if (formData.address) updateData.base_address = formData.address;
+      if (formData.invoiceEmail) updateData.invoice_email = formData.invoiceEmail;
+
+      const { error } = await supabase
+        .from('tenants')
+        .update(updateData)
+        .eq('tenants_id', selectedTenant);
+
+      if (error) throw error;
+
+      // Update local state
+      setTenants(prevTenants => 
+        prevTenants.map(tenant => 
+          tenant.tenants_id === selectedTenant 
+            ? { ...tenant, ...updateData }
+            : tenant
+        )
+      );
+
+      setEditingSection(null);
+      toast.success('Changes saved successfully');
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast.error('Failed to save changes');
+    }
+  };
+
   return (
     <div className="theme-admin min-h-screen bg-admin-muted">
       <header className="bg-admin-primary text-admin-primary-foreground shadow-custom-md">
@@ -482,7 +519,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
                       {editingSection && (
                         <div className="flex gap-2 pt-4">
-                          <Button>
+                          <Button onClick={handleSaveChanges}>
                             <Save className="h-4 w-4 mr-2" />
                             Save Changes
                           </Button>
