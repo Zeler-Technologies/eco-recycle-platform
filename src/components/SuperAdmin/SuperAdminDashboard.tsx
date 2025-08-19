@@ -479,7 +479,7 @@ const SuperAdminDashboard = () => {
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowUserManagement(true)}>
                 <Users className="h-4 w-4 mr-2" />
-                Hantera Förare
+                Hantera Användare
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setShowBillingManagement(true)}>
                 <CreditCard className="h-4 w-4 mr-2" />
