@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Create tenant user function called');
+    console.log('Update tenant user function called');
     
     // Initialize Supabase client with service role key for admin operations
     const supabaseAdmin = createClient(
@@ -21,12 +21,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { email, password, firstName, lastName, role, tenantId, pnrNum } = await req.json();
+    const { userId, email, firstName, lastName, role, pnrNum } = await req.json();
 
-    console.log('Creating user with params:', { email, firstName, lastName, role, tenantId, pnrNum });
+    console.log('Updating user with params:', { userId, email, firstName, lastName, role, pnrNum });
 
     // Validate required fields
-    if (!email || !password || !firstName || !lastName || !role || !tenantId) {
+    if (!userId || !email || !firstName || !lastName || !role) {
       console.error('Missing required fields');
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
@@ -37,12 +37,13 @@ serve(async (req) => {
       );
     }
 
-    // Check for duplicate PNR number if provided
+    // Check for duplicate PNR number if provided (excluding current user)
     if (pnrNum && pnrNum.trim()) {
       const { data: existingUser, error: pnrCheckError } = await supabaseAdmin
         .from('auth_users')
         .select('id, email')
         .eq('pnr_num', pnrNum.trim())
+        .neq('id', userId)
         .single();
 
       if (pnrCheckError && pnrCheckError.code !== 'PGRST116') {
@@ -68,47 +69,22 @@ serve(async (req) => {
       }
     }
 
-    // Create user in auth.users table using admin client
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email for admin-created users
-    });
-
-    if (authError) {
-      console.error('Auth user creation failed:', authError);
-      return new Response(
-        JSON.stringify({ error: `Failed to create auth user: ${authError.message}` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    console.log('Auth user created successfully:', authUser.user?.id);
-
-    // Insert user profile data into auth_users table
-    const { error: profileError } = await supabaseAdmin
+    // Update user profile data in auth_users table
+    const { error: updateError } = await supabaseAdmin
       .from('auth_users')
-      .insert({
-        id: authUser.user!.id,
+      .update({
         email,
         first_name: firstName,
         last_name: lastName,
         role,
-        tenant_id: parseInt(tenantId.toString()),
         pnr_num: pnrNum && pnrNum.trim() ? pnrNum.trim() : null,
-      });
+      })
+      .eq('id', userId);
 
-    if (profileError) {
-      console.error('Profile creation failed:', profileError);
-      
-      // Clean up auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user!.id);
-      
+    if (updateError) {
+      console.error('User update failed:', updateError);
       return new Response(
-        JSON.stringify({ error: `Failed to create user profile: ${profileError.message}` }),
+        JSON.stringify({ error: `Failed to update user: ${updateError.message}` }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -116,18 +92,18 @@ serve(async (req) => {
       );
     }
 
-    console.log('User profile created successfully');
+    console.log('User updated successfully');
 
     return new Response(
       JSON.stringify({ 
         success: true,
         user: {
-          id: authUser.user!.id,
+          id: userId,
           email,
           first_name: firstName,
           last_name: lastName,
           role,
-          tenant_id: parseInt(tenantId.toString()),
+          pnr_num: pnrNum && pnrNum.trim() ? pnrNum.trim() : null,
         }
       }),
       {
@@ -136,7 +112,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Unexpected error in create-tenant-user function:', error);
+    console.error('Unexpected error in update-tenant-user function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

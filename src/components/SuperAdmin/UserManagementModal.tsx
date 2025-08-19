@@ -77,19 +77,27 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
     try {
       if (isEditing) {
-        // Update existing user
-        const { error: updateError } = await supabase
-          .from('auth_users')
-          .update({
+        // Update existing user via secure Edge Function
+        const { data: response, error: updateError } = await supabase.functions.invoke('update-tenant-user', {
+          body: {
+            userId: user.id,
             email: formData.email,
+            firstName: formData.first_name,
+            lastName: formData.last_name,
             role: formData.role,
-            pnr_num: formData.pnr_num || null,
-            first_name: formData.first_name || null,
-            last_name: formData.last_name || null,
-          })
-          .eq('id', user.id);
+            pnrNum: formData.pnr_num
+          }
+        });
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Edge function error:', updateError);
+          throw new Error(`Failed to update user: ${updateError.message}`);
+        }
+
+        if (response?.error) {
+          console.error('User update error:', response.error);
+          throw new Error(response.error);
+        }
 
         // If password is provided, update it via Edge Function
         if (formData.password.trim()) {
@@ -111,6 +119,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
           }
         }
 
+        console.log('User updated successfully:', response);
         toast.success('User updated successfully');
       } else {
         // Create new user via secure Edge Function
@@ -121,7 +130,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
             firstName: formData.first_name,
             lastName: formData.last_name,
             role: formData.role,
-            tenantId: tenantId
+            tenantId: tenantId,
+            pnrNum: formData.pnr_num
           }
         });
 
