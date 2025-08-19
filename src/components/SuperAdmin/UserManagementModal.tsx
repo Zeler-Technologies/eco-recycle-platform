@@ -91,46 +91,51 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
         if (updateError) throw updateError;
 
-        // If password is provided, update it via Auth API
+        // If password is provided, update it via Edge Function
         if (formData.password.trim()) {
-          const { error: passwordError } = await supabase.auth.admin.updateUserById(
-            user.id,
-            { password: formData.password }
-          );
-          if (passwordError) throw passwordError;
+          const { data: passwordResponse, error: passwordError } = await supabase.functions.invoke('update-user-password', {
+            body: {
+              userId: user.id,
+              password: formData.password
+            }
+          });
+
+          if (passwordError) {
+            console.error('Password update error:', passwordError);
+            throw new Error(`Failed to update password: ${passwordError.message}`);
+          }
+
+          if (passwordResponse?.error) {
+            console.error('Password update error:', passwordResponse.error);
+            throw new Error(passwordResponse.error);
+          }
         }
 
         toast.success('User updated successfully');
       } else {
-        // Create new user
-        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          password: formData.password,
-          email_confirm: true,
-          user_metadata: {
-            tenant_id: tenantId,
-            role: formData.role
+        // Create new user via secure Edge Function
+        const { data: response, error: createError } = await supabase.functions.invoke('create-tenant-user', {
+          body: {
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.first_name,
+            lastName: formData.last_name,
+            role: formData.role,
+            tenantId: tenantId
           }
         });
 
-        if (createError) throw createError;
-
-        // Update the auth_users table with additional info
-        if (newUser.user) {
-          const { error: updateError } = await supabase
-            .from('auth_users')
-            .update({
-              tenant_id: tenantId,
-              role: formData.role,
-              pnr_num: formData.pnr_num || null,
-              first_name: formData.first_name || null,
-              last_name: formData.last_name || null,
-            })
-            .eq('id', newUser.user.id);
-
-          if (updateError) throw updateError;
+        if (createError) {
+          console.error('Edge function error:', createError);
+          throw new Error(`Failed to create user: ${createError.message}`);
         }
 
+        if (response?.error) {
+          console.error('User creation error:', response.error);
+          throw new Error(response.error);
+        }
+
+        console.log('User created successfully:', response);
         toast.success('User created successfully');
       }
 
