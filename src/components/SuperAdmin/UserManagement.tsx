@@ -32,6 +32,7 @@ interface UserManagementProps {
 const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<User[]>([]);
+  const [tenants, setTenants] = useState<Array<{ tenants_id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -87,8 +88,28 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     }
   };
 
+  // Fetch tenants for dropdowns
+  const fetchTenants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('tenants_id, name')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching tenants:', error);
+        return;
+      }
+
+      setTenants(data || []);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchTenants();
   }, []);
 
   const getRoleColor = (role: User['role']) => {
@@ -385,15 +406,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="tenant_id" className="text-purple-700">Tenant ID (optional)</Label>
-                      <Input
-                        id="tenant_id"
-                        type="number"
-                        value={newUser.tenant_id}
-                        onChange={(e) => setNewUser({ ...newUser, tenant_id: e.target.value })}
-                        placeholder="Enter tenant ID"
-                        className="border-purple-200 focus:border-purple-500"
-                      />
+                      <Label htmlFor="tenant_id" className="text-purple-700">Tenant (optional)</Label>
+                      <Select 
+                        value={newUser.tenant_id} 
+                        onValueChange={(value) => setNewUser({ ...newUser, tenant_id: value })}
+                      >
+                        <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                          <SelectValue placeholder="Select tenant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No Tenant</SelectItem>
+                          {tenants.map((tenant) => (
+                            <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
+                              {tenant.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="flex gap-2 pt-4">
                       <Button 
@@ -593,15 +622,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="edit-tenant-id" className="text-purple-700">Tenant ID (optional)</Label>
-                    <Input
-                      id="edit-tenant-id"
-                      type="number"
-                      value={editForm.tenant_id}
-                      onChange={(e) => setEditForm({ ...editForm, tenant_id: e.target.value })}
-                      placeholder="Enter tenant ID"
-                      className="border-purple-200 focus:border-purple-500"
-                    />
+                    <Label htmlFor="edit-tenant-id" className="text-purple-700">Tenant (optional)</Label>
+                    <Select 
+                      value={editForm.tenant_id} 
+                      onValueChange={(value) => setEditForm({ ...editForm, tenant_id: value })}
+                    >
+                      <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                        <SelectValue placeholder="Select tenant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No Tenant</SelectItem>
+                        {tenants.map((tenant) => (
+                          <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
+                            {tenant.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex gap-2 pt-4">
                     <Button 
