@@ -1,1 +1,4 @@
 project_id = "cknydpndojctryxwrrmq"
+
+[functions.reset-all-passwords]
+verify_jwt = false

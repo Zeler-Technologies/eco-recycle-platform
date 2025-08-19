@@ -331,6 +331,33 @@ const Login = () => {
               </Button>
 
               <Button 
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke('reset-all-passwords', {
+                      body: { new_password: 'SecurePass123!' }
+                    });
+                    if (error) {
+                      toast.error(`Reset error: ${error.message}`);
+                      setDebugInfo(`Reset error: ${error.message}`);
+                    } else {
+                      toast.success('All user passwords set to SecurePass123!');
+                      setDebugInfo(`Reset result: ${JSON.stringify(data, null, 2)}`);
+                    }
+                  } catch (err) {
+                    toast.error('Password reset failed');
+                    setDebugInfo(`Reset failed: ${err.message}`);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }} 
+                className="w-full bg-black/80 hover:bg-black"
+                disabled={isLoading}
+              >
+                🔐 Reset All Passwords (Dev)
+              </Button>
+
+              <Button 
                 onClick={createAllDevUsers} 
                 className="w-full bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
