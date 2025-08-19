@@ -212,7 +212,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       return;
     }
 
-    // Ensure tenant admins can only create users in their own tenant
     if (!currentUser) {
       toast({
         title: "Error",
@@ -222,9 +221,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       return;
     }
 
+    // Tenant admins cannot assign super_admin role
+    if (currentUser.role !== 'super_admin' && newUser.role === 'super_admin') {
+      toast({
+        title: "Not allowed",
+        description: "Tenant admins cannot assign the Super Admin role.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       let tenantId = newUser.tenant_id === 'none' ? null : parseInt(newUser.tenant_id) || null;
-      
+
       // Enforce tenant restrictions for non-super admins
       if (currentUser.role !== 'super_admin') {
         if (!currentUser.tenant_id) {
@@ -238,48 +247,32 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
         // Force tenant_admin to only create users in their own tenant
         tenantId = currentUser.tenant_id;
       }
-      
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newUser.email,
-        password: newUser.password,
-        email_confirm: true
+
+      // Use secured Edge Function to create user with service role
+      const { data, error } = await supabase.functions.invoke('create-tenant-user', {
+        body: {
+          email: newUser.email,
+          password: newUser.password,
+          name: `${(newUser.first_name || '').trim()} ${(newUser.last_name || '').trim()}`.trim(),
+          role: newUser.role,
+          tenantId: tenantId,
+          pnrNum: null,
+        },
       });
 
-      if (authError) {
+      if (error) {
         toast({
           title: "Error",
-          description: "Failed to create user: " + authError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Create user profile in auth_users table
-      const { error: profileError } = await supabase
-        .from('auth_users')
-        .insert({
-          id: authData.user.id,
-          email: newUser.email,
-          role: newUser.role,
-          tenant_id: tenantId,
-          first_name: newUser.first_name || null,
-          last_name: newUser.last_name || null
-        });
-
-      if (profileError) {
-        toast({
-          title: "Error",
-          description: "Failed to create user profile: " + profileError.message,
-          variant: "destructive"
+          description: `Failed to create user: ${error.message}`,
+          variant: "destructive",
         });
         return;
       }
 
       setNewUser({ email: '', password: '', role: '', tenant_id: '', first_name: '', last_name: '' });
       setIsAddModalOpen(false);
-      await fetchUsers(); // Refresh the user list
-      
+      await fetchUsers();
+
       toast({
         title: "User added",
         description: `${newUser.email} has been added successfully.`,
@@ -292,7 +285,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       });
     }
   };
-
   const handleDeleteUser = async (userId: string) => {
     try {
       const { error } = await supabase
@@ -349,6 +341,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     }
     
     if (!editingUser || !currentUser) return;
+
+    // Tenant admins cannot assign super_admin role
+    if (currentUser.role !== 'super_admin' && editForm.role === 'super_admin') {
+      toast({
+        title: 'Not allowed',
+        description: 'Tenant admins cannot assign the Super Admin role.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       let tenantId = editForm.tenant_id === 'none' ? null : parseInt(editForm.tenant_id) || null;
@@ -486,6 +488,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle className="text-purple-800">Add New User</DialogTitle>
+                    <DialogDescription>Enter details for the new user.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
@@ -539,7 +542,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="super_admin">Super Admin</SelectItem>
+                          {currentUser?.role === 'super_admin' && (
+                            <SelectItem value="super_admin">Super Admin</SelectItem>
+                          )}
                           <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
                           <SelectItem value="scrapyard_admin">Scrapyard Admin</SelectItem>
                           <SelectItem value="scrapyard_staff">Scrapyard Staff</SelectItem>
@@ -791,7 +796,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                        {currentUser?.role === 'super_admin' && (
+                          <SelectItem value="super_admin">Super Admin</SelectItem>
+                        )}
                         <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
                         <SelectItem value="scrapyard_admin">Scrapyard Admin</SelectItem>
                         <SelectItem value="scrapyard_staff">Scrapyard Staff</SelectItem>
