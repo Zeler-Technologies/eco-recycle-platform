@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MapPin, Users, Navigation } from 'lucide-react';
+import DriverTrackingMap from '@/components/Common/DriverTrackingMap';
 
 interface Driver {
   id: string;
@@ -85,37 +86,12 @@ const DriverLocationMap: React.FC<DriverLocationMapProps> = ({ drivers, onBack }
                   Interactive Map
                 </CardTitle>
               </CardHeader>
-              <CardContent className="h-full">
-                <div className="w-full h-full bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center relative overflow-hidden">
-                  <div className="text-center">
-                    <Navigation className="h-16 w-16 text-admin-primary mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-admin-primary mb-2">Live Map View</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Integration with Google Maps or Mapbox would show real-time driver locations
-                    </p>
-                    
-                    {/* Mock map markers */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      {driversWithLocation.slice(0, 5).map((driver, index) => (
-                        <div
-                          key={driver.id}
-                          className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-                          style={{
-                            left: `${20 + index * 15}%`,
-                            top: `${30 + index * 10}%`,
-                          }}
-                        >
-                          <div className={`w-8 h-8 rounded-full ${getStatusColor(driver.driver_status)} flex items-center justify-center text-white text-xs font-bold shadow-lg`}>
-                            {getStatusIcon(driver.driver_status)}
-                          </div>
-                          <div className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-xs whitespace-nowrap">
-                            {driver.full_name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              <CardContent className="h-full p-0">
+                <DriverTrackingMap
+                  drivers={driversWithLocation}
+                  onDriverSelect={setSelectedDriver}
+                  selectedDriver={selectedDriver}
+                />
               </CardContent>
             </Card>
           </div>
