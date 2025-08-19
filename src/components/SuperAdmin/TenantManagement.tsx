@@ -159,6 +159,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
           console.error('Error creating scrapyard:', createError);
           setScrapyardError('Failed to create scrapyard record');
           toast.error('Failed to create scrapyard record');
+          return; // Do not proceed with empty scrapyard list
         } else if (newScrapyard) {
           scrapyardsData = [newScrapyard];
           toast.success('Created missing scrapyard record');
@@ -384,38 +385,87 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
         return;
       }
 
-      if (!selectedScrapyardId) {
-        toast.error('No scrapyard selected. Please refresh and try again.');
-        return;
+      // Prepare normalized values
+      const address = (formData.address || '').trim();
+      const postalCode = (formData.postalCode || '').trim();
+      const city = (formData.city || '').trim();
+
+      // Ensure there is a scrapyard to update; create one if missing
+      let ensureScrapyardId = selectedScrapyardId;
+
+      if (!ensureScrapyardId) {
+        const { data: created, error: createErr } = await supabase
+          .from('scrapyards')
+          .insert({
+            name: formData.companyName || 'Primary Location',
+            address,
+            postal_code: postalCode,
+            city,
+            tenant_id: selectedTenant,
+            is_active: true,
+          })
+          .select('id')
+          .maybeSingle();
+
+        if (createErr || !created) {
+          toast.error('Could not create a scrapyard record. Updating company address only.');
+        } else {
+          ensureScrapyardId = created.id;
+          setSelectedScrapyardId(created.id);
+        }
       }
 
-      const { data: scrapyardCheck, error: checkError } = await supabase
-        .from('scrapyards')
-        .select('id')
-        .eq('id', selectedScrapyardId)
-        .maybeSingle();
+      if (ensureScrapyardId) {
+        const { data: scrapyardCheck, error: checkError } = await supabase
+          .from('scrapyards')
+          .select('id')
+          .eq('id', ensureScrapyardId)
+          .maybeSingle();
 
-      if (checkError || !scrapyardCheck) {
-        toast.error('Selected scrapyard no longer exists. Please refresh the page.');
-        return;
+        if (checkError || !scrapyardCheck) {
+          // Try to recreate if it was deleted
+          const { data: recreated, error: recreateErr } = await supabase
+            .from('scrapyards')
+            .insert({
+              name: formData.companyName || 'Primary Location',
+              address,
+              postal_code: postalCode,
+              city,
+              tenant_id: selectedTenant,
+              is_active: true,
+            })
+            .select('id')
+            .maybeSingle();
+
+          if (recreateErr || !recreated) {
+            toast.error('Scrapyard not available. Updating company address only.');
+            ensureScrapyardId = null;
+          } else {
+            ensureScrapyardId = recreated.id;
+            setSelectedScrapyardId(recreated.id);
+          }
+        }
       }
 
       try {
+        // We already normalized these values above
         const address = (formData.address || '').trim();
         const postalCode = (formData.postalCode || '').trim();
         const city = (formData.city || '').trim();
 
-        const { error: scrapyardError } = await supabase
-          .from('scrapyards')
-          .update({
-            address,
-            postal_code: postalCode,
-            city,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedScrapyardId);
+        if (ensureScrapyardId) {
+          const { error: scrapyardError } = await supabase
+            .from('scrapyards')
+            .update({
+              address,
+              postal_code: postalCode,
+              city,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', ensureScrapyardId);
 
-        if (scrapyardError) throw scrapyardError;
+          if (scrapyardError) throw scrapyardError;
+        }
 
         const fullAddress = `${address}, ${postalCode} ${city}`;
         const { error: tenantError } = await supabase
