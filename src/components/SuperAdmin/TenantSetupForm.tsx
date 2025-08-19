@@ -353,7 +353,7 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Country *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select country" />
