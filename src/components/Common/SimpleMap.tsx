@@ -83,12 +83,22 @@ export default function SimpleMap({
 
     return () => {
       mounted = false;
-      if (markerRef.current) {
-        markerRef.current.setMap(null);
+      try {
+        if (markerRef.current) {
+          markerRef.current.setMap(null);
+        }
+        // Clear pickup markers safely
+        pickupMarkersRef.current.forEach(marker => {
+          try {
+            marker.setMap(null);
+          } catch (e) {
+            console.warn('Error removing marker:', e);
+          }
+        });
+        pickupMarkersRef.current = [];
+      } catch (e) {
+        console.warn('Error during map cleanup:', e);
       }
-      // Clear pickup markers
-      pickupMarkersRef.current.forEach(marker => marker.setMap(null));
-      pickupMarkersRef.current = [];
       mapInstanceRef.current = null;
       markerRef.current = null;
     };
@@ -98,34 +108,44 @@ export default function SimpleMap({
   useEffect(() => {
     if (!mapInstanceRef.current || !isLoaded) return;
 
-    // Clear existing pickup markers
-    pickupMarkersRef.current.forEach(marker => marker.setMap(null));
+    // Clear existing pickup markers safely
+    pickupMarkersRef.current.forEach(marker => {
+      try {
+        marker.setMap(null);
+      } catch (e) {
+        console.warn('Error removing existing marker:', e);
+      }
+    });
     pickupMarkersRef.current = [];
 
     // Add markers for each pickup
     pickups.forEach((pickup) => {
       if (!pickup.pickup_latitude || !pickup.pickup_longitude) return;
 
-      const marker = new window.google.maps.Marker({
-        position: { lat: pickup.pickup_latitude, lng: pickup.pickup_longitude },
-        map: mapInstanceRef.current,
-        title: pickup.car_registration_number || 'Pickup',
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: getPickupStatusColor(pickup.status),
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-        }
-      });
+      try {
+        const marker = new window.google.maps.Marker({
+          position: { lat: pickup.pickup_latitude, lng: pickup.pickup_longitude },
+          map: mapInstanceRef.current,
+          title: pickup.car_registration_number || 'Pickup',
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: getPickupStatusColor(pickup.status),
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          }
+        });
 
-      // Add click listener for pickup selection
-      marker.addListener('click', () => {
-        onPickupSelect?.(pickup);
-      });
+        // Add click listener for pickup selection
+        marker.addListener('click', () => {
+          onPickupSelect?.(pickup);
+        });
 
-      pickupMarkersRef.current.push(marker);
+        pickupMarkersRef.current.push(marker);
+      } catch (e) {
+        console.warn('Error creating marker for pickup:', pickup.car_registration_number, e);
+      }
     });
 
     // Fit map bounds to show all pickups
