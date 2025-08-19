@@ -108,13 +108,20 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           .eq('role', 'scrapyard_admin')
           .single();
 
+        // Fetch scrapyard data for address information
+        const { data: scrapyard } = await supabase
+          .from('scrapyards')
+          .select('address, postal_code, city')
+          .eq('tenant_id', editTenant.tenants_id)
+          .single();
+
         form.reset({
           companyName: editTenant.name,
           country: editTenant.country,
           serviceType: editTenant.service_type || '',
-          address: editTenant.base_address || '',
-          postalCode: '', // Will be populated when we add scrapyard data
-          city: '', // Will be populated when we add scrapyard data
+          address: scrapyard?.address || editTenant.base_address || '',
+          postalCode: scrapyard?.postal_code || '',
+          city: scrapyard?.city || '',
           adminFirstName: adminUser?.first_name || '',
           adminLastName: adminUser?.last_name || '',
           adminEmail: adminUser?.email || '',
@@ -158,6 +165,23 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
 
         if (error) {
           throw new Error(error.message || 'Failed to update tenant');
+        }
+
+        // Also update the associated scrapyard address information
+        if (data.address || data.postalCode || data.city) {
+          const { error: scrapyardError } = await supabase
+            .from('scrapyards')
+            .update({
+              address: data.address || null,
+              postal_code: data.postalCode || null,
+              city: data.city || null,
+            })
+            .eq('tenant_id', editTenant!.tenants_id);
+
+          if (scrapyardError) {
+            console.warn('Failed to update scrapyard address:', scrapyardError);
+            // Don't fail the whole operation for scrapyard address update
+          }
         }
 
         // Update tenant admin user information
