@@ -31,6 +31,12 @@ interface DriverFormModalProps {
 
 const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSuccess }) => {
   const { user } = useAuth();
+  
+  // Debug logging
+  console.log('DriverFormModal - Component loaded with:', { 
+    user: user ? { role: user.role, tenant_id: user.tenant_id, tenant_name: user.tenant_name } : null,
+    driver: driver ? { id: driver.id, tenant_id: driver.tenant_id } : null
+  });
   const [formData, setFormData] = useState({
     full_name: '',
     phone_number: '',
@@ -50,7 +56,34 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
 
   useEffect(() => {
     fetchTenants();
-    if (driver) {
+    
+    // For tenant admins, ALWAYS use their tenant_id regardless of driver being edited
+    if (user?.role === 'tenant_admin' && user.tenant_id) {
+      const tenantId = Number(user.tenant_id);
+      
+      if (driver) {
+        // Force tenant_id to user's tenant even when editing
+        setFormData({
+          full_name: driver.full_name,
+          phone_number: driver.phone_number,
+          email: driver.email || '',
+          vehicle_registration: driver.vehicle_registration || '',
+          vehicle_type: driver.vehicle_type || '',
+          max_capacity_kg: driver.max_capacity_kg || 1000,
+          is_active: driver.is_active,
+          tenant_id: tenantId, // Force to user's tenant
+          scrapyard_id: driver.scrapyard_id ?? null,
+        });
+      } else {
+        // Pre-fill tenant for tenant admins
+        setFormData(prev => ({
+          ...prev,
+          tenant_id: tenantId,
+        }));
+      }
+      fetchScrapyards(tenantId, true);
+    } else if (driver) {
+      // Super admin editing existing driver - use driver's original tenant
       setFormData({
         full_name: driver.full_name,
         phone_number: driver.phone_number,
@@ -63,14 +96,6 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
         scrapyard_id: driver.scrapyard_id ?? null,
       });
       fetchScrapyards(driver.tenant_id);
-    } else if (user?.role === 'tenant_admin' && user.tenant_id) {
-      // Pre-fill tenant for tenant admins
-      const tenantId = Number(user.tenant_id);
-      setFormData(prev => ({
-        ...prev,
-        tenant_id: tenantId,
-      }));
-      fetchScrapyards(tenantId, true);
     }
   }, [driver, user]);
 
