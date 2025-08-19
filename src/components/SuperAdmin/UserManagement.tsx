@@ -22,6 +22,7 @@ interface User {
   created_at: string;
   updated_at: string;
   tenant_id?: number;
+  tenant_name?: string;
 }
 
 interface UserManagementProps {
@@ -52,7 +53,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from('auth_users')
-        .select('*')
+        .select(`
+          *,
+          tenants:tenant_id (
+            name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -64,7 +70,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
         return;
       }
 
-      setUsers(data || []);
+      // Map the data to include tenant_name
+      const usersWithTenantNames = (data || []).map(user => ({
+        ...user,
+        tenant_name: user.tenants?.name || null
+      }));
+      setUsers(usersWithTenantNames);
     } catch (error) {
       toast({
         title: "Error",
@@ -412,7 +423,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                 <TableRow className="bg-purple-50">
                   <TableHead className="text-purple-800 font-semibold">Email</TableHead>
                   <TableHead className="text-purple-800 font-semibold">Role</TableHead>
-                  <TableHead className="text-purple-800 font-semibold">Tenant ID</TableHead>
+                  <TableHead className="text-purple-800 font-semibold">Tenant Name</TableHead>
                   <TableHead className="text-purple-800 font-semibold">Created</TableHead>
                   <TableHead className="text-purple-800 font-semibold">Actions</TableHead>
                 </TableRow>
@@ -436,7 +447,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-purple-700">
-                      {user.tenant_id || 'N/A'}
+                      {user.tenant_name || 'N/A'}
                     </TableCell>
                     <TableCell className="text-purple-700">
                       {new Date(user.created_at).toLocaleDateString()}
