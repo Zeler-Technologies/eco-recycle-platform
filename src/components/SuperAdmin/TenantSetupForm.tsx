@@ -116,6 +116,17 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
     setLoading(true);
     try {
       if (isEditing) {
+        // Validate admin fields for editing as well
+        if (!data.adminFirstName || data.adminFirstName.length < 2) {
+          throw new Error('Administrator first name is required and must be at least 2 characters');
+        }
+        if (!data.adminLastName || data.adminLastName.length < 2) {
+          throw new Error('Administrator last name is required and must be at least 2 characters');
+        }
+        if (!data.adminEmail || !data.adminEmail.includes('@')) {
+          throw new Error('Administrator email is required and must be valid');
+        }
+
         // Update existing tenant
         const { data: result, error } = await supabase
           .from('tenants')
@@ -133,6 +144,22 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
 
         if (error) {
           throw new Error(error.message || 'Failed to update tenant');
+        }
+
+        // Update tenant admin user information
+        const { error: userUpdateError } = await supabase.functions.invoke('update-tenant-user', {
+          body: {
+            tenantId: editTenant!.tenants_id,
+            firstName: data.adminFirstName,
+            lastName: data.adminLastName,
+            email: data.adminEmail,
+            role: 'scrapyard_admin'
+          }
+        });
+
+        if (userUpdateError) {
+          console.warn('Failed to update admin user:', userUpdateError);
+          // Don't throw error here, tenant update succeeded
         }
 
         console.log('Tenant updated successfully:', result);
