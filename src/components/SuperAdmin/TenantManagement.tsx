@@ -66,6 +66,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [error, setError] = useState<string | null>(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedScrapyardId, setSelectedScrapyardId] = useState<number | null>(null);
+  const [tenantScrapyards, setTenantScrapyards] = useState<any[]>([]);
+  const [scrapyardsLoading, setScrapyardsLoading] = useState(false);
   
   // Fetch users for the selected tenant
   const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
@@ -81,6 +84,32 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   useEffect(() => {
     fetchTenants();
   }, []);
+
+  // Fetch scrapyards for selected tenant
+  const fetchTenantScrapyards = async (tenantId: number) => {
+    try {
+      setScrapyardsLoading(true);
+      const { data, error } = await supabase
+        .from('scrapyards')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setTenantScrapyards(data || []);
+      
+      // Select primary scrapyard (first created) by default
+      if (data && data.length > 0) {
+        setSelectedScrapyardId(data[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching scrapyards:', error);
+      toast.error('Failed to load scrapyard locations');
+    } finally {
+      setScrapyardsLoading(false);
+    }
+  };
 
   const fetchTenants = async () => {
     try {
@@ -181,18 +210,41 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
     }
   };
 
-  const selectedTenantData = tenants.find(t => t.tenants_id === selectedTenant);
+  const isAddressValid = () => {
+    return !!(formData.address && formData.postalCode && formData.city);
+  };
 
-  // Update form data when selected tenant changes
+  const getAddressStatus = () => {
+    return isAddressValid() ? 'Complete' : 'Incomplete';
+  };
+
+  const getAddressStatusColor = () => {
+    return isAddressValid() ? 'bg-status-completed text-white' : 'bg-status-cancelled text-white';
+  };
+
+  const selectedTenantData = tenants.find(t => t.tenants_id === selectedTenant);
+  const selectedScrapyard = tenantScrapyards.find(s => s.id === selectedScrapyardId);
+
+  // Fetch scrapyards when tenant selection changes
+  useEffect(() => {
+    if (selectedTenant) {
+      fetchTenantScrapyards(selectedTenant);
+    } else {
+      setTenantScrapyards([]);
+      setSelectedScrapyardId(null);
+    }
+  }, [selectedTenant]);
+
+  // Update form data when selected tenant or scrapyard changes
   useEffect(() => {
     if (selectedTenantData) {
       setFormData({
         companyName: selectedTenantData.name,
         country: selectedTenantData.country,
         serviceType: selectedTenantData.service_type,
-        address: selectedTenantData.base_address,
-        postalCode: selectedTenantData.postal_code || '',
-        city: selectedTenantData.city || '',
+        address: selectedScrapyard?.address || '',
+        postalCode: selectedScrapyard?.postal_code || '',
+        city: selectedScrapyard?.city || '',
         invoiceEmail: selectedTenantData.invoice_email,
         plan: selectedTenantData.plan?.toLowerCase() || 'premium',
         monthlyRevenue: selectedTenantData.revenue || '€0',
@@ -202,7 +254,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
       // Reset form data when no tenant is selected
       setFormData({});
     }
-  }, [selectedTenantData]);
+  }, [selectedTenantData, selectedScrapyard]);
 
   const handleSelectTenant = (tenantId: number) => {
     setSelectedTenant(tenantId);
@@ -244,33 +296,72 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const handleSaveChanges = async () => {
     if (!selectedTenant || !formData) return;
 
+    // Validate address fields if editing address
+    if (editingSection === 'address' && !isAddressValid()) {
+      toast.error('Please fill in all required address fields');
+      return;
+    }
+
     try {
-      const updateData: any = {};
+      const tenantUpdateData: any = {};
+      const scrapyardUpdateData: any = {};
       
-      // Map form fields to database columns
-      if (formData.companyName) updateData.name = formData.companyName;
-      if (formData.country) updateData.country = formData.country;
-      if (formData.serviceType) updateData.service_type = formData.serviceType;
-      if (formData.address) updateData.base_address = formData.address;
-      if (formData.postalCode) updateData.postal_code = formData.postalCode;
-      if (formData.city) updateData.city = formData.city;
-      if (formData.invoiceEmail) updateData.invoice_email = formData.invoiceEmail;
+      // Map form fields to appropriate tables
+      if (formData.companyName) tenantUpdateData.name = formData.companyName;
+      if (formData.country) tenantUpdateData.country = formData.country;
+      if (formData.serviceType) tenantUpdateData.service_type = formData.serviceType;
+      if (formData.invoiceEmail) tenantUpdateData.invoice_email = formData.invoiceEmail;
 
-      const { error } = await supabase
-        .from('tenants')
-        .update(updateData)
-        .eq('tenants_id', selectedTenant);
+      // Address fields go to scrapyard table
+      if (editingSection === 'address' && selectedScrapyardId) {
+        if (formData.address) scrapyardUpdateData.address = formData.address;
+        if (formData.postalCode) scrapyardUpdateData.postal_code = formData.postalCode;
+        if (formData.city) scrapyardUpdateData.city = formData.city;
 
-      if (error) throw error;
+        // Update tenant base_address with concatenated address from primary scrapyard
+        const fullAddress = `${formData.address}, ${formData.postalCode} ${formData.city}`;
+        tenantUpdateData.base_address = fullAddress;
+      }
+
+      // Update scrapyard if address data changed
+      if (Object.keys(scrapyardUpdateData).length > 0 && selectedScrapyardId) {
+        const { error: scrapyardError } = await supabase
+          .from('scrapyards')
+          .update(scrapyardUpdateData)
+          .eq('id', selectedScrapyardId);
+
+        if (scrapyardError) throw scrapyardError;
+      }
+
+      // Update tenant
+      if (Object.keys(tenantUpdateData).length > 0) {
+        const { error: tenantError } = await supabase
+          .from('tenants')
+          .update(tenantUpdateData)
+          .eq('tenants_id', selectedTenant);
+
+        if (tenantError) throw tenantError;
+      }
 
       // Update local state
       setTenants(prevTenants => 
         prevTenants.map(tenant => 
           tenant.tenants_id === selectedTenant 
-            ? { ...tenant, ...updateData }
+            ? { ...tenant, ...tenantUpdateData }
             : tenant
         )
       );
+
+      // Update scrapyards state
+      if (Object.keys(scrapyardUpdateData).length > 0) {
+        setTenantScrapyards(prevScrapyards =>
+          prevScrapyards.map(scrapyard =>
+            scrapyard.id === selectedScrapyardId
+              ? { ...scrapyard, ...scrapyardUpdateData }
+              : scrapyard
+          )
+        );
+      }
 
       setEditingSection(null);
       toast.success('Changes saved successfully');
@@ -439,7 +530,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                         <div className="flex items-center justify-between">
                           <h4 className="font-semibold flex items-center gap-2">
                             <MapPin className="h-4 w-4" />
-                            Address Information
+                            Scrapyard Locations
                           </h4>
                           <Button
                             variant="outline"
@@ -449,51 +540,145 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             {editingSection === 'address' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                           </Button>
                         </div>
-                        <div className="grid gap-4">
-                          <div>
-                            <Label htmlFor="address">Address</Label>
-                            <Input
-                              id="address"
-                              value={formData.address || ''}
-                              onChange={(e) => handleInputChange('address', e.target.value)}
+
+                        {/* Scrapyard Selector */}
+                        <div className="space-y-3">
+                          <Label htmlFor="scrapyardSelect">Select Scrapyard Location</Label>
+                          {scrapyardsLoading ? (
+                            <div className="text-sm text-muted-foreground">Loading scrapyards...</div>
+                          ) : tenantScrapyards.length === 0 ? (
+                            <div className="text-sm text-muted-foreground">No scrapyard locations found</div>
+                          ) : (
+                            <Select
+                              value={selectedScrapyardId?.toString() || ''}
+                              onValueChange={(value) => setSelectedScrapyardId(parseInt(value))}
                               disabled={editingSection !== 'address'}
-                              placeholder="Enter address"
-                            />
-                          </div>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div>
-                              <Label htmlFor="postalCode">Postal Code</Label>
-                              <Input
-                                id="postalCode"
-                                value={formData.postalCode || ''}
-                                onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                                disabled={editingSection !== 'address'}
-                                placeholder="Enter postal code"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="city">City</Label>
-                              <Input
-                                id="city"
-                                value={formData.city || ''}
-                                onChange={(e) => handleInputChange('city', e.target.value)}
-                                disabled={editingSection !== 'address'}
-                                placeholder="Enter city"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="invoiceEmail">Invoice Email</Label>
-                            <Input
-                              id="invoiceEmail"
-                              type="email"
-                              value={formData.invoiceEmail || ''}
-                              onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
-                              disabled={editingSection !== 'address'}
-                              placeholder="Enter invoice email"
-                            />
-                          </div>
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a scrapyard location" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {tenantScrapyards.map((scrapyard, index) => {
+                                  const addressComplete = !!(scrapyard.address && scrapyard.postal_code && scrapyard.city);
+                                  return (
+                                    <SelectItem key={scrapyard.id} value={scrapyard.id.toString()}>
+                                      <div className="flex items-center gap-2 w-full">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>{scrapyard.name || `Location ${index + 1}`}</span>
+                                        {index === 0 && <Badge variant="secondary">Primary</Badge>}
+                                        <Badge 
+                                          className={addressComplete 
+                                            ? 'bg-status-completed text-white' 
+                                            : 'bg-status-cancelled text-white'}
+                                        >
+                                          {addressComplete ? 'Complete' : 'Incomplete'}
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={editingSection !== 'address'}
+                            className="w-full"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Scrapyard Location
+                          </Button>
                         </div>
+
+                        {/* Address Form */}
+                        {selectedScrapyardId && (
+                          <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-medium">Address Details</h5>
+                              <Badge className={getAddressStatusColor()}>
+                                {getAddressStatus()}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid gap-4">
+                              <div>
+                                <Label htmlFor="address" className="flex items-center gap-1">
+                                  Street Address <span className="text-red-500">*</span>
+                                  <span className="text-xs text-muted-foreground">(Required)</span>
+                                </Label>
+                                <Input
+                                  id="address"
+                                  value={formData.address || ''}
+                                  onChange={(e) => handleInputChange('address', e.target.value)}
+                                  disabled={editingSection !== 'address'}
+                                  placeholder="Enter street address"
+                                  className={!formData.address && editingSection === 'address' ? 'border-red-500' : ''}
+                                />
+                                {!formData.address && editingSection === 'address' && (
+                                  <p className="text-xs text-red-500 mt-1">Street address is required</p>
+                                )}
+                              </div>
+                              
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                  <Label htmlFor="postalCode" className="flex items-center gap-1">
+                                    Postal Code <span className="text-red-500">*</span>
+                                    <span className="text-xs text-muted-foreground">(Required)</span>
+                                  </Label>
+                                  <Input
+                                    id="postalCode"
+                                    value={formData.postalCode || ''}
+                                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                                    disabled={editingSection !== 'address'}
+                                    placeholder="Enter postal code"
+                                    className={!formData.postalCode && editingSection === 'address' ? 'border-red-500' : ''}
+                                  />
+                                  {!formData.postalCode && editingSection === 'address' && (
+                                    <p className="text-xs text-red-500 mt-1">Postal code is required</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="city" className="flex items-center gap-1">
+                                    City <span className="text-red-500">*</span>
+                                    <span className="text-xs text-muted-foreground">(Required)</span>
+                                  </Label>
+                                  <Input
+                                    id="city"
+                                    value={formData.city || ''}
+                                    onChange={(e) => handleInputChange('city', e.target.value)}
+                                    disabled={editingSection !== 'address'}
+                                    placeholder="Enter city"
+                                    className={!formData.city && editingSection === 'address' ? 'border-red-500' : ''}
+                                  />
+                                  {!formData.city && editingSection === 'address' && (
+                                    <p className="text-xs text-red-500 mt-1">City is required</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {!selectedScrapyardId && tenantScrapyards.length > 0 && (
+                          <div className="p-4 border rounded-lg bg-muted/10 text-center">
+                            <p className="text-sm text-muted-foreground">Select a scrapyard location to edit address details</p>
+                          </div>
+                        )}
+
+                        <div>
+                          <Label htmlFor="invoiceEmail">Invoice Email</Label>
+                          <Input
+                            id="invoiceEmail"
+                            type="email"
+                            value={formData.invoiceEmail || ''}
+                            onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
+                            disabled={editingSection !== 'address'}
+                            placeholder="Enter invoice email"
+                          />
+                        </div>
+                        
                         <div className="flex items-center gap-2">
                           <Switch disabled={editingSection !== 'address'} />
                           <Label>Use different billing address</Label>
