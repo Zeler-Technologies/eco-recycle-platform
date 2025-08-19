@@ -33,13 +33,9 @@ class MapErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="h-96 rounded-xl bg-muted border-2 border-dashed border-border flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <div className="text-2xl mb-2">🗺️</div>
-            <div className="text-sm">Kartan kunde inte laddas</div>
-            <div className="text-xs mt-1">Försök uppdatera sidan</div>
-          </div>
+      return (
+        <div className="h-96 rounded-xl border border-border overflow-hidden">
+          <SimpleMapFallback />
         </div>
       );
     }
@@ -47,5 +43,66 @@ class MapErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+// Fallback component that tries to render a basic Google Map
+const SimpleMapFallback = () => {
+  const mapRef = React.useRef<HTMLDivElement>(null);
+  const [mapLoaded, setMapLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    
+    const initFallbackMap = () => {
+      if (!mounted || !window.google?.maps || !mapRef.current) return;
+      
+      try {
+        new window.google.maps.Map(mapRef.current, {
+          center: { lat: 59.3293, lng: 18.0686 }, // Stockholm
+          zoom: 12,
+          clickableIcons: false,
+          disableDefaultUI: true,
+          styles: [
+            {
+              featureType: "poi",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
+        });
+        
+        if (mounted) setMapLoaded(true);
+      } catch (error) {
+        console.warn('Fallback map failed to load:', error);
+      }
+    };
+
+    const checkAndInit = () => {
+      if (window.google?.maps) {
+        setTimeout(initFallbackMap, 200); // Extra delay for stability
+      } else {
+        setTimeout(checkAndInit, 100);
+      }
+    };
+
+    checkAndInit();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full h-full">
+      <div ref={mapRef} className="w-full h-full" />
+      {!mapLoaded && (
+        <div className="absolute inset-0 bg-muted flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <div className="text-2xl mb-2">🗺️</div>
+            <div className="text-sm">Laddar reservkarta...</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default MapErrorBoundary;
