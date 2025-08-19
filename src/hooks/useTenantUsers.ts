@@ -9,6 +9,8 @@ export type TenantUser = {
   updated_at: string | null;
   pnr_num: string | null;
   pnr_num_norm: string | null;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 export function useTenantUsers(tenantId: number | null) {

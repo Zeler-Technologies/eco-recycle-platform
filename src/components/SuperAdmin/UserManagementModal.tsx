@@ -17,6 +17,8 @@ interface TenantUser {
   created_at: string;
   pnr_num?: string;
   tenant_id: number;
+  first_name?: string;
+  last_name?: string;
 }
 
 interface UserManagementModalProps {
@@ -40,7 +42,9 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
     email: '',
     role: 'tenant_admin' as UserRole,
     pnr_num: '',
-    password: ''
+    password: '',
+    first_name: '',
+    last_name: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!user;
@@ -51,14 +55,18 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
         email: user.email,
         role: user.role,
         pnr_num: user.pnr_num || '',
-        password: '' // Don't prefill password for editing
+        password: '', // Don't prefill password for editing
+        first_name: user.first_name || '',
+        last_name: user.last_name || ''
       });
     } else {
       setFormData({
         email: '',
         role: 'tenant_admin' as UserRole,
         pnr_num: '',
-        password: ''
+        password: '',
+        first_name: '',
+        last_name: ''
       });
     }
   }, [user, isOpen]);
@@ -76,6 +84,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
             email: formData.email,
             role: formData.role,
             pnr_num: formData.pnr_num || null,
+            first_name: formData.first_name || null,
+            last_name: formData.last_name || null,
           })
           .eq('id', user.id);
 
@@ -113,6 +123,8 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
               tenant_id: tenantId,
               role: formData.role,
               pnr_num: formData.pnr_num || null,
+              first_name: formData.first_name || null,
+              last_name: formData.last_name || null,
             })
             .eq('id', newUser.user.id);
 
@@ -155,6 +167,27 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="first_name">First Name</Label>
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="last_name">Last Name</Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="email">Email Address</Label>
             <Input

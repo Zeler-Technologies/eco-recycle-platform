@@ -540,9 +540,15 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                 <div className="p-2 bg-admin-accent rounded-full">
                                   <Users className="h-4 w-4 text-admin-primary" />
                                 </div>
-                                <div>
-                                  <h4 className="font-semibold">{user.email}</h4>
-                                  <p className="text-sm text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
+                                 <div>
+                                   <h4 className="font-semibold">
+                                     {user.first_name || user.last_name 
+                                       ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+                                       : user.email
+                                     }
+                                   </h4>
+                                   <p className="text-sm text-muted-foreground">{user.email}</p>
+                                   <p className="text-sm text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <Badge variant={user.role === 'super_admin' ? 'default' : 'secondary'}>
                                       {user.role}
