@@ -78,9 +78,16 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     try {
       setTenantsLoading(true);
       let query = supabase.from('tenants').select('tenants_id, name');
-      if (user?.role === 'tenant_admin' && user.tenant_id) {
+      
+      // Restrict access based on user role - only show user's own tenant
+      if (user?.tenant_id) {
         query = query.eq('tenants_id', Number(user.tenant_id));
+      } else {
+        // If no tenant_id, return empty (shouldn't happen for tenant/scrapyard admins)
+        setTenants([]);
+        return;
       }
+      
       const { data, error } = await query;
       if (error) {
         console.error('Error fetching tenants:', error);
