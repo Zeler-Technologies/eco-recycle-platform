@@ -190,7 +190,7 @@ export default function SimpleMap({
 
   if (error) {
     return (
-      <div className={`w-full h-96 bg-muted rounded-lg flex items-center justify-center ${className}`}>
+      <div className={`w-full h-[500px] bg-muted rounded-lg flex items-center justify-center ${className}`}>
         <p className="text-destructive">Kunde inte ladda karta</p>
       </div>
     );
@@ -198,9 +198,9 @@ export default function SimpleMap({
 
   return (
     <div className={className}>
-      <div ref={mapRef} className="w-full h-96 rounded-lg border border-border">
+      <div ref={mapRef} className="w-full h-[500px] rounded-lg border border-border">
         {!isLoaded && (
-          <div className="w-full h-96 bg-muted rounded-lg flex items-center justify-center">
+          <div className="w-full h-[500px] bg-muted rounded-lg flex items-center justify-center">
             <p className="text-muted-foreground">Laddar karta...</p>
           </div>
         )}

@@ -398,7 +398,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           center={{ lat: 59.3293, lng: 18.0686 }}
           pickups={filteredPickups}
           onPickupSelect={openPickupDetail}
-          className="h-96 rounded-xl"
+          className="h-[500px] rounded-xl"
         />
       </MapErrorBoundary>
     </div>
