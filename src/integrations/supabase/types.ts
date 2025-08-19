@@ -2842,6 +2842,7 @@ export type Database = {
       tenants: {
         Row: {
           base_address: string | null
+          city: string | null
           country: string
           created_at: string
           date: string
@@ -2849,12 +2850,14 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
+          postal_code: string | null
           service_type: string | null
           tenants_id: number
           updated_at: string | null
         }
         Insert: {
           base_address?: string | null
+          city?: string | null
           country: string
           created_at?: string
           date: string
@@ -2862,12 +2865,14 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
+          postal_code?: string | null
           service_type?: string | null
           tenants_id?: number
           updated_at?: string | null
         }
         Update: {
           base_address?: string | null
+          city?: string | null
           country?: string
           created_at?: string
           date?: string
@@ -2875,6 +2880,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
+          postal_code?: string | null
           service_type?: string | null
           tenants_id?: number
           updated_at?: string | null

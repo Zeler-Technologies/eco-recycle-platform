@@ -46,6 +46,8 @@ interface Tenant {
   country: string;
   service_type: string;
   base_address: string;
+  postal_code?: string;
+  city?: string;
   invoice_email: string;
   created_at: string;
   status?: string;
@@ -189,6 +191,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
         country: selectedTenantData.country,
         serviceType: selectedTenantData.service_type,
         address: selectedTenantData.base_address,
+        postalCode: selectedTenantData.postal_code || '',
+        city: selectedTenantData.city || '',
         invoiceEmail: selectedTenantData.invoice_email,
         plan: selectedTenantData.plan?.toLowerCase() || 'premium',
         monthlyRevenue: selectedTenantData.revenue || '€0',
@@ -248,6 +252,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
       if (formData.country) updateData.country = formData.country;
       if (formData.serviceType) updateData.service_type = formData.serviceType;
       if (formData.address) updateData.base_address = formData.address;
+      if (formData.postalCode) updateData.postal_code = formData.postalCode;
+      if (formData.city) updateData.city = formData.city;
       if (formData.invoiceEmail) updateData.invoice_email = formData.invoiceEmail;
 
       const { error } = await supabase
@@ -443,15 +449,38 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             {editingSection === 'address' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-4">
                           <div>
-                            <Label htmlFor="address">Base Address</Label>
-                            <Textarea
+                            <Label htmlFor="address">Address</Label>
+                            <Input
                               id="address"
                               value={formData.address || ''}
                               onChange={(e) => handleInputChange('address', e.target.value)}
                               disabled={editingSection !== 'address'}
+                              placeholder="Enter address"
                             />
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                              <Label htmlFor="postalCode">Postal Code</Label>
+                              <Input
+                                id="postalCode"
+                                value={formData.postalCode || ''}
+                                onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                                disabled={editingSection !== 'address'}
+                                placeholder="Enter postal code"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="city">City</Label>
+                              <Input
+                                id="city"
+                                value={formData.city || ''}
+                                onChange={(e) => handleInputChange('city', e.target.value)}
+                                disabled={editingSection !== 'address'}
+                                placeholder="Enter city"
+                              />
+                            </div>
                           </div>
                           <div>
                             <Label htmlFor="invoiceEmail">Invoice Email</Label>
@@ -461,6 +490,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               value={formData.invoiceEmail || ''}
                               onChange={(e) => handleInputChange('invoiceEmail', e.target.value)}
                               disabled={editingSection !== 'address'}
+                              placeholder="Enter invoice email"
                             />
                           </div>
                         </div>
