@@ -98,46 +98,26 @@ const DriverFormModal: React.FC<DriverFormModalProps> = ({ driver, onClose, onSu
     try {
       setScrapyardsLoading(true);
 
-      // Enforce tenant-level security - determine which tenant to filter by
+      // For tenant_admin users, ALWAYS use their tenant_id - never allow access to other tenants
       let filterTenantId = tenantId;
-      
-      // For tenant_admin users, always use their tenant_id regardless of input
       if (user?.role === 'tenant_admin' && user.tenant_id) {
         filterTenantId = Number(user.tenant_id);
       }
 
-      let scrapyardData: any[] = [];
-      
-      try {
-        // Try RPC function first with tenant filtering
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_accessible_scrapyards', { p_tenant_id: filterTenantId });
+      // Direct query with strict tenant filtering
+      const { data: scrapyardData, error } = await supabase
+        .from('scrapyards')
+        .select('id, name, tenant_id, address, city')
+        .eq('is_active', true)
+        .eq('tenant_id', filterTenantId);
 
-        if (rpcError) {
-          console.error('RPC get_accessible_scrapyards error:', rpcError);
-          throw rpcError;
-        }
-
-        scrapyardData = rpcData || [];
-      } catch (rpcError) {
-        console.log('Falling back to direct scrapyards query...');
-        // Fallback to direct query WITH tenant filtering at database level
-        const { data: directData, error: directError } = await supabase
-          .from('scrapyards')
-          .select('id, name, tenant_id')
-          .eq('is_active', true)
-          .eq('tenant_id', filterTenantId); // CRITICAL: Filter at database level for security
-
-        if (directError) {
-          console.error('Direct scrapyards query error:', directError);
-          throw directError;
-        }
-
-        scrapyardData = directData || [];
+      if (error) {
+        console.error('Scrapyards query error:', error);
+        throw error;
       }
 
-      // Double-check: ensure all returned scrapyards belong to the correct tenant
-      const filtered = scrapyardData.filter((s: any) => Number(s.tenant_id) === Number(filterTenantId));
+      // Ensure strict tenant isolation - only return scrapyards for the specific tenant
+      const filtered = (scrapyardData || []).filter((s: any) => Number(s.tenant_id) === Number(filterTenantId));
 
       // Fix encoding in scrapyard data
       const fixedData = filtered.map(s => ({
