@@ -129,7 +129,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { data, error } = await supabase
         .from('auth_users')
-        .select('*')
+        .select(`
+          *,
+          tenants:tenant_id (
+            name
+          )
+        `)
         .eq('id', userId)
         .single();
       
@@ -311,7 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role: profile.role as UserRole,
     tenant_id: profile.tenant_id,
     scrapyard_id: undefined,
-    tenant_name: `Tenant ${profile.tenant_id}`,
+    tenant_name: (profile as any)?.tenants?.name || `Tenant ${profile.tenant_id}`,
     tenant_country: 'Sverige'
   } : null;
 
