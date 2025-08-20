@@ -6,101 +6,85 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('=== Google Maps Function Called (Updated) ===');
-  console.log('Method:', req.method);
-  console.log('Headers:', Object.fromEntries(req.headers.entries()));
-
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const requestBody = await req.json();
-    console.log('Request body received:', JSON.stringify(requestBody, null, 2));
+    // Get the Google Maps API key from environment
+    const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     
-    const { service, params } = requestBody;
-    console.log('Service requested:', service);
-    console.log('Params:', JSON.stringify(params, null, 2));
-
-    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
-    console.log('API Key available:', !!googleMapsApiKey);
-    console.log('API Key length:', googleMapsApiKey?.length || 0);
-
-    if (!googleMapsApiKey) {
-      console.error('ERROR: Google Maps API key not configured');
+    if (!apiKey) {
+      console.error('GOOGLE_MAPS_API_KEY environment variable not set');
       return new Response(
         JSON.stringify({ error: 'Google Maps API key not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
-    let apiUrl = '';
-    let queryParams = new URLSearchParams();
-    queryParams.append('key', googleMapsApiKey);
+    // Parse the request body
+    const { service, params } = await req.json();
+    
+    // Build the Google Maps API URL based on service type
+    let url: string;
+    const queryParams = new URLSearchParams();
+    queryParams.set('key', apiKey);
 
     switch (service) {
       case 'autocomplete':
-        apiUrl = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-        queryParams.append('input', params.input);
-        if (params.language) queryParams.append('language', params.language);
-        if (params.components) queryParams.append('components', params.components);
-        if (params.sessiontoken) queryParams.append('sessiontoken', params.sessiontoken);
-        console.log('Autocomplete URL params:', queryParams.toString());
+        url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+        queryParams.set('input', params.input);
+        if (params.language) queryParams.set('language', params.language);
+        if (params.components) queryParams.set('components', params.components);
+        if (params.sessiontoken) queryParams.set('sessiontoken', params.sessiontoken);
         break;
 
       case 'geocode':
-        apiUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
-        queryParams.append('address', params.address);
-        if (params.language) queryParams.append('language', params.language);
-        console.log('Geocode URL params:', queryParams.toString());
+        url = 'https://maps.googleapis.com/maps/api/geocode/json';
+        queryParams.set('address', params.address);
+        if (params.language) queryParams.set('language', params.language);
         break;
 
       case 'reverse-geocode':
-        apiUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
-        queryParams.append('latlng', `${params.lat},${params.lng}`);
-        if (params.language) queryParams.append('language', params.language);
-        console.log('Reverse geocode URL params:', queryParams.toString());
+        url = 'https://maps.googleapis.com/maps/api/geocode/json';
+        queryParams.set('latlng', `${params.lat},${params.lng}`);
+        if (params.language) queryParams.set('language', params.language);
         break;
 
       default:
-        console.error('ERROR: Invalid service type:', service);
         return new Response(
           JSON.stringify({ error: 'Invalid service type' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
         );
     }
 
-    const fullUrl = `${apiUrl}?${queryParams.toString()}`;
-    console.log('Making request to Google Maps API:', fullUrl.replace(googleMapsApiKey, 'API_KEY_HIDDEN'));
-    
+    // Make request to Google Maps API
+    const fullUrl = `${url}?${queryParams.toString()}`;
     const response = await fetch(fullUrl);
-    console.log('Google Maps API response status:', response.status);
-    console.log('Google Maps API response headers:', Object.fromEntries(response.headers.entries()));
-    
     const data = await response.json();
-    console.log('Google Maps API response data:', JSON.stringify(data, null, 2));
 
-    // Check for API errors
-    if (data.status && data.status !== 'OK') {
-      console.error('Google Maps API Error Status:', data.status);
-      console.error('Google Maps API Error Message:', data.error_message);
-    }
-
+    // Return the Google Maps API response
     return new Response(
       JSON.stringify(data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('=== ERROR in google-maps function ===');
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    return new Response(
-      JSON.stringify({ error: error.message }),
       { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+
+  } catch (error) {
+    console.error('Error in google-maps function:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
