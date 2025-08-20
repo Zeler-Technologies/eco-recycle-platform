@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AccessibleInput, AccessibleTextarea } from '@/components/Common/AccessibleForm';
+import { SwedishAddressAutocomplete } from './SwedishAddressAutocomplete';
 import { validateSwedishPNR, validateSwedishOrgNumber } from '@/utils/swedishValidation';
 import { formatSwedishPhone, formatSwedishPostalCode, formatSwedishCurrency } from '@/utils/swedishFormatting';
 import { GDPRConsent } from '@/components/Legal/GDPRConsent';
@@ -36,6 +37,16 @@ interface FormData {
   pickupCity: string;
   preferredPickupDate: string;
   contactMethod: 'phone' | 'email' | 'sms';
+}
+
+interface AddressData {
+  address: string;
+  postalCode: string;
+  city: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 interface QuoteDisplay {
@@ -89,6 +100,9 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quote, setQuote] = useState<QuoteDisplay | null>(null);
   const [formProgress, setFormProgress] = useState(10);
+  const [ownerAddressData, setOwnerAddressData] = useState<AddressData | null>(null);
+  const [pickupAddressData, setPickupAddressData] = useState<AddressData | null>(null);
+  const [useOwnerAddressForPickup, setUseOwnerAddressForPickup] = useState(true);
   const { toast } = useToast();
 
   // Enhanced field formatters
@@ -130,6 +144,92 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
     const filledFields = requiredFields.filter(f => updatedData[f as keyof FormData]?.toString().trim());
     setFormProgress((filledFields.length / requiredFields.length) * 100);
   }, [formatRegistrationNumber, errors, formData]);
+
+  // Handle owner address selection from autocomplete
+  const handleOwnerAddressSelect = useCallback((suggestion: any) => {
+    const addressData: AddressData = {
+      address: suggestion.formatted_address || suggestion.description,
+      postalCode: suggestion.postal_code || '',
+      city: suggestion.city || '',
+      coordinates: suggestion.coordinates
+    };
+
+    setOwnerAddressData(addressData);
+    
+    // Update form fields
+    if (suggestion.postal_code) {
+      updateField('postalCode', suggestion.postal_code);
+    }
+    if (suggestion.city) {
+      updateField('city', suggestion.city);
+    }
+
+    // If using owner address for pickup, update pickup fields too
+    if (useOwnerAddressForPickup) {
+      setPickupAddressData(addressData);
+      updateField('pickupAddress', addressData.address);
+      if (suggestion.postal_code) {
+        updateField('pickupPostalCode', suggestion.postal_code);
+      }
+      if (suggestion.city) {
+        updateField('pickupCity', suggestion.city);
+      }
+    }
+
+    toast({
+      title: "Adress vald",
+      description: `${addressData.address} har valts som din adress.`,
+    });
+  }, [updateField, useOwnerAddressForPickup, toast]);
+
+  // Handle pickup address selection from autocomplete
+  const handlePickupAddressSelect = useCallback((suggestion: any) => {
+    const addressData: AddressData = {
+      address: suggestion.formatted_address || suggestion.description,
+      postalCode: suggestion.postal_code || '',
+      city: suggestion.city || '',
+      coordinates: suggestion.coordinates
+    };
+
+    setPickupAddressData(addressData);
+    
+    // Update pickup form fields
+    updateField('pickupAddress', addressData.address);
+    if (suggestion.postal_code) {
+      updateField('pickupPostalCode', suggestion.postal_code);
+    }
+    if (suggestion.city) {
+      updateField('pickupCity', suggestion.city);
+    }
+
+    toast({
+      title: "Hämtningsadress vald",
+      description: `${addressData.address} har valts som hämtningsadress.`,
+    });
+  }, [updateField, toast]);
+
+  // Toggle using owner address for pickup
+  const handleUseOwnerAddressToggle = useCallback(() => {
+    setUseOwnerAddressForPickup(prev => {
+      const newValue = !prev;
+      
+      if (newValue && ownerAddressData) {
+        // Copy owner address to pickup address
+        setPickupAddressData(ownerAddressData);
+        updateField('pickupAddress', ownerAddressData.address);
+        updateField('pickupPostalCode', ownerAddressData.postalCode);
+        updateField('pickupCity', ownerAddressData.city);
+      } else if (!newValue) {
+        // Clear pickup address fields
+        setPickupAddressData(null);
+        updateField('pickupAddress', '');
+        updateField('pickupPostalCode', '');
+        updateField('pickupCity', '');
+      }
+      
+      return newValue;
+    });
+  }, [ownerAddressData, updateField]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -199,8 +299,8 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
 
     if (!formData.controlNumber.trim()) {
       newErrors.controlNumber = 'Kontrollnummer är obligatoriskt';
-    } else if (!/^\d{10}$/.test(formData.controlNumber)) {
-      newErrors.controlNumber = 'Kontrollnummer måste vara 10 siffror';
+    } else if (!/^\d{8}$/.test(formData.controlNumber)) {
+      newErrors.controlNumber = 'Kontrollnummer måste vara 8 siffror';
     }
 
     // Year validation
@@ -212,14 +312,30 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
       }
     }
 
+    // Pickup address validation
+    if (!useOwnerAddressForPickup) {
+      if (!formData.pickupAddress.trim()) {
+        newErrors.pickupAddress = 'Hämtningsadress är obligatorisk';
+      }
+      if (!formData.pickupPostalCode.trim()) {
+        newErrors.pickupPostalCode = 'Postnummer för hämtning är obligatoriskt';
+      }
+      if (!formData.pickupCity.trim()) {
+        newErrors.pickupCity = 'Ort för hämtning är obligatorisk';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, validateRegistrationNumber]);
+  }, [formData, validateRegistrationNumber, useOwnerAddressForPickup]);
 
   const generateQuote = async () => {
     setIsSubmitting(true);
     
     try {
+      // Use pickup address data for distance calculation
+      const addressForQuote = useOwnerAddressForPickup ? ownerAddressData : pickupAddressData;
+      
       // First, create the customer request
       const { data: requestData, error: requestError } = await supabase
         .from('customer_requests')
@@ -233,38 +349,48 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
           control_number: formData.controlNumber,
           owner_address: formData.address,
           owner_postal_code: formData.postalCode,
-          pickup_address: formData.pickupAddress || formData.address,
-          pickup_postal_code: formData.pickupPostalCode || formData.postalCode,
+          pickup_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
+          pickup_postal_code: useOwnerAddressForPickup ? formData.postalCode : formData.pickupPostalCode,
           contact_phone: formData.phone,
           special_instructions: formData.notes,
           preferred_contact_method: formData.contactMethod,
-          status: 'pending'
+          status: 'pending',
+          // Include coordinates if available
+          pickup_latitude: addressForQuote?.coordinates?.lat || null,
+          pickup_longitude: addressForQuote?.coordinates?.lng || null
         })
         .select()
         .single();
 
       if (requestError) throw requestError;
 
-      // Generate enhanced quote
-      const { data: quoteData, error: quoteError } = await supabase
-        .rpc('generate_enhanced_quote', {
-          p_customer_request_id: requestData.id,
-          p_pickup_location: formData.pickupAddress || formData.address,
-          p_preferred_date: formData.preferredPickupDate || null
+      // Add car metadata
+      await supabase
+        .from('car_metadata')
+        .insert({
+          customer_request_id: requestData.id,
+          kontrollsiffror: formData.controlNumber,
+          car_year: parseInt(formData.carYear) || null,
+          control_number: formData.controlNumber
         });
+
+      // Generate enhanced quote with location data
+      const { data: quoteData, error: quoteError } = await supabase.functions.invoke(
+        'generate-comprehensive-quote',
+        { body: { requestId: requestData.id } }
+      );
 
       if (quoteError) throw quoteError;
 
-      // Type assertion for the RPC function response
-      const quote = quoteData as any;
-      if (quote?.success) {
-        setQuote(quote);
+      if (quoteData?.success) {
+        setQuote(quoteData);
         setCurrentStep('quote');
       } else {
-        throw new Error(quote?.error || 'Failed to generate quote');
+        throw new Error(quoteData?.error || 'Failed to generate quote');
       }
 
     } catch (error: any) {
+      console.error('Quote generation error:', error);
       toast({
         title: "Fel vid offertberäkning",
         description: error.message || "Något gick fel. Försök igen.",
@@ -306,8 +432,8 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
           control_number: formData.controlNumber,
           owner_address: formData.address,
           owner_postal_code: formData.postalCode,
-          pickup_address: formData.address,
-          pickup_postal_code: formData.postalCode,
+          pickup_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
+          pickup_postal_code: useOwnerAddressForPickup ? formData.postalCode : formData.pickupPostalCode,
           status: 'pending'
         });
 
@@ -461,23 +587,25 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
             </CardContent>
           </Card>
 
-          {/* Address Information */}
+          {/* Address Information with Autocomplete */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Hämtningsadress
+                Adressuppgifter
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <AccessibleInput
-                id="address"
-                label="Gatuadress"
+              <SwedishAddressAutocomplete
+                label="Adress"
+                placeholder="Börja skriv din adress..."
                 value={formData.address}
                 onChange={(value) => updateField('address', value)}
+                onAddressSelect={handleOwnerAddressSelect}
+                onPostalCodeChange={(postalCode) => updateField('postalCode', postalCode)}
+                onCityChange={(city) => updateField('city', city)}
                 error={errors.address}
                 required
-                placeholder="Gatunaming 123"
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -501,6 +629,68 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
                   placeholder="Stockholm"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Pickup Address Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Hämtningsadress
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  id="use-owner-address"
+                  type="checkbox"
+                  checked={useOwnerAddressForPickup}
+                  onChange={handleUseOwnerAddressToggle}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="use-owner-address" className="text-sm text-gray-700">
+                  Använd samma adress som ovan för hämtning
+                </label>
+              </div>
+
+              {!useOwnerAddressForPickup && (
+                <>
+                  <SwedishAddressAutocomplete
+                    label="Hämtningsadress"
+                    placeholder="Ange hämtningsadress..."
+                    value={formData.pickupAddress}
+                    onChange={(value) => updateField('pickupAddress', value)}
+                    onAddressSelect={handlePickupAddressSelect}
+                    onPostalCodeChange={(postalCode) => updateField('pickupPostalCode', postalCode)}
+                    onCityChange={(city) => updateField('pickupCity', city)}
+                    error={errors.pickupAddress}
+                    required
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <AccessibleInput
+                      id="pickup-postal-code"
+                      label="Postnummer"
+                      value={formData.pickupPostalCode}
+                      onChange={(value) => updateField('pickupPostalCode', formatSwedishPostalCode(value))}
+                      error={errors.pickupPostalCode}
+                      required
+                      placeholder="123 45"
+                    />
+
+                    <AccessibleInput
+                      id="pickup-city"
+                      label="Ort"
+                      value={formData.pickupCity}
+                      onChange={(value) => updateField('pickupCity', value)}
+                      error={errors.pickupCity}
+                      required
+                      placeholder="Stockholm"
+                    />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -552,6 +742,7 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
                   type="number"
                   value={formData.carYear}
                   onChange={(value) => updateField('carYear', value)}
+                  error={errors.carYear}
                   placeholder="2010"
                 />
 
@@ -563,7 +754,7 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
                   error={errors.controlNumber}
                   helpText="Finns på registreringsbeviset"
                   required
-                  placeholder="CTRL123456"
+                  placeholder="12345678"
                 />
               </div>
 

@@ -10,11 +10,13 @@ interface AccessibleInputProps {
   type?: string;
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   error?: string;
   helpText?: string;
   required?: boolean;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
   'aria-describedby'?: string;
 }
 
@@ -24,11 +26,13 @@ export const AccessibleInput: React.FC<AccessibleInputProps> = ({
   type = 'text',
   value,
   onChange,
+  onKeyDown,
   error,
   helpText,
   required = false,
   placeholder,
   className = '',
+  disabled = false,
   'aria-describedby': ariaDescribedBy
 }) => {
   const helpId = `${id}-help`;
@@ -46,8 +50,10 @@ export const AccessibleInput: React.FC<AccessibleInputProps> = ({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
+        disabled={disabled}
         className={error ? 'border-red-500' : ''}
         aria-describedby={[
           helpText ? helpId : '',
