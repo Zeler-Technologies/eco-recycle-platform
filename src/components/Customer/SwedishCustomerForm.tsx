@@ -157,6 +157,7 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
     setOwnerAddressData(addressData);
     
     // Update form fields
+    updateField('address', addressData.address);
     if (suggestion.postal_code) {
       updateField('postalCode', suggestion.postal_code);
     }

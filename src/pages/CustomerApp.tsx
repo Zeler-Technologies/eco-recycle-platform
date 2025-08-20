@@ -158,7 +158,7 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
       }
     }
 
-    // Save to customer_requests table without customer_id for anonymous users
+    // Save minimal car registration data - full address will be added later in the form
     const { data: customerRequestData, error: customerRequestError } = await supabase
       .from('customer_requests')
       .insert({
@@ -167,11 +167,6 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
         car_brand: carDetails.carBrand,
         car_model: carDetails.carModel,
         car_year: carDetails.carYear,
-        owner_name: 'Customer',
-        owner_address: 'Address TBD',
-        owner_postal_code: '00000',
-        pickup_address: 'Pickup TBD',
-        pickup_postal_code: '00000',
         pnr_num: carDetails.pnr,
         tenant_id: null // Explicitly set to null for anonymous users
       })
