@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader } from "@googlemaps/js-api-loader";
 
 interface AddressPickerSimpleProps {
   onAddressSelect?: (address: string, coordinates: { lat: number; lng: number }) => void;
@@ -15,7 +16,74 @@ export default function AddressPickerSimple({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState({ lat: 59.3293, lng: 18.0686 });
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const sessionToken = useRef(crypto.randomUUID());
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const markerInstance = useRef<google.maps.Marker | null>(null);
+
+  // Load Google Maps API key
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-google-maps-key");
+        if (!error && data?.apiKey) {
+          setApiKey(data.apiKey);
+        } else {
+          console.error("Failed to get Google Maps API key:", error);
+        }
+      } catch (error) {
+        console.error("Error fetching Google Maps API key:", error);
+      }
+    };
+
+    fetchApiKey();
+  }, []);
+
+  // Initialize Google Maps
+  useEffect(() => {
+    if (!apiKey || !mapRef.current || mapLoaded) return;
+
+    const loader = new Loader({
+      apiKey: apiKey,
+      version: "weekly",
+      libraries: ["places"]
+    });
+
+    loader.load().then(() => {
+      if (mapRef.current) {
+        mapInstance.current = new google.maps.Map(mapRef.current, {
+          center: selectedCoords,
+          zoom: 13,
+          styles: [
+            {
+              featureType: "poi",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
+        });
+
+        markerInstance.current = new google.maps.Marker({
+          position: selectedCoords,
+          map: mapInstance.current,
+          title: "Vald position"
+        });
+
+        setMapLoaded(true);
+      }
+    }).catch(error => {
+      console.error("Error loading Google Maps:", error);
+    });
+  }, [apiKey, selectedCoords]);
+
+  // Update map when coordinates change
+  useEffect(() => {
+    if (mapInstance.current && markerInstance.current && mapLoaded) {
+      mapInstance.current.setCenter(selectedCoords);
+      markerInstance.current.setPosition(selectedCoords);
+    }
+  }, [selectedCoords, mapLoaded]);
 
   // Debounce autocomplete
   useEffect(() => {
@@ -133,16 +201,22 @@ export default function AddressPickerSimple({
         )}
       </div>
 
-      <div className="w-full h-64 bg-muted rounded-lg border border-border flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2">Karta</p>
-          {query && (
-            <p className="text-sm text-foreground">Vald adress: {query}</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-2">
-            Koordinater: {selectedCoords.lat.toFixed(4)}, {selectedCoords.lng.toFixed(4)}
-          </p>
-        </div>
+      <div className="relative w-full h-64 bg-muted rounded-lg border border-border overflow-hidden">
+        {!mapLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-muted-foreground mb-2">Laddar karta...</p>
+              {query && (
+                <p className="text-sm text-foreground">Vald adress: {query}</p>
+              )}
+            </div>
+          </div>
+        )}
+        <div 
+          ref={mapRef} 
+          className="w-full h-full"
+          style={{ display: mapLoaded ? 'block' : 'none' }}
+        />
       </div>
     </div>
   );
