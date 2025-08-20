@@ -45,6 +45,13 @@ export default function AddressPickerSimple({
   useEffect(() => {
     if (!apiKey || !mapRef.current || mapLoaded) return;
 
+    // Check if Google Maps is already loaded
+    if (window.google && window.google.maps) {
+      console.log('Google Maps already loaded, initializing map...');
+      initializeMap();
+      return;
+    }
+
     const loader = new Loader({
       apiKey: apiKey,
       version: "weekly",
@@ -52,7 +59,16 @@ export default function AddressPickerSimple({
     });
 
     loader.load().then(() => {
-      if (mapRef.current) {
+      console.log('Google Maps loaded via loader, initializing map...');
+      initializeMap();
+    }).catch(error => {
+      console.error("Error loading Google Maps:", error);
+    });
+  }, [apiKey]);
+
+  const initializeMap = () => {
+    if (mapRef.current && window.google && window.google.maps && !mapLoaded) {
+      try {
         mapInstance.current = new google.maps.Map(mapRef.current, {
           center: selectedCoords,
           zoom: 13,
@@ -71,11 +87,12 @@ export default function AddressPickerSimple({
         });
 
         setMapLoaded(true);
+        console.log('Map initialized successfully');
+      } catch (error) {
+        console.error('Error initializing map:', error);
       }
-    }).catch(error => {
-      console.error("Error loading Google Maps:", error);
-    });
-  }, [apiKey, selectedCoords]);
+    }
+  };
 
   // Update map when coordinates change
   useEffect(() => {
