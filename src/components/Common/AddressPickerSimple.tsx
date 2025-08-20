@@ -147,6 +147,14 @@ export default function AddressPickerSimple({
         setSuggestions([]);
       } else {
         console.log('Autocomplete response:', data);
+        
+        // Check for Google Maps API errors
+        if (data?.status && data.status !== 'OK') {
+          console.error('Google Maps API Error:', data.status, data.error_message);
+          setSuggestions([]);
+          return;
+        }
+        
         const predictions = data?.predictions ?? [];
         console.log('Found predictions:', predictions.length);
         setSuggestions(predictions);
