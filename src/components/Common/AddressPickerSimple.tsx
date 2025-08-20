@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AddressPickerSimpleProps {
   onAddressSelect?: (address: string, coordinates: { lat: number; lng: number }) => void;
@@ -16,38 +15,43 @@ export default function AddressPickerSimple({
   const [open, setOpen] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState({ lat: 59.3293, lng: 18.0686 });
   const [mapLoaded, setMapLoaded] = useState(false);
-  const sessionToken = useRef(crypto.randomUUID());
+  
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markerInstance = useRef<google.maps.Marker | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
 
-  // Initialize Google Maps using existing script tag
+  // Initialize Google Maps services when available
   useEffect(() => {
-    if (mapRef.current && !mapLoaded && window.google && window.google.maps) {
-      initializeMap();
-    }
-  }, []);
-
-  // Poll for Google Maps to be available (from script tag in index.html)
-  useEffect(() => {
-    const checkGoogleMaps = () => {
-      if (window.google && window.google.maps && mapRef.current && !mapLoaded) {
-        initializeMap();
+    const initializeServices = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        console.log('Initializing Google Maps services...');
+        autocompleteService.current = new google.maps.places.AutocompleteService();
+        geocoder.current = new google.maps.Geocoder();
+        
+        if (mapRef.current && !mapLoaded) {
+          initializeMap();
+        }
       }
     };
 
-    const interval = setInterval(checkGoogleMaps, 100);
-    
-    // Cleanup after 10 seconds
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-    }, 10000);
+    // Check if Google Maps is already loaded
+    if (window.google && window.google.maps && window.google.maps.places) {
+      initializeServices();
+    } else {
+      // Poll until Google Maps is loaded
+      const interval = setInterval(() => {
+        if (window.google && window.google.maps && window.google.maps.places) {
+          initializeServices();
+          clearInterval(interval);
+        }
+      }, 100);
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [mapLoaded]);
+      // Cleanup after 10 seconds
+      setTimeout(() => clearInterval(interval), 10000);
+    }
+  }, []);
 
   const initializeMap = () => {
     if (mapRef.current && window.google && window.google.maps && !mapLoaded) {
@@ -104,83 +108,73 @@ export default function AddressPickerSimple({
   }, [query]);
 
   const fetchSuggestions = async () => {
-    if (!query || query.length <= 2) return;
+    if (!query || query.length <= 2 || !autocompleteService.current) {
+      console.log('Skipping autocomplete: query too short or service not ready');
+      return;
+    }
     
     setLoading(true);
     console.log('Fetching suggestions for:', query);
     
     try {
-      const requestBody = {
-        service: "autocomplete",
-        params: {
-          input: query,
-          language: "sv",
-          components: "country:se",
-          sessiontoken: sessionToken.current,
-        },
+      const request = {
+        input: query,
+        componentRestrictions: { country: 'se' },
+        language: 'sv'
       };
-      
-      console.log('Calling google-maps function with:', requestBody);
-      const { data, error } = await supabase.functions.invoke("google-maps", {
-        body: requestBody,
-      });
-      
-      if (error) {
-        console.error("Autocomplete error:", error);
-        setSuggestions([]);
-      } else {
-        console.log('Autocomplete response:', data);
+
+      autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
+        console.log('Autocomplete status:', status);
+        console.log('Predictions:', predictions);
         
-        // Check for Google Maps API errors
-        if (data?.status && data.status !== 'OK') {
-          console.error('Google Maps API Error:', data.status, data.error_message);
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSuggestions(predictions);
+          setOpen(true);
+        } else {
+          console.error('Autocomplete failed:', status);
           setSuggestions([]);
-          return;
+          setOpen(false);
         }
-        
-        const predictions = data?.predictions ?? [];
-        console.log('Found predictions:', predictions.length);
-        setSuggestions(predictions);
-        setOpen(predictions.length > 0);
-      }
+        setLoading(false);
+      });
     } catch (error) {
-      console.error("Autocomplete fetch error:", error);
+      console.error("Autocomplete error:", error);
       setSuggestions([]);
-    } finally {
       setLoading(false);
     }
   };
 
-  const handleSelect = async (description: string) => {
+  const handleSelect = async (description: string, placeId: string) => {
     console.log('Address selected:', description);
     setQuery(description);
     setOpen(false);
 
+    if (!geocoder.current) {
+      console.error('Geocoder not available');
+      return;
+    }
+
     try {
-      console.log('Geocoding address:', description);
-      const { data, error } = await supabase.functions.invoke("google-maps", {
-        body: {
-          service: "geocode",
-          params: { address: description },
-        },
+      console.log('Geocoding place ID:', placeId);
+      
+      geocoder.current.geocode({ placeId: placeId }, (results, status) => {
+        console.log('Geocode status:', status);
+        console.log('Geocode results:', results);
+        
+        if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+          const location = results[0].geometry.location;
+          const coordinates = {
+            lat: location.lat(),
+            lng: location.lng()
+          };
+          
+          console.log('New coordinates:', coordinates);
+          setSelectedCoords(coordinates);
+          onAddressSelect?.(description, coordinates);
+        } else {
+          console.error('Geocoding failed:', status);
+        }
       });
-
-      console.log('Geocode response:', { data, error });
-
-      if (!error && data?.results?.[0]?.geometry?.location) {
-        const result = data.results[0];
-        const coordinates = {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng,
-        };
-        console.log('New coordinates:', coordinates);
-        setSelectedCoords(coordinates);
-        onAddressSelect?.(description, coordinates);
-        sessionToken.current = crypto.randomUUID();
-        console.log('Map should update to new position');
-      } else {
-        console.error('Geocoding failed:', error || 'No results found');
-      }
     } catch (error) {
       console.error("Geocode error:", error);
     }
@@ -205,7 +199,7 @@ export default function AddressPickerSimple({
               <li
                 key={idx}
                 className="p-3 hover:bg-accent cursor-pointer text-popover-foreground transition-colors duration-200 first:rounded-t-lg last:rounded-b-lg"
-                onClick={() => handleSelect(item.description)}
+                onClick={() => handleSelect(item.description, item.place_id)}
               >
                 <div className="font-medium text-sm">
                   {item.structured_formatting?.main_text || item.description}
