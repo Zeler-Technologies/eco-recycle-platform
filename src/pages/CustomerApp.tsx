@@ -278,8 +278,7 @@ const CarDetailsForm = React.memo<CarDetailsFormProps>(({
       carDetails.carBrand.length >= 2 &&
       carDetails.carModel.length >= 2 &&
       carDetails.carYear >= 1900 &&
-      carDetails.ownerConfirmation &&
-      Object.keys(validationErrors).length === 0
+      carDetails.ownerConfirmation
     );
   };
 
