@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader } from "@googlemaps/js-api-loader";
 
 interface AddressPickerSimpleProps {
   onAddressSelect?: (address: string, coordinates: { lat: number; lng: number }) => void;
@@ -17,54 +16,38 @@ export default function AddressPickerSimple({
   const [open, setOpen] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState({ lat: 59.3293, lng: 18.0686 });
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const sessionToken = useRef(crypto.randomUUID());
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markerInstance = useRef<google.maps.Marker | null>(null);
 
-  // Load Google Maps API key
+  // Initialize Google Maps using existing script tag
   useEffect(() => {
-    const fetchApiKey = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("get-google-maps-key");
-        if (!error && data?.apiKey) {
-          setApiKey(data.apiKey);
-        } else {
-          console.error("Failed to get Google Maps API key:", error);
-        }
-      } catch (error) {
-        console.error("Error fetching Google Maps API key:", error);
+    if (mapRef.current && !mapLoaded && window.google && window.google.maps) {
+      initializeMap();
+    }
+  }, []);
+
+  // Poll for Google Maps to be available (from script tag in index.html)
+  useEffect(() => {
+    const checkGoogleMaps = () => {
+      if (window.google && window.google.maps && mapRef.current && !mapLoaded) {
+        initializeMap();
       }
     };
 
-    fetchApiKey();
-  }, []);
+    const interval = setInterval(checkGoogleMaps, 100);
+    
+    // Cleanup after 10 seconds
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+    }, 10000);
 
-  // Initialize Google Maps
-  useEffect(() => {
-    if (!apiKey || !mapRef.current || mapLoaded) return;
-
-    // Check if Google Maps is already loaded
-    if (window.google && window.google.maps) {
-      console.log('Google Maps already loaded, initializing map...');
-      initializeMap();
-      return;
-    }
-
-    const loader = new Loader({
-      apiKey: apiKey,
-      version: "weekly",
-      libraries: ["places"]
-    });
-
-    loader.load().then(() => {
-      console.log('Google Maps loaded via loader, initializing map...');
-      initializeMap();
-    }).catch(error => {
-      console.error("Error loading Google Maps:", error);
-    });
-  }, [apiKey]);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [mapLoaded]);
 
   const initializeMap = () => {
     if (mapRef.current && window.google && window.google.maps && !mapLoaded) {

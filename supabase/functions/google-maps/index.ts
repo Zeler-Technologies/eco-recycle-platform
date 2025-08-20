@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('=== Google Maps Function Called ===');
+  console.log('=== Google Maps Function Called (Updated) ===');
   console.log('Method:', req.method);
   console.log('Headers:', Object.fromEntries(req.headers.entries()));
 
