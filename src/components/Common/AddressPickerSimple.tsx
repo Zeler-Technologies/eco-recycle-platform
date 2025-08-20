@@ -124,6 +124,7 @@ export default function AddressPickerSimple({
     if (!query || query.length <= 2) return;
     
     setLoading(true);
+    console.log('Fetching suggestions for:', query);
     
     try {
       const requestBody = {
@@ -136,6 +137,7 @@ export default function AddressPickerSimple({
         },
       };
       
+      console.log('Calling google-maps function with:', requestBody);
       const { data, error } = await supabase.functions.invoke("google-maps", {
         body: requestBody,
       });
@@ -144,7 +146,9 @@ export default function AddressPickerSimple({
         console.error("Autocomplete error:", error);
         setSuggestions([]);
       } else {
+        console.log('Autocomplete response:', data);
         const predictions = data?.predictions ?? [];
+        console.log('Found predictions:', predictions.length);
         setSuggestions(predictions);
         setOpen(predictions.length > 0);
       }
@@ -157,10 +161,12 @@ export default function AddressPickerSimple({
   };
 
   const handleSelect = async (description: string) => {
+    console.log('Address selected:', description);
     setQuery(description);
     setOpen(false);
 
     try {
+      console.log('Geocoding address:', description);
       const { data, error } = await supabase.functions.invoke("google-maps", {
         body: {
           service: "geocode",
@@ -168,15 +174,21 @@ export default function AddressPickerSimple({
         },
       });
 
+      console.log('Geocode response:', { data, error });
+
       if (!error && data?.results?.[0]?.geometry?.location) {
         const result = data.results[0];
         const coordinates = {
           lat: result.geometry.location.lat,
           lng: result.geometry.location.lng,
         };
+        console.log('New coordinates:', coordinates);
         setSelectedCoords(coordinates);
         onAddressSelect?.(description, coordinates);
         sessionToken.current = crypto.randomUUID();
+        console.log('Map should update to new position');
+      } else {
+        console.error('Geocoding failed:', error || 'No results found');
       }
     } catch (error) {
       console.error("Geocode error:", error);
