@@ -84,6 +84,7 @@ const TenantDashboard = () => {
           car_brand,
           car_model,
           car_year,
+          car_registration_number,
           pickup_address,
           status,
           quote_amount,
@@ -209,7 +210,7 @@ const TenantDashboard = () => {
   };
 
   const formatOrderDisplay = (order: any) => {
-    const vehicle = `${order.car_brand} ${order.car_model}${order.car_year ? ` ${order.car_year}` : ''}`;
+    const vehicle = `${order.car_brand} ${order.car_model}${order.car_year ? ` ${order.car_year}` : ''} (${order.car_registration_number || 'Ingen reg.nr'})`;
     const location = order.pickup_address || 'Ej angivet';
     return { vehicle, location };
   };
