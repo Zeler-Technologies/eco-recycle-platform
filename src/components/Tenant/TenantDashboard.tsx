@@ -106,8 +106,8 @@ const TenantDashboard = () => {
 
       console.log('Today date range:', today_start.toISOString().split('T')[0], 'to', today_end.toISOString().split('T')[0]);
 
-      // First try to get scheduled pickups with pickup_date set for today
-      let { data: scheduleData, error: scheduleError } = await supabase
+      // Get ALL customer requests for today (created today OR scheduled for today)
+      const { data: scheduleData, error: scheduleError } = await supabase
         .from('customer_requests')
         .select(`
           id,
@@ -121,43 +121,11 @@ const TenantDashboard = () => {
           created_at
         `)
         .eq('tenant_id', user?.tenant_id)
-        .not('pickup_date', 'is', null)
-        .gte('pickup_date', today_start.toISOString().split('T')[0])
-        .lte('pickup_date', today_end.toISOString().split('T')[0])
+        .or(`pickup_date.gte.${today_start.toISOString().split('T')[0]},pickup_date.lte.${today_end.toISOString().split('T')[0]},created_at.gte.${today_start.toISOString()},created_at.lte.${today_end.toISOString()}`)
         .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
-        .order('pickup_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
-      console.log('Schedule data with pickup_date:', scheduleData, 'Error:', scheduleError);
-
-      // If no scheduled items with pickup_date, fallback to show all recent requests
-      if (!scheduleError && (!scheduleData || scheduleData.length === 0)) {
-        console.log('No scheduled items with pickup_date, getting all recent requests...');
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('customer_requests')
-          .select(`
-            id,
-            pickup_date,
-            status,
-            owner_name,
-            car_brand,
-            car_model,
-            pickup_address,
-            contact_phone,
-            created_at
-          `)
-          .eq('tenant_id', user?.tenant_id)
-          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
-          .order('created_at', { ascending: false })
-          .limit(10);
-        
-        console.log('Fallback data:', fallbackData, 'Error:', fallbackError);
-        
-        if (!fallbackError) {
-          scheduleData = fallbackData;
-        }
-      }
-
-      console.log('Final schedule data:', scheduleData);
+      console.log('All today schedule data:', scheduleData, 'Error:', scheduleError);
 
       if (!scheduleError) {
         setTodaySchedule(scheduleData || []);
