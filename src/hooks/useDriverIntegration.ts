@@ -197,7 +197,8 @@ export const useDriverIntegration = () => {
         estimated_arrival: pickup.estimated_arrival,
         scheduled_at: pickup.scheduled_at,
         completion_notes: pickup.completion_photos?.join(', ') || '', // Fix: use completion_photos
-        driver_notes: pickup.driver_notes
+        driver_notes: pickup.driver_notes,
+        assigned_driver_id: pickup.assigned_driver_id // Keep the original assigned_driver_id
       })) || [];
 
       setPickups(mappedPickups);

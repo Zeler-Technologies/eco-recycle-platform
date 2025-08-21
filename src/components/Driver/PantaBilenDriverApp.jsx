@@ -336,18 +336,8 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
   const PickupCard = ({ pickup }) => {
     // Check if this pickup is assigned to current driver
     const isAssignedToCurrentDriver = pickup.assigned_driver_id === currentDriver?.id;
-    const isUnassigned = !pickup.assigned_driver_id;
+    const isUnassigned = pickup.assigned_driver_id === null || pickup.assigned_driver_id === undefined;
     const showActions = showPickupActions === pickup.id;
-
-    // Debug logging
-    console.log('PickupCard debug:', {
-      pickupId: pickup.id,
-      assigned_driver_id: pickup.assigned_driver_id,
-      currentDriverId: currentDriver?.id,
-      isAssignedToCurrentDriver,
-      isUnassigned,
-      status: pickup.status
-    });
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
