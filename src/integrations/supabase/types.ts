@@ -6167,6 +6167,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_pickup_status_simple: {
+        Args: {
+          completion_photos_param?: string[]
+          driver_notes_param?: string
+          new_status: string
+          pickup_id: string
+        }
+        Returns: boolean
+      }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
