@@ -174,32 +174,40 @@ export const useDriverIntegration = () => {
       // Combine both datasets
       const allPickups = [...(assignedPickups || []), ...unassignedPickups];
 
-      // Map the combined result to expected format
-      const mappedPickups: PickupOrder[] = allPickups?.map(pickup => ({
-        id: pickup.id,
-        pickup_id: pickup.id,
-        car_registration_number: pickup.customer_requests?.car_registration_number || '',
-        car_year: pickup.customer_requests?.car_year,
-        car_brand: pickup.customer_requests?.car_brand || '',
-        car_model: pickup.customer_requests?.car_model || '',
-        owner_name: pickup.customer_requests?.owner_name || '',
-        pickup_address: pickup.customer_requests?.pickup_address || '',
-        final_price: pickup.final_price,
-        status: pickup.status,
-        created_at: pickup.created_at,
-        vehicle_year: pickup.customer_requests?.car_year,
-        vehicle_make: pickup.customer_requests?.car_brand || '',
-        vehicle_model: pickup.customer_requests?.car_model || '',
-        fuel_type: 'gasoline', // Default value
-        pickup_distance: 0, // Default value
-        customer_name: pickup.customer_requests?.owner_name || '',
-        pickup_location: pickup.customer_requests?.pickup_address || '',
-        estimated_arrival: pickup.estimated_arrival,
-        scheduled_at: pickup.scheduled_at,
-        completion_notes: pickup.completion_photos?.join(', ') || '', // Fix: use completion_photos
-        driver_notes: pickup.driver_notes,
-        assigned_driver_id: pickup.assigned_driver_id // Keep the original assigned_driver_id
-      })) || [];
+      // Map the combined result to expected format and fix assigned_driver_id format
+      const mappedPickups: PickupOrder[] = allPickups?.map(pickup => {
+        // Fix the assigned_driver_id format - handle both direct values and wrapped objects
+        let assignedDriverId = pickup.assigned_driver_id;
+        if (assignedDriverId && typeof assignedDriverId === 'object' && assignedDriverId.value !== undefined) {
+          assignedDriverId = assignedDriverId.value === 'undefined' ? null : assignedDriverId.value;
+        }
+
+        return {
+          id: pickup.id,
+          pickup_id: pickup.id,
+          car_registration_number: pickup.customer_requests?.car_registration_number || '',
+          car_year: pickup.customer_requests?.car_year,
+          car_brand: pickup.customer_requests?.car_brand || '',
+          car_model: pickup.customer_requests?.car_model || '',
+          owner_name: pickup.customer_requests?.owner_name || '',
+          pickup_address: pickup.customer_requests?.pickup_address || '',
+          final_price: pickup.final_price,
+          status: pickup.status,
+          created_at: pickup.created_at,
+          vehicle_year: pickup.customer_requests?.car_year,
+          vehicle_make: pickup.customer_requests?.car_brand || '',
+          vehicle_model: pickup.customer_requests?.car_model || '',
+          fuel_type: 'gasoline', // Default value
+          pickup_distance: 0, // Default value
+          customer_name: pickup.customer_requests?.owner_name || '',
+          pickup_location: pickup.customer_requests?.pickup_address || '',
+          estimated_arrival: pickup.estimated_arrival,
+          scheduled_at: pickup.scheduled_at,
+          completion_notes: pickup.completion_photos?.join(', ') || '',
+          driver_notes: pickup.driver_notes,
+          assigned_driver_id: assignedDriverId // Use the cleaned value
+        };
+      }) || [];
 
       setPickups(mappedPickups);
 
