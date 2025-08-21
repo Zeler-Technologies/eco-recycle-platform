@@ -122,7 +122,7 @@ const TenantDashboard = () => {
         .not('pickup_date', 'is', null)
         .gte('pickup_date', today_start.toISOString().split('T')[0])
         .lte('pickup_date', today_end.toISOString().split('T')[0])
-        .in('status', ['assigned', 'in_progress', 'scheduled', 'confirmed'])
+        .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
         .order('pickup_date', { ascending: true });
 
       // If no scheduled items with pickup_date, fallback to show all assigned/in_progress requests
@@ -141,7 +141,7 @@ const TenantDashboard = () => {
             created_at
           `)
           .eq('tenant_id', user?.tenant_id)
-          .in('status', ['assigned', 'in_progress', 'scheduled', 'confirmed'])
+          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
           .order('created_at', { ascending: false })
           .limit(5);
         
