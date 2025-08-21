@@ -162,7 +162,7 @@ const PantaBilenDriverApp = () => {
                 ✅ Real Supabase Authentication Active
               </p>
               <p className="text-xs text-green-700">
-                Logged in as: {user?.email} | Role: {user?.role} | Driver: {currentDriver?.full_name}
+                Logged in as: {user?.email} | Role: {user?.role} | Driver: {currentDriver?.full_name} | Tenant: {user?.tenants?.name || currentDriver?.tenant_id}
               </p>
             </div>
           </div>
