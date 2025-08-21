@@ -342,17 +342,24 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
         <div 
-          className={`p-5 border-l-4 cursor-pointer`} 
+          className={`p-5 border-l-4`} 
           style={{ borderLeftColor: getStatusColor(pickup.status) }}
-          onClick={() => openPickupDetail(pickup)}
         >
           <div className="flex justify-between items-center mb-2">
             <div className="text-lg font-bold text-gray-900">
               {pickup.car_registration_number || 'N/A'}
             </div>
-            <div className="flex gap-1">
-              <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
-              <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => openPickupDetail(pickup)}
+                className="text-indigo-600 text-sm hover:text-indigo-800 font-medium px-2 py-1 rounded"
+              >
+                Visa detaljer
+              </button>
+              <div className="flex gap-1">
+                <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
+                <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
+              </div>
             </div>
           </div>
           
