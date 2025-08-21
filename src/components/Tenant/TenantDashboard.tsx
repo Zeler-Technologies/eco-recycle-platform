@@ -382,7 +382,7 @@ const TenantDashboard = () => {
                               {location}
                             </p>
                             {hasDriver && (
-                              <p className="text-sm font-medium text-green-700 mt-1">
+                              <p className="text-sm font-medium text-red-700 mt-1">
                                 <strong>Förare: {order.driver_name}</strong>
                               </p>
                             )}
@@ -512,7 +512,7 @@ const TenantDashboard = () => {
                               {location}
                             </p>
                             {hasDriver && (
-                              <p className="text-sm font-medium text-green-700 mt-1">
+                              <p className="text-sm font-medium text-red-700 mt-1">
                                 <strong>Förare: {schedule.driver_name}</strong>
                               </p>
                             )}
