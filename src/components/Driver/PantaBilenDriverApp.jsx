@@ -549,17 +549,17 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 text-center">{UI_LABELS.customer}</h3>
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600 font-medium">{UI_LABELS.name}</span>
-                <span className="text-sm text-gray-900 font-medium text-right">{selectedPickup.owner_name}</span>
+              <div className="flex flex-col py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium mb-1">{UI_LABELS.name}</span>
+                <span className="text-sm text-gray-900 font-medium">{selectedPickup.owner_name}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600 font-medium">{UI_LABELS.address}</span>
-                <span className="text-sm text-gray-900 font-medium text-right max-w-48">{selectedPickup.pickup_address}</span>
+              <div className="flex flex-col py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium mb-1">{UI_LABELS.address}</span>
+                <span className="text-sm text-gray-900 font-medium">{selectedPickup.pickup_address}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600 font-medium">{UI_LABELS.status}</span>
-                <span className="text-sm text-gray-900 font-medium text-right">{getStatusText(selectedPickup.status)}</span>
+              <div className="flex flex-col py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium mb-1">{UI_LABELS.status}</span>
+                <span className="text-sm text-gray-900 font-medium">{getStatusText(selectedPickup.status)}</span>
               </div>
             </div>
           </div>
