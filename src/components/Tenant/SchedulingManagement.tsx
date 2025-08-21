@@ -69,6 +69,15 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [driversLoading, setDriversLoading] = useState(true);
   const [requests, setRequests] = useState<Request[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
+  const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false);
+  const [rescheduleRequest, setRescheduleRequest] = useState<Request | null>(null);
+  const [rescheduleConfirmOpen, setRescheduleConfirmOpen] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState<{
+    requestId: string;
+    newDate: Date;
+    newTime: string;
+    sendSMS: boolean;
+  } | null>(null);
 
   // Fetch drivers and customer requests for the current tenant
   useEffect(() => {
@@ -285,6 +294,61 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const handleScheduleRequest = (request: Request) => {
     setSelectedRequestForScheduling(request);
     setIsAddPickupDialogOpen(true);
+  };
+
+  const handleRescheduleRequest = (request: Request) => {
+    setRescheduleRequest(request);
+    setIsRescheduleDialogOpen(true);
+  };
+
+  const handleRescheduleSubmit = (newDate: Date, newTime: string, sendSMS: boolean) => {
+    if (!rescheduleRequest) return;
+    
+    setRescheduleData({
+      requestId: rescheduleRequest.id,
+      newDate,
+      newTime,
+      sendSMS
+    });
+    setIsRescheduleDialogOpen(false);
+    setRescheduleConfirmOpen(true);
+  };
+
+  const confirmReschedule = () => {
+    if (!rescheduleData) return;
+
+    // Update the request with new schedule
+    setRequests(prev => prev.map(req => 
+      req.id === rescheduleData.requestId 
+        ? { ...req, date: rescheduleData.newDate, time: rescheduleData.newTime }
+        : req
+    ));
+
+    // Show toast with SMS option
+    if (rescheduleData.sendSMS) {
+      const request = requests.find(r => r.id === rescheduleData.requestId);
+      toast({
+        title: "Hämtning omschemalagd",
+        description: `SMS skickat till ${request?.customerName} om den nya tiden: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}`
+      });
+    } else {
+      toast({
+        title: "Hämtning omschemalagd",
+        description: "Schemat har uppdaterats. Inget SMS skickades."
+      });
+    }
+
+    // Reset state
+    setRescheduleConfirmOpen(false);
+    setRescheduleData(null);
+    setRescheduleRequest(null);
+    setIsDetailDialogOpen(false);
+  };
+
+  const cancelReschedule = () => {
+    setRescheduleConfirmOpen(false);
+    setRescheduleData(null);
+    setIsRescheduleDialogOpen(true); // Reopen reschedule dialog
   };
 
   const renderCalendarGrid = () => {
@@ -652,19 +716,29 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 )}
 
                 {selectedRequest.status === 'Bekräftad' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      toast({
-                        title: "SMS skickat",
-                        description: `Påminnelse skickad till ${selectedRequest.customerName}`
-                      });
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Skicka påminnelse
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleRescheduleRequest(selectedRequest)}
+                      className="flex items-center gap-2"
+                    >
+                      <Clock className="h-4 w-4" />
+                      Omschemalägg
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        toast({
+                          title: "SMS skickat",
+                          description: `Påminnelse skickad till ${selectedRequest.customerName}`
+                        });
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Skicka påminnelse
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -851,6 +925,141 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={isRescheduleDialogOpen} onOpenChange={setIsRescheduleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Omschemalägg hämtning</DialogTitle>
+          </DialogHeader>
+          
+          {rescheduleRequest && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="font-medium">{rescheduleRequest.customerName}</p>
+                <p className="text-sm text-muted-foreground">
+                  {rescheduleRequest.carBrand} {rescheduleRequest.carModel} ({rescheduleRequest.registrationNumber})
+                </p>
+                <p className="text-sm text-muted-foreground">Nuvarande tid: {format(rescheduleRequest.date, 'dd/MM')} {rescheduleRequest.time}</p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="reschedule-date">Nytt datum:</Label>
+                  <Input
+                    type="date"
+                    id="reschedule-date"
+                    defaultValue={format(rescheduleRequest.date, 'yyyy-MM-dd')}
+                    className="w-40"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="reschedule-time">Ny tid:</Label>
+                  <Input
+                    type="time"
+                    id="reschedule-time"
+                    defaultValue={rescheduleRequest.time}
+                    className="w-32"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="send-sms"
+                  defaultChecked={true}
+                  className="rounded"
+                />
+                <Label htmlFor="send-sms" className="text-sm">
+                  Skicka SMS till kunden om ändringen
+                </Label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => {
+                    const dateInput = document.getElementById('reschedule-date') as HTMLInputElement;
+                    const timeInput = document.getElementById('reschedule-time') as HTMLInputElement;
+                    const smsCheckbox = document.getElementById('send-sms') as HTMLInputElement;
+                    
+                    const newDate = new Date(dateInput.value);
+                    const newTime = timeInput.value;
+                    const sendSMS = smsCheckbox.checked;
+                    
+                    handleRescheduleSubmit(newDate, newTime, sendSMS);
+                  }}
+                  className="flex-1"
+                >
+                  Spara ändringar
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRescheduleDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Avbryt
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Confirmation Dialog */}
+      <Dialog open={rescheduleConfirmOpen} onOpenChange={setRescheduleConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bekräfta omschemaläggning</DialogTitle>
+          </DialogHeader>
+          
+          {rescheduleData && (
+            <div className="space-y-4">
+              <p className="text-sm">
+                Är du säker på att du vill ändra hämtningstiden till:
+              </p>
+              
+              <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                <p className="font-medium">
+                  {format(rescheduleData.newDate, 'dd MMMM yyyy')} kl. {rescheduleData.newTime}
+                </p>
+                {rescheduleData.sendSMS && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    ✓ SMS kommer att skickas till kunden
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={confirmReschedule}
+                  className="flex-1"
+                >
+                  Ja, bekräfta
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelReschedule}
+                  className="flex-1"
+                >
+                  Ändra igen
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setRescheduleConfirmOpen(false);
+                    setRescheduleData(null);
+                    setRescheduleRequest(null);
+                  }}
+                  className="flex-1"
+                >
+                  Avbryt
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
