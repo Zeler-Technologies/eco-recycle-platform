@@ -250,6 +250,20 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
   const handleAssignDriver = async (requestId: string, driverId: string) => {
     try {
+      // Check if the same driver is already assigned
+      const currentRequest = requests.find(req => req.id === requestId);
+      const currentDriverId = currentRequest?.assignedDriver;
+      const selectedDriverName = drivers.find(d => d.id === driverId)?.name;
+      
+      if (currentDriverId === selectedDriverName) {
+        toast({
+          title: "Föraren redan vald",
+          description: "Denna förare är redan tilldelad denna förfrågan",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Save driver assignment to database
       const { error } = await supabase
         .from('driver_assignments')
