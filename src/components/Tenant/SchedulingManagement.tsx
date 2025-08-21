@@ -673,7 +673,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                             {request.address}
                           </p>
                           {request.assignedDriver && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                             <p className="text-sm text-destructive flex items-center gap-1">
                               <User className="h-3 w-3" />
                               Förare: {request.assignedDriver}
                             </p>
