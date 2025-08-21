@@ -118,17 +118,11 @@ const TenantDashboard = () => {
           car_model,
           pickup_address,
           contact_phone,
-          created_at,
-          drivers:driver_id(
-            id,
-            full_name,
-            phone_number
-          )
+          created_at
         `)
         .eq('tenant_id', user?.tenant_id)
         .or(`pickup_date.gte.${today_start.toISOString().split('T')[0]},pickup_date.lte.${today_end.toISOString().split('T')[0]},created_at.gte.${today_start.toISOString()},created_at.lte.${today_end.toISOString()}`)
         .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
-        .order('status.desc.nullslast', { ascending: false }) // assigned/scheduled first
         .order('created_at', { ascending: false });
 
       console.log('All today schedule data:', scheduleData, 'Error:', scheduleError);
@@ -422,7 +416,7 @@ const TenantDashboard = () => {
                 </div>
               ) : (
                 todaySchedule.map((schedule, index) => {
-                  const scheduledDate = new Date(schedule.pickup_date || schedule.created_at);
+                  const scheduledDate = new Date(schedule.pickup_date);
                   const time = scheduledDate.toLocaleTimeString('sv-SE', { 
                     hour: '2-digit', 
                     minute: '2-digit' 
@@ -431,22 +425,15 @@ const TenantDashboard = () => {
                   const vehicle = `${schedule.car_brand || ''} ${schedule.car_model || ''}`.trim();
                   const location = schedule.pickup_address || 'Okänd plats';
                   const task = `Hämta ${vehicle} från ${customerName}`;
-                  const driverName = schedule.drivers?.full_name || null;
-                  const isAssigned = schedule.status === 'assigned' || schedule.status === 'scheduled' || schedule.status === 'confirmed';
-                  
                   const status = schedule.status === 'scheduled' ? 'Schemalagd' : 
                                schedule.status === 'assigned' ? 'Tilldelad' :
                                schedule.status === 'confirmed' ? 'Bekräftad' :
                                schedule.status === 'in_progress' ? 'Pågående' : 
-                               schedule.status === 'pending' ? 'Ny' :
                                schedule.status === 'completed' ? 'Klar' : 
                                schedule.status;
 
-                  // Use green background for assigned pickups
-                  const backgroundClass = isAssigned ? 'bg-green-50 border-l-4 border-l-green-500' : 'bg-tenant-accent/20';
-
                   return (
-                    <div key={schedule.id || index} className={`flex items-center justify-between p-3 ${backgroundClass} rounded-lg`}>
+                    <div key={schedule.id || index} className="flex items-center justify-between p-3 bg-tenant-accent/20 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="text-center">
                           <p className="font-bold text-tenant-primary">{time}</p>
@@ -455,22 +442,11 @@ const TenantDashboard = () => {
                           <p className="font-medium">{task}</p>
                           <p className="text-sm text-muted-foreground">{location}</p>
                           <p className="text-sm text-muted-foreground">{schedule.contact_phone || 'Inget telefonnummer'}</p>
-                          {driverName && (
-                            <p className="text-sm font-semibold text-green-700 flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              Förare: {driverName}
-                            </p>
-                          )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant="outline" className={isAssigned ? "text-green-700 border-green-500 bg-green-100" : "text-tenant-primary border-tenant-primary"}>
-                          {status}
-                        </Badge>
-                        {driverName && (
-                          <span className="text-xs text-green-600 font-medium">Tilldelad förare</span>
-                        )}
-                      </div>
+                      <Badge variant="outline" className="text-tenant-primary border-tenant-primary">
+                        {status}
+                      </Badge>
                     </div>
                   );
                 })
