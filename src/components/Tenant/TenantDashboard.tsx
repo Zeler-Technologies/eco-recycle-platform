@@ -193,7 +193,10 @@ const TenantDashboard = () => {
   }
 
   if (showSchedulingManagement) {
-    return <SchedulingManagement onBack={() => setShowSchedulingManagement(false)} />;
+    return <SchedulingManagement onBack={() => {
+      setShowSchedulingManagement(false);
+      fetchTenantData(); // Refresh data when returning from scheduling management
+    }} />;
   }
 
   if (showServiceZoneManagement) {
