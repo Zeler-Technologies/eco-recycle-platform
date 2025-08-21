@@ -292,7 +292,29 @@ export const useDriverIntegration = () => {
         throw new Error(`Failed to update pickup status: ${updateError.message}`);
       }
 
-      // 2. Log the change in pickup_status_updates
+      // 2. Update the related customer_requests status to keep tenant views in sync
+      const { data: orderRow, error: orderFetchError } = await supabase
+        .from('pickup_orders')
+        .select('customer_request_id')
+        .eq('id', pickupId)
+        .maybeSingle();
+
+      if (orderFetchError) {
+        console.warn('Failed to fetch pickup_orders row for customer_request sync:', orderFetchError);
+      } else if (orderRow?.customer_request_id) {
+        const { error: crUpdateError } = await supabase
+          .from('customer_requests')
+          .update({
+            status,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderRow.customer_request_id);
+        if (crUpdateError) {
+          console.warn('Failed to update customer_requests status:', crUpdateError);
+        }
+      }
+
+      // 3. Log the change in pickup_status_updates
       const { data, error: logError } = await supabase
         .from('pickup_status_updates')
         .insert({

@@ -603,7 +603,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                 </button>
                 <button 
                   className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
-                  onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
+                  onClick={() => handleRejectPickup(selectedPickup.id)}
                 >
                   Avvisa uppdrag
                 </button>
@@ -614,7 +614,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               <div className="flex justify-center">
                 <button 
                   className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
-                  onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
+                  onClick={() => handleRejectPickup(selectedPickup.id)}
                 >
                   Avvisa uppdrag
                 </button>
