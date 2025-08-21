@@ -529,16 +529,16 @@ const TenantDashboard = () => {
                              schedule.status}
                           </Badge>
                            <div className="text-right">
-                             {schedule.pickup_date && (
+                             {(schedule.status === 'assigned' || schedule.status === 'in_progress' || hasDriver) && schedule.pickup_date ? (
+                               <div className="text-sm text-muted-foreground">
+                                 <p>Hämtning: {new Date(schedule.pickup_date).toLocaleDateString('sv-SE')}</p>
+                                 <p>Tid: 09:00</p>
+                               </div>
+                             ) : schedule.pickup_date ? (
                                <p className="text-sm text-muted-foreground">
                                  {new Date(schedule.pickup_date).toLocaleDateString('sv-SE')}
                                </p>
-                             )}
-                             {(schedule.status === 'assigned' || schedule.status === 'in_progress' || hasDriver) && schedule.pickup_date && (
-                               <p className="text-sm text-muted-foreground">
-                                 Hämtning: {new Date(schedule.pickup_date).toLocaleDateString('sv-SE')}
-                               </p>
-                             )}
+                             ) : null}
                            </div>
                         </div>
                       </div>
