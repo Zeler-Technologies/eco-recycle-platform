@@ -74,7 +74,7 @@ const TenantDashboard = () => {
         activeDrivers: driversData?.length || 0
       });
 
-      // Fetch recent orders from tenant's customers
+      // Fetch recent orders from tenant's customers with driver info
       const { data: ordersData, error: ordersError } = await supabase
         .from('customer_requests')
         .select(`
@@ -96,7 +96,31 @@ const TenantDashboard = () => {
 
       if (ordersError) throw ordersError;
 
-      setRecentOrders(ordersData || []);
+      // Get driver assignments for recent orders
+      if (ordersData && ordersData.length > 0) {
+        const orderIds = ordersData.map(order => order.id);
+        const { data: orderAssignmentsData } = await supabase
+          .from('driver_assignments')
+          .select(`
+            customer_request_id,
+            driver_id,
+            drivers(full_name)
+          `)
+          .in('customer_request_id', orderIds)
+          .eq('is_active', true);
+
+        // Combine orders with driver info
+        const ordersWithDrivers = ordersData.map(order => {
+          const assignment = orderAssignmentsData?.find(a => a.customer_request_id === order.id);
+          return {
+            ...order,
+            driver_name: assignment?.drivers?.full_name || null
+          };
+        });
+        setRecentOrders(ordersWithDrivers);
+      } else {
+        setRecentOrders([]);
+      }
 
       // Fetch today's scheduled pickup requests from customer_requests table
       const today_start = new Date();
@@ -106,7 +130,7 @@ const TenantDashboard = () => {
 
       console.log('Today date range:', today_start.toISOString().split('T')[0], 'to', today_end.toISOString().split('T')[0]);
 
-      // Get ALL customer requests for today (created today OR scheduled for today)
+      // First get customer requests for today
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('customer_requests')
         .select(`
@@ -118,17 +142,39 @@ const TenantDashboard = () => {
           car_model,
           pickup_address,
           contact_phone,
-          created_at
+          created_at,
+          car_registration_number,
+          car_year
         `)
         .eq('tenant_id', user?.tenant_id)
         .or(`pickup_date.gte.${today_start.toISOString().split('T')[0]},pickup_date.lte.${today_end.toISOString().split('T')[0]},created_at.gte.${today_start.toISOString()},created_at.lte.${today_end.toISOString()}`)
         .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
         .order('created_at', { ascending: false });
 
-      console.log('All today schedule data:', scheduleData, 'Error:', scheduleError);
+      console.log('Today schedule data:', scheduleData, 'Error:', scheduleError);
 
-      if (!scheduleError) {
-        setTodaySchedule(scheduleData || []);
+      if (!scheduleError && scheduleData) {
+        // Get driver assignments for these requests
+        const requestIds = scheduleData.map(item => item.id);
+        const { data: assignmentsData } = await supabase
+          .from('driver_assignments')
+          .select(`
+            customer_request_id,
+            driver_id,
+            drivers(full_name)
+          `)
+          .in('customer_request_id', requestIds)
+          .eq('is_active', true);
+
+        // Combine the data
+        const transformedData = scheduleData.map(item => {
+          const assignment = assignmentsData?.find(a => a.customer_request_id === item.id);
+          return {
+            ...item,
+            driver_name: assignment?.drivers?.full_name || null
+          };
+        });
+        setTodaySchedule(transformedData);
       }
 
     } catch (error) {
@@ -317,8 +363,9 @@ const TenantDashboard = () => {
                 ) : (
                   recentOrders.map((order, index) => {
                     const { vehicle, location } = formatOrderDisplay(order);
+                    const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.status);
                     return (
-                      <div key={order.id || index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors">
+                      <div key={order.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${isAssigned ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-tenant-accent rounded-full">
                             <Car className="h-4 w-4 text-tenant-primary" />
@@ -330,6 +377,11 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
+                            {isAssigned && order.driver_name && (
+                              <p className="text-sm font-medium text-green-700 mt-1">
+                                <strong>Förare: {order.driver_name}</strong>
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -338,6 +390,8 @@ const TenantDashboard = () => {
                              order.status === 'assigned' ? 'Tilldelad' :
                              order.status === 'in_progress' ? 'Pågående' :
                              order.status === 'completed' ? 'Klar' : 
+                             order.status === 'scheduled' ? 'Schemalagd' :
+                             order.status === 'confirmed' ? 'Bekräftad' :
                              order.status}
                           </Badge>
                           <div className="text-right">
