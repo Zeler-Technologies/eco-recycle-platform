@@ -352,10 +352,42 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     setIsDetailDialogOpen(false);
   };
 
-  const handleCancelRequest = (requestId: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === requestId ? { ...req, status: 'Avbokad' as const } : req
-    ));
+  const handleCancelRequest = async (requestId: string) => {
+    try {
+      // Update database
+      const { error } = await supabase
+        .from('customer_requests')
+        .update({ status: 'cancelled' })
+        .eq('id', requestId);
+
+      if (error) {
+        console.error('Error cancelling request:', error);
+        toast({
+          title: "Fel",
+          description: "Kunde inte avboka förfrågan",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === requestId ? { ...req, status: 'Avbokad' as const } : req
+      ));
+
+      toast({
+        title: "Förfrågan avbokad",
+        description: "Förfrågan har avbokats framgångsrikt",
+      });
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      toast({
+        title: "Fel",
+        description: "Ett oväntat fel inträffade",
+        variant: "destructive"
+      });
+    }
+    
     setIsDetailDialogOpen(false);
   };
 
