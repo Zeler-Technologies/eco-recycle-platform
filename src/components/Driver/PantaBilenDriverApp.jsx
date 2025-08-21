@@ -130,6 +130,24 @@ const PantaBilenDriverApp = () => {
     }
   };
 
+  // Debug: explicit handler for Start Pickup with detailed logs
+  const handleStartPickup = (pickupId) => {
+    try {
+      console.log('🔴 BUTTON CLICKED - Start Pickup');
+      console.log('🔴 Pickup ID:', pickupId);
+      console.log('🔴 Selected pickup:', selectedPickup);
+
+      updatePickupStatusHook(pickupId, 'in_progress')
+        .then((result) => {
+          console.log('🟢 SUCCESS: updatePickupStatusHook resolved', result);
+        })
+        .catch((error) => {
+          console.error('🔴 ERROR from updatePickupStatusHook:', error);
+        });
+    } catch (e) {
+      console.error('🔴 UNEXPECTED ERROR in handleStartPickup:', e);
+    }
+  };
   const handleSelfAssign = async (pickupId) => {
     try {
       await selfAssignPickup(pickupId);
@@ -141,13 +159,16 @@ const PantaBilenDriverApp = () => {
   };
 
   const handleRejectPickup = async (pickupId, reason = 'Kan inte utföra detta uppdrag') => {
+    console.log('🔴 BUTTON CLICKED - Avvisa uppdrag');
+    console.log('🔴 Pickup ID:', pickupId);
+    console.log('🔴 Selected pickup:', selectedPickup);
+    console.log('🔴 Reason:', reason);
     try {
-      await rejectAssignedPickup(pickupId, reason);
+      const result = await rejectAssignedPickup(pickupId, reason);
+      console.log('🟢 SUCCESS: rejectAssignedPickup resolved', result);
       setShowDetailView(false);
-      // Success feedback will come from the hook's refresh
     } catch (error) {
-      console.error('Failed to reject pickup:', error);
-      // Could add toast notification here
+      console.error('🔴 ERROR from rejectAssignedPickup:', error);
     }
   };
 
@@ -580,7 +601,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
-                  onClick={() => updatePickupStatusHook(selectedPickup.id, 'in_progress')}
+                  onClick={() => handleStartPickup(selectedPickup.id)}
                 >
                   {UI_LABELS.startPickup}
                 </button>

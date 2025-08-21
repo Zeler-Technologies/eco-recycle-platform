@@ -274,12 +274,12 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status using the working database function
+  // Update pickup status with strict step-by-step logging
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
+    console.log('🔵 updatePickupStatus called', { pickupId, status, notes });
     try {
-      console.log('Updating pickup status:', { pickupId, status, notes });
-      
-      // 1. Update the main pickup_orders table (THIS WAS MISSING!)
+      console.log('STEP 1: Updating pickup_orders...', { pickupId, status });
+      const t1 = performance.now();
       const { error: updateError } = await supabase
         .from('pickup_orders')
         .update({
@@ -288,22 +288,27 @@ export const useDriverIntegration = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', pickupId);
-
       if (updateError) {
-        console.error('Failed to update pickup_orders:', updateError);
+        console.error('STEP 1 FAILED: pickup_orders update error', updateError);
         throw new Error(`Failed to update pickup status: ${updateError.message}`);
       }
+      console.log('STEP 1 OK in', Math.round(performance.now() - t1), 'ms');
 
-      // 2. Update the related customer_requests status to keep tenant views in sync
+      console.log('STEP 1b: Fetching customer_request_id for pickup...', pickupId);
       const { data: orderRow, error: orderFetchError } = await supabase
         .from('pickup_orders')
         .select('customer_request_id')
         .eq('id', pickupId)
         .maybeSingle();
-
       if (orderFetchError) {
-        console.warn('Failed to fetch pickup_orders row for customer_request sync:', orderFetchError);
-      } else if (orderRow?.customer_request_id) {
+        console.warn('STEP 1b WARN: fetch pickup_orders failed', orderFetchError);
+      } else {
+        console.log('STEP 1b OK: customer_request_id =', orderRow?.customer_request_id);
+      }
+
+      if (orderRow?.customer_request_id) {
+        console.log('STEP 2: Updating customer_requests...', { id: orderRow.customer_request_id, status });
+        const t2 = performance.now();
         const { error: crUpdateError } = await supabase
           .from('customer_requests')
           .update({
@@ -312,11 +317,16 @@ export const useDriverIntegration = () => {
           })
           .eq('id', orderRow.customer_request_id);
         if (crUpdateError) {
-          console.warn('Failed to update customer_requests status:', crUpdateError);
+          console.error('STEP 2 FAILED: customer_requests update error', crUpdateError);
+          // Surface this so UI can show failure; we cannot rollback client-side
+          throw new Error(`Failed to update customer_requests: ${crUpdateError.message}`);
         }
+        console.log('STEP 2 OK in', Math.round(performance.now() - t2), 'ms');
+      } else {
+        console.warn('STEP 2 SKIPPED: No customer_request_id found for pickup', pickupId);
       }
 
-      // 3. Log the change in pickup_status_updates
+      console.log('STEP 3: Logging status change to pickup_status_updates');
       const { data, error: logError } = await supabase
         .from('pickup_status_updates')
         .insert({
@@ -326,37 +336,38 @@ export const useDriverIntegration = () => {
           changed_by: driver?.driver_id
         })
         .select()
-        .single();
-
+        .maybeSingle();
       if (logError) {
-        console.warn('Failed to log status change:', logError);
-        // Don't throw error here since main update succeeded
+        console.warn('STEP 3 WARN: Failed to log status change', logError);
+      } else {
+        console.log('STEP 3 OK: Log row id', data?.id);
       }
 
-      console.log('Status update completed successfully');
+      console.log('✅ Both updates successful (or log warning only)');
 
-      // Optimistically update local state immediately
+      // Optimistic UI update
       setPickups(prev => prev.map(pickup => 
         pickup.id === pickupId 
           ? { ...pickup, status, driver_notes: notes }
           : pickup
       ));
 
-      // Invalidate all related queries to force refresh across all views
+      // Invalidate related queries to refresh other views
       await queryClient.invalidateQueries({ queryKey: ['pickup-orders'] });
       await queryClient.invalidateQueries({ queryKey: ['customer-requests'] });
       await queryClient.invalidateQueries({ queryKey: ['tenant-customers'] });
 
-      // Also reload pickups to ensure we have the latest data
+      // Ensure latest data for driver list
       if (driver?.driver_id) {
         setTimeout(() => loadPickups(driver.driver_id), 100);
       }
 
+      return { success: true };
     } catch (err) {
-      console.error('Error updating pickup status:', err);
+      console.error('❌ Error updating pickup status:', err);
       throw new Error(err instanceof Error ? err.message : 'Failed to update pickup status');
     }
-  }, [driver?.driver_id, loadPickups]);
+  }, [driver?.driver_id, loadPickups, queryClient]);
 
   // Other hook methods (keeping existing signatures for compatibility)
   const assignDriver = useCallback(async (orderId: string, driverId: string) => {
