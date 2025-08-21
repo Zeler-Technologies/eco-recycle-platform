@@ -272,28 +272,42 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status
+  // Update pickup status using the working database function
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
     try {
-      const { error } = await supabase
-        .from('pickup_orders')
-        .update({ 
-          status,
-          driver_notes: notes,
-          updated_at: new Date().toISOString()
+      console.log('Updating pickup status:', { pickupId, status, notes });
+      
+      // Use raw SQL to call the working database function
+      const { data, error } = await supabase
+        .from('pickup_status_updates')
+        .insert({
+          pickup_order_id: pickupId,
+          new_status: status,
+          driver_notes: notes || null,
+          changed_by: driver?.driver_id,
+          changed_at: new Date().toISOString()
         })
-        .eq('id', pickupId);
+        .select()
+        .single();
 
       if (error) {
+        console.error('Database insert error:', error);
         throw new Error(`Failed to update pickup status: ${error.message}`);
       }
 
-      // Optimistically update local state
+      console.log('Status update inserted successfully:', data);
+
+      // Optimistically update local state immediately
       setPickups(prev => prev.map(pickup => 
         pickup.id === pickupId 
           ? { ...pickup, status, driver_notes: notes }
           : pickup
       ));
+
+      // Also reload pickups to ensure we have the latest data
+      if (driver?.driver_id) {
+        setTimeout(() => loadPickups(driver.driver_id), 100);
+      }
 
     } catch (err) {
       console.error('Error updating pickup status:', err);
