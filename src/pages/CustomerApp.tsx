@@ -1291,7 +1291,7 @@ const CustomerApp = () => {
   const [carDetails, setCarDetails] = useState<CarDetails>({
     registrationNumber: '',
     controlNumber: '',
-    issueDate: '',
+    issueDate: new Date().toISOString().split('T')[0], // Default to today's date
     ownerConfirmation: false,
     // TODO: Remove dummy data when testing is complete
     pnr: '199001011234', // Dummy Swedish PNR
