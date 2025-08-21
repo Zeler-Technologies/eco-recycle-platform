@@ -469,6 +469,17 @@ export const useDriverIntegration = () => {
     }
 
     try {
+      // First get the pickup order to find the customer request ID
+      const { data: pickupOrder, error: fetchError } = await supabase
+        .from('pickup_orders')
+        .select('customer_request_id')
+        .eq('id', pickupId)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Failed to find pickup order: ${fetchError.message}`);
+      }
+
       // Update the pickup order to unassign driver
       const { error: updateError } = await supabase
         .from('pickup_orders')
@@ -480,6 +491,26 @@ export const useDriverIntegration = () => {
         })
         .eq('id', pickupId)
         .eq('assigned_driver_id', driver.id);
+
+      if (updateError) {
+        throw new Error(`Failed to reject pickup: ${updateError.message}`);
+      }
+
+      // Also update the customer request status to cancelled
+      if (pickupOrder.customer_request_id) {
+        const { error: requestError } = await supabase
+          .from('customer_requests')
+          .update({
+            status: 'cancelled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pickupOrder.customer_request_id);
+
+        if (requestError) {
+          console.error('Failed to update customer request status:', requestError);
+          // Don't throw error here as the main pickup rejection succeeded
+        }
+      }
 
       if (updateError) {
         throw new Error(`Failed to reject pickup: ${updateError.message}`);
