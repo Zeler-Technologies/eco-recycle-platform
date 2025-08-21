@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +20,7 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     owner_name: '',
     contact_phone: '',
@@ -29,8 +31,32 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
     car_registration_number: '',
     pnr_num: '',
     special_instructions: '',
-    quote_amount: ''
+    quote_amount: '',
+    assigned_driver: ''
   });
+
+  
+  // Fetch drivers when modal opens
+  useEffect(() => {
+    if (open && user?.tenant_id) {
+      fetchDrivers();
+    }
+  }, [open, user?.tenant_id]);
+
+  const fetchDrivers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, full_name, driver_status')
+        .eq('tenant_id', user?.tenant_id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setDrivers(data || []);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -63,7 +89,8 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      // First create the customer request
+      const { data: requestData, error: requestError } = await supabase
         .from('customer_requests')
         .insert({
           tenant_id: user.tenant_id,
@@ -78,13 +105,34 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
           special_instructions: formData.special_instructions || null,
           quote_amount: formData.quote_amount ? parseFloat(formData.quote_amount) : null,
           status: 'pending'
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (requestError) throw requestError;
+
+      // If a driver was assigned, create the driver assignment
+      if (formData.assigned_driver && requestData) {
+        const { error: assignmentError } = await supabase
+          .from('driver_assignments')
+          .insert({
+            customer_request_id: requestData.id,
+            driver_id: formData.assigned_driver,
+            is_active: true,
+            assigned_at: new Date().toISOString(),
+            assignment_type: 'pickup',
+            role: 'primary'
+          });
+
+        if (assignmentError) {
+          console.error('Error assigning driver:', assignmentError);
+          // Don't fail the entire operation if driver assignment fails
+        }
+      }
 
       toast({
         title: "Lyckat!",
-        description: "Nytt ärende har skapats",
+        description: formData.assigned_driver ? "Nytt ärende har skapats och förare tilldelad" : "Nytt ärende har skapats",
       });
 
       // Reset form
@@ -98,7 +146,8 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
         car_registration_number: '',
         pnr_num: '',
         special_instructions: '',
-        quote_amount: ''
+        quote_amount: '',
+        assigned_driver: ''
       });
 
       onOpenChange(false);
@@ -234,6 +283,24 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
                 />
               </div>
             </div>
+          </div>
+
+          {/* Driver Assignment */}
+          <div>
+            <Label htmlFor="assigned_driver">Förare</Label>
+            <Select value={formData.assigned_driver} onValueChange={(value) => handleInputChange('assigned_driver', value)}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Välj förare (valfritt)" />
+              </SelectTrigger>
+              <SelectContent className="bg-white z-50">
+                <SelectItem value="">Ingen förare tilldelad</SelectItem>
+                {drivers.map((driver) => (
+                  <SelectItem key={driver.id} value={driver.id}>
+                    {driver.full_name} ({driver.driver_status || 'offline'})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Additional Information */}
