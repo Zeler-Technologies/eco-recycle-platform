@@ -98,29 +98,30 @@ const TenantDashboard = () => {
 
       setRecentOrders(ordersData || []);
 
-      // Fetch today's pickup schedule
+      // Fetch today's scheduled pickup requests from customer_requests table
       const today_start = new Date();
       today_start.setHours(0, 0, 0, 0);
       const today_end = new Date();
       today_end.setHours(23, 59, 59, 999);
 
       const { data: scheduleData, error: scheduleError } = await supabase
-        .from('pickup_orders')
+        .from('customer_requests')
         .select(`
-          scheduled_pickup_date,
+          id,
+          pickup_date,
           status,
-          customer_requests!inner(
-            owner_name,
-            car_brand,
-            car_model,
-            pickup_address
-          ),
-          drivers(full_name)
+          owner_name,
+          car_brand,
+          car_model,
+          pickup_address,
+          contact_phone
         `)
-        .eq('customer_requests.tenant_id', user?.tenant_id)
-        .gte('scheduled_pickup_date', today_start.toISOString())
-        .lte('scheduled_pickup_date', today_end.toISOString())
-        .order('scheduled_pickup_date', { ascending: true });
+        .eq('tenant_id', user?.tenant_id)
+        .not('pickup_date', 'is', null)
+        .gte('pickup_date', today_start.toISOString().split('T')[0])
+        .lte('pickup_date', today_end.toISOString().split('T')[0])
+        .in('status', ['assigned', 'scheduled', 'confirmed'])
+        .order('pickup_date', { ascending: true });
 
       if (!scheduleError) {
         setTodaySchedule(scheduleData || []);
@@ -411,17 +412,18 @@ const TenantDashboard = () => {
                 </div>
               ) : (
                 todaySchedule.map((schedule, index) => {
-                  const scheduledDate = new Date(schedule.scheduled_pickup_date);
+                  const scheduledDate = new Date(schedule.pickup_date);
                   const time = scheduledDate.toLocaleTimeString('sv-SE', { 
                     hour: '2-digit', 
                     minute: '2-digit' 
                   });
-                  const driverName = schedule.drivers?.full_name || 'Ingen förare tilldelad';
-                  const customerName = schedule.customer_requests?.owner_name || 'Okänd kund';
-                  const vehicle = `${schedule.customer_requests?.car_brand || ''} ${schedule.customer_requests?.car_model || ''}`.trim();
-                  const location = schedule.customer_requests?.pickup_address || 'Okänd plats';
-                  const task = `Hämta ${vehicle} - ${location}`;
+                  const customerName = schedule.owner_name || 'Okänd kund';
+                  const vehicle = `${schedule.car_brand || ''} ${schedule.car_model || ''}`.trim();
+                  const location = schedule.pickup_address || 'Okänd plats';
+                  const task = `Hämta ${vehicle} från ${customerName}`;
                   const status = schedule.status === 'scheduled' ? 'Schemalagd' : 
+                               schedule.status === 'assigned' ? 'Tilldelad' :
+                               schedule.status === 'confirmed' ? 'Bekräftad' :
                                schedule.status === 'in_progress' ? 'Pågående' : 
                                schedule.status === 'completed' ? 'Klar' : 
                                schedule.status;
@@ -434,7 +436,8 @@ const TenantDashboard = () => {
                         </div>
                         <div>
                           <p className="font-medium">{task}</p>
-                          <p className="text-sm text-muted-foreground">{driverName}</p>
+                          <p className="text-sm text-muted-foreground">{location}</p>
+                          <p className="text-sm text-muted-foreground">{schedule.contact_phone || 'Inget telefonnummer'}</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-tenant-primary border-tenant-primary">
