@@ -504,40 +504,48 @@ export const useDriverIntegration = () => {
 
   // Reject/disapprove assigned pickup
   const rejectAssignedPickup = useCallback(async (pickupId: string, reason?: string) => {
+    console.log('🔴 rejectAssignedPickup called with:', { pickupId, reason, driverId: driver?.id });
+    
     if (!driver?.id) {
       throw new Error('No driver available');
     }
 
     try {
       // First get the pickup order to find the customer request ID
+      console.log('📍 Step 1: Fetching pickup order...');
       const { data: pickupOrder, error: fetchError } = await supabase
         .from('pickup_orders')
-        .select('customer_request_id')
+        .select('customer_request_id, status, assigned_driver_id')
         .eq('id', pickupId)
         .single();
+
+      console.log('📍 Step 1 result:', { pickupOrder, fetchError });
 
       if (fetchError) {
         throw new Error(`Failed to find pickup order: ${fetchError.message}`);
       }
 
-      // Update the pickup order to unassign driver
+      // Update the pickup order to unassign driver and set status to rejected
+      console.log('📍 Step 2: Updating pickup_orders status to rejected...');
       const { error: updateError } = await supabase
         .from('pickup_orders')
         .update({
           assigned_driver_id: null,
-          status: 'pending',
+          status: 'rejected',
           driver_notes: reason || 'Rejected by driver',
           updated_at: new Date().toISOString()
         })
         .eq('id', pickupId)
         .eq('assigned_driver_id', driver.id);
 
+      console.log('📍 Step 2 result:', { updateError });
       if (updateError) {
         throw new Error(`Failed to reject pickup: ${updateError.message}`);
       }
 
       // Also update the customer request status to rejected
       if (pickupOrder.customer_request_id) {
+        console.log('📍 Step 3: Updating customer_requests status to rejected...');
         const { error: requestError } = await supabase
           .from('customer_requests')
           .update({
@@ -546,17 +554,15 @@ export const useDriverIntegration = () => {
           })
           .eq('id', pickupOrder.customer_request_id);
 
+        console.log('📍 Step 3 result:', { requestError });
         if (requestError) {
           console.error('Failed to update customer request status:', requestError);
           // Don't throw error here as the main pickup rejection succeeded
         }
       }
 
-      if (updateError) {
-        throw new Error(`Failed to reject pickup: ${updateError.message}`);
-      }
-
       // Deactivate driver assignment for THIS SPECIFIC pickup only
+      console.log('📍 Step 4: Deactivating driver assignment...');
       const { error: assignmentError } = await supabase
         .from('driver_assignments')
         .update({
@@ -569,12 +575,29 @@ export const useDriverIntegration = () => {
         .eq('driver_id', driver.id)         // AND specific driver
         .eq('is_active', true);             // AND only active assignments
 
+      console.log('📍 Step 4 result:', { assignmentError });
       if (assignmentError) {
         console.warn('Failed to update assignment record:', assignmentError.message);
       }
 
-      // Refresh data
-      await refreshData();
+      // Optimistic UI update
+      setPickups(prev => prev.map(pickup => 
+        pickup.id === pickupId 
+          ? { ...pickup, status: 'rejected', assigned_driver_id: null }
+          : pickup
+      ));
+
+      // Invalidate queries to refresh all views
+      await queryClient.invalidateQueries({ queryKey: ['pickup-orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['customer-requests'] });
+      await queryClient.invalidateQueries({ queryKey: ['tenant-customers'] });
+
+      // Refresh data with small delay
+      if (driver?.driver_id) {
+        setTimeout(() => loadPickups(driver.driver_id), 200);
+      }
+
+      console.log('✅ Pickup rejection completed successfully');
       return true;
 
     } catch (err) {
