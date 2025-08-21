@@ -104,6 +104,8 @@ const TenantDashboard = () => {
       const today_end = new Date();
       today_end.setHours(23, 59, 59, 999);
 
+      console.log('Today date range:', today_start.toISOString().split('T')[0], 'to', today_end.toISOString().split('T')[0]);
+
       // First try to get scheduled pickups with pickup_date set for today
       let { data: scheduleData, error: scheduleError } = await supabase
         .from('customer_requests')
@@ -125,8 +127,11 @@ const TenantDashboard = () => {
         .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
         .order('pickup_date', { ascending: true });
 
-      // If no scheduled items with pickup_date, fallback to show all assigned/in_progress requests
+      console.log('Schedule data with pickup_date:', scheduleData, 'Error:', scheduleError);
+
+      // If no scheduled items with pickup_date, fallback to show all recent requests
       if (!scheduleError && (!scheduleData || scheduleData.length === 0)) {
+        console.log('No scheduled items with pickup_date, getting all recent requests...');
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('customer_requests')
           .select(`
@@ -143,12 +148,16 @@ const TenantDashboard = () => {
           .eq('tenant_id', user?.tenant_id)
           .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(10);
+        
+        console.log('Fallback data:', fallbackData, 'Error:', fallbackError);
         
         if (!fallbackError) {
           scheduleData = fallbackData;
         }
       }
+
+      console.log('Final schedule data:', scheduleData);
 
       if (!scheduleError) {
         setTodaySchedule(scheduleData || []);
