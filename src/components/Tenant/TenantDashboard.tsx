@@ -104,7 +104,8 @@ const TenantDashboard = () => {
       const today_end = new Date();
       today_end.setHours(23, 59, 59, 999);
 
-      const { data: scheduleData, error: scheduleError } = await supabase
+      // First try to get scheduled pickups with pickup_date set for today
+      let { data: scheduleData, error: scheduleError } = await supabase
         .from('customer_requests')
         .select(`
           id,
@@ -114,14 +115,40 @@ const TenantDashboard = () => {
           car_brand,
           car_model,
           pickup_address,
-          contact_phone
+          contact_phone,
+          created_at
         `)
         .eq('tenant_id', user?.tenant_id)
         .not('pickup_date', 'is', null)
         .gte('pickup_date', today_start.toISOString().split('T')[0])
         .lte('pickup_date', today_end.toISOString().split('T')[0])
-        .in('status', ['assigned', 'scheduled', 'confirmed'])
+        .in('status', ['assigned', 'in_progress', 'scheduled', 'confirmed'])
         .order('pickup_date', { ascending: true });
+
+      // If no scheduled items with pickup_date, fallback to show all assigned/in_progress requests
+      if (!scheduleError && (!scheduleData || scheduleData.length === 0)) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('customer_requests')
+          .select(`
+            id,
+            pickup_date,
+            status,
+            owner_name,
+            car_brand,
+            car_model,
+            pickup_address,
+            contact_phone,
+            created_at
+          `)
+          .eq('tenant_id', user?.tenant_id)
+          .in('status', ['assigned', 'in_progress', 'scheduled', 'confirmed'])
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        if (!fallbackError) {
+          scheduleData = fallbackData;
+        }
+      }
 
       if (!scheduleError) {
         setTodaySchedule(scheduleData || []);
