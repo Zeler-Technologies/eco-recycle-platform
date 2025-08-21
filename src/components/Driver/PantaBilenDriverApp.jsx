@@ -524,19 +524,19 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     showDetailView && selectedPickup && (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-xl">
-        <div className="bg-indigo-600 text-white px-5 py-4 flex items-center gap-4">
+        <div className="bg-indigo-600 text-white px-4 py-3 flex items-center justify-between rounded-t-xl">
+          <h2 className="font-semibold text-lg">Uppdragsdetaljer</h2>
           <button
-            className="text-xl font-bold"
+            className="text-white hover:text-gray-200 text-2xl font-bold"
             onClick={() => setShowDetailView(false)}
             aria-label={ARIA_LABELS.backToList}
           >
-            ←
+            ×
           </button>
-          <span className="font-semibold">{UI_LABELS.backToList}</span>
         </div>
         
-        <div className="p-5">
-          <div className="text-center mb-8">
+        <div className="p-6">
+          <div className="text-center mb-6">
             <div className="text-2xl font-bold text-indigo-600 mb-2">
               {selectedPickup.car_registration_number}
             </div>
@@ -547,76 +547,82 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
           {/* Customer Info */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{UI_LABELS.customer}</h3>
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 text-center">{UI_LABELS.customer}</h3>
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-sm text-gray-600">{UI_LABELS.name}</span>
-                <span className="text-sm text-gray-900 font-medium">{selectedPickup.owner_name}</span>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium">{UI_LABELS.name}</span>
+                <span className="text-sm text-gray-900 font-medium text-right">{selectedPickup.owner_name}</span>
               </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-sm text-gray-600">{UI_LABELS.address}</span>
-                <span className="text-sm text-gray-900 font-medium">{selectedPickup.pickup_address}</span>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium">{UI_LABELS.address}</span>
+                <span className="text-sm text-gray-900 font-medium text-right max-w-48">{selectedPickup.pickup_address}</span>
               </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-sm text-gray-600">{UI_LABELS.status}</span>
-                <span className="text-sm text-gray-900 font-medium">{getStatusText(selectedPickup.status)}</span>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium">{UI_LABELS.status}</span>
+                <span className="text-sm text-gray-900 font-medium text-right">{getStatusText(selectedPickup.status)}</span>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-8 space-y-3">
+          <div className="space-y-3">
             {selectedPickup.status === 'scheduled' && (
-              <button 
-                className="w-full bg-blue-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
-              >
-                {UI_LABELS.startPickup}
-              </button>
+              <div className="flex justify-center">
+                <button 
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
+                >
+                  {UI_LABELS.startPickup}
+                </button>
+              </div>
             )}
             
             {selectedPickup.status === 'in_progress' && (
-              <>
+              <div className="flex flex-col gap-2 items-center">
                 <button 
-                  className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold"
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
                   onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
                 >
                   {UI_LABELS.completePickup}
                 </button>
                 <button 
-                  className="w-full bg-red-600 text-white py-4 rounded-xl text-base font-semibold"
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
                   onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
                 >
                   Avvisa uppdrag
                 </button>
-              </>
+              </div>
             )}
             
             {selectedPickup.status === 'assigned' && selectedPickup.assigned_driver_id === currentDriver?.id && (
-              <button 
-                className="w-full bg-red-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
-              >
-                Avvisa uppdrag
-              </button>
+              <div className="flex justify-center">
+                <button 
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
+                >
+                  Avvisa uppdrag
+                </button>
+              </div>
             )}
             
-            <button 
-              className="w-full bg-gray-600 text-white py-4 rounded-xl text-base font-semibold"
-              onClick={() => {
-                const address = selectedPickup.pickup_address;
-                if (address) {
-                  window.open(
-                    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, 
-                    '_blank',
-                    'noopener,noreferrer'
-                  );
-                }
-              }}
-              aria-label={ARIA_LABELS.navigate}
-            >
-              🗺️ {UI_LABELS.navigate}
-            </button>
+            <div className="flex justify-center pt-2">
+              <button 
+                className="px-6 py-2 bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors flex items-center gap-2"
+                onClick={() => {
+                  const address = selectedPickup.pickup_address;
+                  if (address) {
+                    window.open(
+                      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, 
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
+                  }
+                }}
+                aria-label={ARIA_LABELS.navigate}
+              >
+                🗺️ {UI_LABELS.navigate}
+              </button>
+            </div>
           </div>
         </div>
         </div>
