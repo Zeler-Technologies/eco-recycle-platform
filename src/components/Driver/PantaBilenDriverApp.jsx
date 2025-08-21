@@ -522,7 +522,8 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   const DetailView = () => (
     showDetailView && selectedPickup && (
-      <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-xl">
         <div className="bg-indigo-600 text-white px-5 py-4 flex items-center gap-4">
           <button
             className="text-xl font-bold"
@@ -617,6 +618,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               🗺️ {UI_LABELS.navigate}
             </button>
           </div>
+        </div>
         </div>
       </div>
     )
