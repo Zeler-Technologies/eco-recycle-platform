@@ -660,6 +660,17 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 </p>
               </div>
 
+              {/* Current Driver Assignment Display */}
+              {selectedRequest.assignedDriver && (
+                <div>
+                  <Label className="text-sm font-medium">Förare</Label>
+                  <p className="flex items-center gap-2 mt-1 text-green-700 font-medium">
+                    <User className="h-4 w-4" />
+                    {selectedRequest.assignedDriver}
+                  </p>
+                </div>
+              )}
+
               {/* Driver Assignment */}
               <div>
                 <Label className="text-sm font-medium">Tilldela förare</Label>
