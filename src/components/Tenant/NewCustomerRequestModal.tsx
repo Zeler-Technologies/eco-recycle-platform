@@ -288,12 +288,12 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
           {/* Driver Assignment */}
           <div>
             <Label htmlFor="assigned_driver">Förare</Label>
-            <Select value={formData.assigned_driver} onValueChange={(value) => handleInputChange('assigned_driver', value)}>
+            <Select value={formData.assigned_driver} onValueChange={(value) => handleInputChange('assigned_driver', value === 'none' ? '' : value)}>
               <SelectTrigger className="bg-white">
                 <SelectValue placeholder="Välj förare (valfritt)" />
               </SelectTrigger>
               <SelectContent className="bg-white z-50">
-                <SelectItem value="">Ingen förare tilldelad</SelectItem>
+                <SelectItem value="none">Ingen förare tilldelad</SelectItem>
                 {drivers.map((driver) => (
                   <SelectItem key={driver.id} value={driver.id}>
                     {driver.full_name} ({driver.driver_status || 'offline'})
