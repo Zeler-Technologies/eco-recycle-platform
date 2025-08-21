@@ -210,7 +210,11 @@ const TenantDashboard = () => {
   };
 
   const formatOrderDisplay = (order: any) => {
-    const vehicle = `${order.car_brand} ${order.car_model}${order.car_year ? ` ${order.car_year}` : ''} (${order.car_registration_number || 'Ingen reg.nr'})`;
+    const formatRegistrationNumber = (regNum: string) => {
+      if (!regNum || regNum.length <= 3) return regNum;
+      return `${regNum.slice(0, 3)} ${regNum.slice(3)}`;
+    };
+    const vehicle = `${order.car_brand} ${order.car_model}${order.car_year ? ` ${order.car_year}` : ''} (${formatRegistrationNumber(order.car_registration_number) || 'Ingen reg.nr'})`;
     const location = order.pickup_address || 'Ej angivet';
     return { vehicle, location };
   };
