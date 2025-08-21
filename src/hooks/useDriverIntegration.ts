@@ -132,30 +132,47 @@ export const useDriverIntegration = () => {
         throw new Error(`Failed to load assigned pickups: ${assignedError.message}`);
       }
 
-      // Get unassigned pickups from the same tenant
-      const { data: unassignedPickups, error: unassignedError } = await supabase
-        .from('pickup_orders')
-        .select(`
-          *,
-          customer_requests (
-            car_registration_number,
-            car_brand,
-            car_model,
-            car_year,
-            owner_name,
-            pickup_address
-          )
-        `)
-        .is('assigned_driver_id', null)
-        .eq('tenant_id', driver?.tenant_id)
-        .order('created_at', { ascending: false });
+      // Get the driver's tenant_id to load unassigned pickups
+      const { data: driverData, error: driverError } = await supabase
+        .from('drivers')
+        .select('tenant_id')
+        .eq('id', driverId)
+        .single();
 
-      if (unassignedError) {
-        console.warn('Failed to load unassigned pickups:', unassignedError.message);
+      if (driverError) {
+        console.warn('Failed to get driver tenant_id:', driverError.message);
+      }
+
+      let unassignedPickups = [];
+      
+      // Only load unassigned pickups if we have a valid tenant_id
+      if (driverData?.tenant_id) {
+        const { data: unassignedData, error: unassignedError } = await supabase
+          .from('pickup_orders')
+          .select(`
+            *,
+            customer_requests (
+              car_registration_number,
+              car_brand,
+              car_model,
+              car_year,
+              owner_name,
+              pickup_address
+            )
+          `)
+          .is('assigned_driver_id', null)
+          .eq('tenant_id', driverData.tenant_id)
+          .order('created_at', { ascending: false });
+
+        if (unassignedError) {
+          console.warn('Failed to load unassigned pickups:', unassignedError.message);
+        } else {
+          unassignedPickups = unassignedData || [];
+        }
       }
 
       // Combine both datasets
-      const allPickups = [...(assignedPickups || []), ...(unassignedPickups || [])];
+      const allPickups = [...(assignedPickups || []), ...unassignedPickups];
 
       // Map the combined result to expected format
       const mappedPickups: PickupOrder[] = allPickups?.map(pickup => ({
@@ -215,7 +232,7 @@ export const useDriverIntegration = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, [driver?.tenant_id]);
+  }, []);
 
   // Update driver status
   const updateDriverStatus = useCallback(async (driverId: string, status: string) => {

@@ -339,6 +339,16 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     const isUnassigned = !pickup.assigned_driver_id;
     const showActions = showPickupActions === pickup.id;
 
+    // Debug logging
+    console.log('PickupCard debug:', {
+      pickupId: pickup.id,
+      assigned_driver_id: pickup.assigned_driver_id,
+      currentDriverId: currentDriver?.id,
+      isAssignedToCurrentDriver,
+      isUnassigned,
+      status: pickup.status
+    });
+
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
         <div 
@@ -440,20 +450,39 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     );
   };
 
-  const PickupList = () => (
-    <div className={`p-4 ${currentView === 'map' ? 'hidden' : 'block'}`}>
-      {filteredPickups.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">📋</div>
-          <p className="text-gray-600">{UI_LABELS.noTasksToShow}</p>
-        </div>
-      ) : (
-        filteredPickups.map(pickup => (
-          <PickupCard key={pickup.pickup_id || pickup.id} pickup={pickup} />
-        ))
-      )}
-    </div>
-  );
+  const PickupList = () => {
+    // Debug logging for pickup data
+    console.log('PickupList debug:', {
+      totalPickups: pickups.length,
+      filteredPickups: filteredPickups.length,
+      currentFilter,
+      currentDriverId: currentDriver?.id,
+      pickupsData: pickups.map(p => ({
+        id: p.id,
+        status: p.status,
+        assigned_driver_id: p.assigned_driver_id,
+        car_registration: p.car_registration_number
+      }))
+    });
+
+    return (
+      <div className={`p-4 ${currentView === 'map' ? 'hidden' : 'block'}`}>
+        {filteredPickups.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-6xl mb-4">📋</div>
+            <p className="text-gray-600">{UI_LABELS.noTasksToShow}</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Total pickups: {pickups.length} | Filter: {currentFilter}
+            </p>
+          </div>
+        ) : (
+          filteredPickups.map(pickup => (
+            <PickupCard key={pickup.pickup_id || pickup.id} pickup={pickup} />
+          ))
+        )}
+      </div>
+    );
+  };
 
   const MapView = () => (
     <div className={`p-4 ${currentView === 'list' ? 'hidden' : 'block'}`}>
