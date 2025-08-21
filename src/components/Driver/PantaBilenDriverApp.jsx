@@ -567,12 +567,18 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           {/* Action Buttons */}
           <div className="space-y-3">
             {selectedPickup.status === 'scheduled' && (
-              <div className="flex justify-center">
+              <div className="flex flex-col gap-2 items-center">
                 <button 
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
                   onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
                 >
                   {UI_LABELS.startPickup}
+                </button>
+                <button 
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
+                >
+                  Avvisa uppdrag
                 </button>
               </div>
             )}
