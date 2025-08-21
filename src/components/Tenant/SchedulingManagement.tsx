@@ -149,6 +149,23 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
+      // Get driver assignments for all requests
+      let driverAssignments: any[] = [];
+      if (data && data.length > 0) {
+        const requestIds = data.map(req => req.id);
+        const { data: assignmentsData } = await supabase
+          .from('driver_assignments')
+          .select(`
+            customer_request_id,
+            driver_id,
+            drivers(full_name)
+          `)
+          .in('customer_request_id', requestIds)
+          .eq('is_active', true);
+        
+        driverAssignments = assignmentsData || [];
+      }
+
       // Convert database format to component format
       const formattedRequests: Request[] = (data || []).map(request => {
         // Convert status from database to Swedish
@@ -176,6 +193,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           ? new Date(request.pickup_date)
           : new Date(request.created_at);
 
+        // Find assigned driver
+        const assignment = driverAssignments.find(a => a.customer_request_id === request.id);
+        const assignedDriver = assignment?.drivers?.full_name || null;
+
         return {
           id: request.id,
           date: requestDate,
@@ -187,7 +208,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           carModel: request.car_model || 'Okänd modell',
           registrationNumber: request.car_registration_number || 'Okänt reg.nr',
           status,
-          notes: request.special_instructions
+          notes: request.special_instructions,
+          assignedDriver
         };
       });
 
@@ -226,12 +248,49 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     return filteredRequests.filter(request => isSameDay(request.date, date));
   };
 
-  const handleAssignDriver = (requestId: string, driverId: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === requestId 
-        ? { ...req, assignedDriver: drivers.find(d => d.id === driverId)?.name }
-        : req
-    ));
+  const handleAssignDriver = async (requestId: string, driverId: string) => {
+    try {
+      // Save driver assignment to database
+      const { error } = await supabase
+        .from('driver_assignments')
+        .insert({
+          customer_request_id: requestId,
+          driver_id: driverId,
+          is_active: true,
+          assigned_at: new Date().toISOString(),
+          assignment_type: 'pickup',
+          role: 'primary'
+        });
+
+      if (error) {
+        console.error('Error assigning driver:', error);
+        toast({
+          title: "Fel",
+          description: "Kunde inte tilldela föraren",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, assignedDriver: drivers.find(d => d.id === driverId)?.name }
+          : req
+      ));
+
+      toast({
+        title: "Förare tilldelad",
+        description: "Föraren har tilldelats uppdraget"
+      });
+    } catch (error) {
+      console.error('Error assigning driver:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte tilldela föraren",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleConfirmRequest = async (requestId: string) => {
