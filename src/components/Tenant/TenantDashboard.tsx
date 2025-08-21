@@ -405,7 +405,7 @@ const TenantDashboard = () => {
             <CardDescription>Planerade hämtningar och aktiviteter</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {loading ? (
                 <div className="text-center py-4">
                   <p className="text-muted-foreground">Laddar schema...</p>
@@ -415,41 +415,66 @@ const TenantDashboard = () => {
                   <p className="text-muted-foreground">Inga schemalagda aktiviteter för idag</p>
                 </div>
               ) : (
-                todaySchedule.map((schedule, index) => {
-                  const scheduledDate = new Date(schedule.pickup_date);
-                  const time = scheduledDate.toLocaleTimeString('sv-SE', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  });
-                  const customerName = schedule.owner_name || 'Okänd kund';
-                  const vehicle = `${schedule.car_brand || ''} ${schedule.car_model || ''}`.trim();
-                  const location = schedule.pickup_address || 'Okänd plats';
-                  const task = `Hämta ${vehicle} från ${customerName}`;
-                  const status = schedule.status === 'scheduled' ? 'Schemalagd' : 
-                               schedule.status === 'assigned' ? 'Tilldelad' :
-                               schedule.status === 'confirmed' ? 'Bekräftad' :
-                               schedule.status === 'in_progress' ? 'Pågående' : 
-                               schedule.status === 'completed' ? 'Klar' : 
-                               schedule.status;
-
-                  return (
-                    <div key={schedule.id || index} className="flex items-center justify-between p-3 bg-tenant-accent/20 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-center">
-                          <p className="font-bold text-tenant-primary">{time}</p>
+                // Sort items - assigned/scheduled first
+                todaySchedule
+                  .sort((a, b) => {
+                    const isAssignedA = ['assigned', 'scheduled', 'confirmed'].includes(a.status);
+                    const isAssignedB = ['assigned', 'scheduled', 'confirmed'].includes(b.status);
+                    if (isAssignedA && !isAssignedB) return -1;
+                    if (!isAssignedA && isAssignedB) return 1;
+                    return 0;
+                  })
+                  .map((schedule, index) => {
+                    const formatRegistrationNumber = (regNum: string) => {
+                      if (!regNum || regNum.length <= 3) return regNum;
+                      return `${regNum.slice(0, 3)} ${regNum.slice(3)}`;
+                    };
+                    
+                    const vehicle = `${schedule.car_brand} ${schedule.car_model}${schedule.car_year ? ` ${schedule.car_year}` : ''} (${formatRegistrationNumber(schedule.car_registration_number) || 'Ingen reg.nr'})`;
+                    const location = schedule.pickup_address || 'Ej angivet';
+                    const isAssigned = ['assigned', 'scheduled', 'confirmed'].includes(schedule.status);
+                    
+                    return (
+                      <div key={schedule.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${isAssigned ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-tenant-accent rounded-full">
+                            <Car className="h-4 w-4 text-tenant-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold">{schedule.owner_name} - {schedule.contact_phone || 'Inget telefonnummer'}</h4>
+                            <p className="text-sm text-muted-foreground">{vehicle}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {location}
+                            </p>
+                            {isAssigned && schedule.driver_name && (
+                              <p className="text-sm font-medium text-green-700 mt-1">
+                                Förare: {schedule.driver_name}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{task}</p>
-                          <p className="text-sm text-muted-foreground">{location}</p>
-                          <p className="text-sm text-muted-foreground">{schedule.contact_phone || 'Inget telefonnummer'}</p>
+                        <div className="flex items-center gap-3">
+                          <Badge className={getStatusColor(schedule.status)}>
+                            {schedule.status === 'pending' ? 'Ny' : 
+                             schedule.status === 'assigned' ? 'Tilldelad' :
+                             schedule.status === 'in_progress' ? 'Pågående' :
+                             schedule.status === 'completed' ? 'Klar' : 
+                             schedule.status === 'scheduled' ? 'Schemalagd' :
+                             schedule.status === 'confirmed' ? 'Bekräftad' :
+                             schedule.status}
+                          </Badge>
+                          <div className="text-right">
+                            {schedule.pickup_date && (
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(schedule.pickup_date).toLocaleDateString('sv-SE')}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-tenant-primary border-tenant-primary">
-                        {status}
-                      </Badge>
-                    </div>
-                  );
-                })
+                    );
+                  })
               )}
             </div>
           </CardContent>
