@@ -277,8 +277,23 @@ export const useDriverIntegration = () => {
     try {
       console.log('Updating pickup status:', { pickupId, status, notes });
       
-      // Use raw SQL to call the working database function
-      const { data, error } = await supabase
+      // 1. Update the main pickup_orders table (THIS WAS MISSING!)
+      const { error: updateError } = await supabase
+        .from('pickup_orders')
+        .update({
+          status,
+          driver_notes: notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pickupId);
+
+      if (updateError) {
+        console.error('Failed to update pickup_orders:', updateError);
+        throw new Error(`Failed to update pickup status: ${updateError.message}`);
+      }
+
+      // 2. Log the change in pickup_status_updates
+      const { data, error: logError } = await supabase
         .from('pickup_status_updates')
         .insert({
           pickup_order_id: pickupId,
@@ -290,12 +305,12 @@ export const useDriverIntegration = () => {
         .select()
         .single();
 
-      if (error) {
-        console.error('Database insert error:', error);
-        throw new Error(`Failed to update pickup status: ${error.message}`);
+      if (logError) {
+        console.warn('Failed to log status change:', logError);
+        // Don't throw error here since main update succeeded
       }
 
-      console.log('Status update inserted successfully:', data);
+      console.log('Status update completed successfully');
 
       // Optimistically update local state immediately
       setPickups(prev => prev.map(pickup => 
@@ -313,7 +328,7 @@ export const useDriverIntegration = () => {
       console.error('Error updating pickup status:', err);
       throw new Error(err instanceof Error ? err.message : 'Failed to update pickup status');
     }
-  }, []);
+  }, [driver?.driver_id, loadPickups]);
 
   // Other hook methods (keeping existing signatures for compatibility)
   const assignDriver = useCallback(async (orderId: string, driverId: string) => {
