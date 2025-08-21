@@ -438,26 +438,70 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     const wasAvbokad = originalRequest?.status === 'Avbokad';
     const newStatus = wasAvbokad ? 'pending' : originalRequest?.status; // Set to 'pending' if was cancelled, else keep current status
 
+    console.log('🔄 RESCHEDULE DEBUG:', {
+      requestId: rescheduleData.requestId,
+      originalStatus: originalRequest?.status,
+      wasAvbokad,
+      newStatus,
+      newDate: rescheduleData.newDate,
+      newTime: rescheduleData.newTime
+    });
+
     try {
       // Update the request in the database with new date/time and status
       const pickupDateTime = format(rescheduleData.newDate, 'yyyy-MM-dd');
-      const { error } = await supabase
+      
+      console.log('🔄 UPDATING DATABASE with:', {
+        pickup_date: pickupDateTime,
+        status: newStatus,
+        requestId: rescheduleData.requestId
+      });
+
+      const { error, data: updatedData } = await supabase
         .from('customer_requests')
         .update({
           pickup_date: pickupDateTime,
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', rescheduleData.requestId);
+        .eq('id', rescheduleData.requestId)
+        .select(); // Add select to see what was updated
 
       if (error) {
-        console.error('Error updating customer request:', error);
+        console.error('❌ Database update error:', error);
         toast({
           title: "Fel",
           description: "Kunde inte uppdatera hämtningen i databasen.",
           variant: "destructive"
         });
         return;
+      }
+
+      console.log('✅ Database update successful:', updatedData);
+
+      // Also check if there's a related pickup_order that needs updating
+      const { data: pickupOrderData, error: pickupError } = await supabase
+        .from('pickup_orders')
+        .select('id, status')
+        .eq('customer_request_id', rescheduleData.requestId);
+
+      if (pickupOrderData && pickupOrderData.length > 0) {
+        console.log('🔄 Found related pickup_orders:', pickupOrderData);
+        
+        // Update pickup_orders status too
+        const { error: pickupUpdateError } = await supabase
+          .from('pickup_orders')
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('customer_request_id', rescheduleData.requestId);
+
+        if (pickupUpdateError) {
+          console.error('❌ Pickup order update error:', pickupUpdateError);
+        } else {
+          console.log('✅ Pickup orders updated successfully');
+        }
       }
 
       // Update local state to reflect the changes
@@ -487,7 +531,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       });
 
     } catch (error) {
-      console.error('Error rescheduling request:', error);
+      console.error('❌ Error rescheduling request:', error);
       toast({
         title: "Fel",
         description: "Ett fel uppstod vid omschemaläggning.",
