@@ -434,28 +434,35 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const confirmReschedule = () => {
     if (!rescheduleData) return;
 
-    // Update the request with new schedule
+    const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
+    const wasAvbokad = originalRequest?.status === 'Avbokad';
+
+    // Update the request with new date and time, and reset status to 'Förfrågan' if it was cancelled
     setRequests(prev => prev.map(req => 
       req.id === rescheduleData.requestId 
-        ? { ...req, date: rescheduleData.newDate, time: rescheduleData.newTime }
+        ? { 
+            ...req, 
+            date: rescheduleData.newDate, 
+            time: rescheduleData.newTime,
+            status: wasAvbokad ? 'Förfrågan' as const : req.status
+          }
         : req
     ));
 
-    // Show toast with SMS option
     if (rescheduleData.sendSMS) {
       const request = requests.find(r => r.id === rescheduleData.requestId);
-      toast({
-        title: "Hämtning omschemalagd",
-        description: `SMS skickat till ${request?.customerName} om den nya tiden: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}`
-      });
-    } else {
-      toast({
-        title: "Hämtning omschemalagd",
-        description: "Schemat har uppdaterats. Inget SMS skickades."
-      });
+      if (request) {
+        toast({
+          description: `SMS skickat till ${request?.customerName} om den nya tiden: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}`
+        });
+      }
     }
 
-    // Reset state
+    toast({
+      title: wasAvbokad ? "Hämtning återaktiverad och omschemalagd" : "Hämtning omschemalagd",
+      description: `Ny tid: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}${wasAvbokad ? ' - Status ändrad till Förfrågan' : ''}`
+    });
+
     setRescheduleConfirmOpen(false);
     setRescheduleData(null);
     setRescheduleRequest(null);
@@ -843,7 +850,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   </Button>
                 )}
 
-                {selectedRequest.status === 'Bekräftad' && (
+                {(selectedRequest.status === 'Bekräftad' || selectedRequest.status === 'Avbokad') && (
                   <>
                     <Button
                       variant="outline"
@@ -851,7 +858,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                       className="flex items-center gap-2"
                     >
                       <Clock className="h-4 w-4" />
-                      Omschemalägg
+                      {selectedRequest.status === 'Avbokad' ? 'Återaktivera & Omschemalägg' : 'Omschemalägg'}
                     </Button>
                     <Button
                       variant="outline"
