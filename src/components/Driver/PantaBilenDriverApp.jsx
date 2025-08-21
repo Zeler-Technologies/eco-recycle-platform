@@ -554,6 +554,10 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                 <span className="text-sm text-gray-900 font-medium">{selectedPickup.owner_name}</span>
               </div>
               <div className="flex flex-col py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 font-medium mb-1">Telefon</span>
+                <span className="text-sm text-gray-900 font-medium">{selectedPickup.contact_phone || 'Ej angivet'}</span>
+              </div>
+              <div className="flex flex-col py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-600 font-medium mb-1">{UI_LABELS.address}</span>
                 <span className="text-sm text-gray-900 font-medium">{selectedPickup.pickup_address}</span>
               </div>
