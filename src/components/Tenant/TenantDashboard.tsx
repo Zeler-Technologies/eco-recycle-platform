@@ -194,17 +194,23 @@ const TenantDashboard = () => {
     switch (status?.toLowerCase()) {
       case 'pending':
       case 'ny': 
-        return 'bg-status-new text-white';
+        return 'bg-blue-500 text-white';
       case 'assigned':
+      case 'tilldelad':
+        return 'bg-orange-500 text-white';
       case 'in_progress':
       case 'pågående': 
-        return 'bg-status-processing text-white';
+        return 'bg-green-500 text-white';
       case 'scheduled':
+      case 'schemalagd':
       case 'hämtas': 
-        return 'bg-status-pending text-white';
+        return 'bg-purple-500 text-white';
+      case 'confirmed':
+      case 'bekräftad':
+        return 'bg-teal-500 text-white';
       case 'completed':
       case 'klar': 
-        return 'bg-status-completed text-white';
+        return 'bg-gray-500 text-white';
       default: 
         return 'bg-muted';
     }
