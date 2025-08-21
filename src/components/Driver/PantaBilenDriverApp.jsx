@@ -44,6 +44,7 @@ const PantaBilenDriverApp = () => {
   const [showDetailView, setShowDetailView] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showStatusHistory, setShowStatusHistory] = useState(false);
+  const [showPickupActions, setShowPickupActions] = useState(null); // For pickup action dropdown
 
   // Memoized filtered and sorted pickups
   const filteredPickups = useMemo(() => {
@@ -336,6 +337,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     // Check if this pickup is assigned to current driver
     const isAssignedToCurrentDriver = pickup.assigned_driver_id === currentDriver?.id;
     const isUnassigned = !pickup.assigned_driver_id;
+    const showActions = showPickupActions === pickup.id;
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
@@ -362,7 +364,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             {UI_LABELS.finalPrice}: {pickup.final_price ? `${pickup.final_price} kr` : UI_LABELS.notDetermined}
           </div>
           
-          <div className="text-sm text-gray-600 mb-2">
+          <div className="text-sm text-gray-600 mb-3">
             {UI_LABELS.address}: {pickup.pickup_address}
           </div>
           
@@ -375,23 +377,61 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {getStatusText(pickup.status)}
             </div>
             
-            {/* Action buttons */}
-            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-              {isUnassigned && (
-                <button
-                  onClick={() => handleSelfAssign(pickup.id)}
-                  className="px-3 py-1 bg-green-600 text-white text-xs rounded-full hover:bg-green-700 transition-colors"
-                >
-                  Välj uppdrag
-                </button>
-              )}
-              {isAssignedToCurrentDriver && pickup.status === 'assigned' && (
-                <button
-                  onClick={() => handleRejectPickup(pickup.id)}
-                  className="px-3 py-1 bg-red-600 text-white text-xs rounded-full hover:bg-red-700 transition-colors"
-                >
-                  Avvisa
-                </button>
+            {/* Enhanced Action Menu */}
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              {(isUnassigned || isAssignedToCurrentDriver) && (
+                <>
+                  <button
+                    onClick={() => setShowPickupActions(showActions ? null : pickup.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                      isUnassigned 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    }`}
+                  >
+                    {isUnassigned ? 'Hantera uppdrag' : 'Hantera tilldelat'}
+                    <span className={`transition-transform ${showActions ? 'rotate-180' : ''}`}>▼</span>
+                  </button>
+                  
+                  {showActions && (
+                    <div className="absolute right-0 top-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-48 z-50">
+                      <div className="py-2">
+                        {isUnassigned && (
+                          <button
+                            onClick={() => {
+                              handleSelfAssign(pickup.id);
+                              setShowPickupActions(null);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 text-green-700 font-medium flex items-center gap-2"
+                          >
+                            <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                            Välj detta uppdrag
+                          </button>
+                        )}
+                        
+                        {isAssignedToCurrentDriver && (
+                          <button
+                            onClick={() => {
+                              handleRejectPickup(pickup.id);
+                              setShowPickupActions(null);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-700 font-medium flex items-center gap-2"
+                          >
+                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                            Avvisa uppdrag
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => setShowPickupActions(null)}
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-600 border-t border-gray-100"
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -557,7 +597,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
   );
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100" onClick={() => setShowPickupActions(null)}>
       <AuthStatusBar />
       <StatusBar />
       <AppHeader />
@@ -570,6 +610,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
         </div>
       )}
       {currentView === 'list' ? <PickupList /> : <MapView />}
+      <DetailView />
       {/* Navigation Indicator */}
       <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 w-33 h-1 bg-gray-900 rounded-full opacity-80"></div>
     </div>
