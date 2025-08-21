@@ -613,7 +613,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             
             <div className="flex justify-center pt-2">
               <button 
-                className="px-8 py-3 bg-indigo-600 text-white rounded-lg text-base font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg"
+                className="px-8 py-3 bg-gray-600 text-white rounded-lg text-base font-semibold hover:bg-gray-700 transition-colors flex items-center gap-2 shadow-lg"
                 onClick={() => {
                   const address = selectedPickup.pickup_address;
                   if (address) {
