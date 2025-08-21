@@ -11,6 +11,7 @@ import UserManagement from '../SuperAdmin/UserManagement';
 import SchedulingManagement from './SchedulingManagement';
 import { ServiceZoneManagement } from './ServiceZoneManagement';
 import { CustomerMessageManagement } from './CustomerMessageManagement';
+import { NewCustomerRequestModal } from './NewCustomerRequestModal';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
@@ -19,6 +20,7 @@ const TenantDashboard = () => {
   const [showSchedulingManagement, setShowSchedulingManagement] = useState(false);
   const [showServiceZoneManagement, setShowServiceZoneManagement] = useState(false);
   const [showCustomerMessages, setShowCustomerMessages] = useState(false);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   
   // State for real tenant data
   const [stats, setStats] = useState({
@@ -276,7 +278,10 @@ const TenantDashboard = () => {
                   <CardTitle className="text-tenant-primary">Ärendehantering</CardTitle>
                   <CardDescription>Hantera bilhämtningar och värderingar</CardDescription>
                 </div>
-                <Button className="bg-tenant-primary hover:bg-tenant-primary/90">
+                <Button 
+                  className="bg-tenant-primary hover:bg-tenant-primary/90"
+                  onClick={() => setShowNewCustomerModal(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Nytt ärende
                 </Button>
@@ -437,6 +442,13 @@ const TenantDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Customer Request Modal */}
+      <NewCustomerRequestModal
+        open={showNewCustomerModal}
+        onOpenChange={setShowNewCustomerModal}
+        onSuccess={fetchTenantData}
+      />
     </div>
   );
 };

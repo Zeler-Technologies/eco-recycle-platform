@@ -1,0 +1,273 @@
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+
+interface NewCustomerRequestModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCustomerRequestModalProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    owner_name: '',
+    contact_phone: '',
+    pickup_address: '',
+    car_brand: '',
+    car_model: '',
+    car_year: '',
+    car_registration_number: '',
+    pnr_num: '',
+    special_instructions: '',
+    quote_amount: ''
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const validateForm = () => {
+    const required = ['owner_name', 'contact_phone', 'car_brand', 'car_model', 'car_registration_number', 'pnr_num'];
+    for (const field of required) {
+      if (!formData[field as keyof typeof formData]) {
+        toast({
+          title: "Fel",
+          description: `${field === 'owner_name' ? 'Namn' : 
+                       field === 'contact_phone' ? 'Telefon' :
+                       field === 'car_brand' ? 'Bilmärke' :
+                       field === 'car_model' ? 'Bilmodell' :
+                       field === 'car_registration_number' ? 'Registreringsnummer' :
+                       field === 'pnr_num' ? 'Personnummer' : field} är obligatoriskt`,
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm() || !user?.tenant_id) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('customer_requests')
+        .insert({
+          tenant_id: user.tenant_id,
+          owner_name: formData.owner_name,
+          contact_phone: formData.contact_phone,
+          pickup_address: formData.pickup_address || null,
+          car_brand: formData.car_brand,
+          car_model: formData.car_model,
+          car_year: formData.car_year ? parseInt(formData.car_year) : null,
+          car_registration_number: formData.car_registration_number,
+          pnr_num: formData.pnr_num,
+          special_instructions: formData.special_instructions || null,
+          quote_amount: formData.quote_amount ? parseFloat(formData.quote_amount) : null,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Lyckat!",
+        description: "Nytt ärende har skapats",
+      });
+
+      // Reset form
+      setFormData({
+        owner_name: '',
+        contact_phone: '',
+        pickup_address: '',
+        car_brand: '',
+        car_model: '',
+        car_year: '',
+        car_registration_number: '',
+        pnr_num: '',
+        special_instructions: '',
+        quote_amount: ''
+      });
+
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (error) {
+      console.error('Error creating customer request:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte skapa ärendet",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nytt ärende</DialogTitle>
+          <DialogDescription>
+            Lägg till en ny kund och bil för hämtning
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Customer Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Kundinformation</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="owner_name">Namn *</Label>
+                <Input
+                  id="owner_name"
+                  value={formData.owner_name}
+                  onChange={(e) => handleInputChange('owner_name', e.target.value)}
+                  placeholder="För- och efternamn"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="pnr_num">Personnummer *</Label>
+                <Input
+                  id="pnr_num"
+                  value={formData.pnr_num}
+                  onChange={(e) => handleInputChange('pnr_num', e.target.value)}
+                  placeholder="YYYYMMDD-XXXX"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="contact_phone">Telefon *</Label>
+                <Input
+                  id="contact_phone"
+                  value={formData.contact_phone}
+                  onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                  placeholder="08-123 45 67"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="pickup_address">Hämtadress</Label>
+                <Input
+                  id="pickup_address"
+                  value={formData.pickup_address}
+                  onChange={(e) => handleInputChange('pickup_address', e.target.value)}
+                  placeholder="Gata, postnummer, ort"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Car Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Bilinformation</h3>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="car_brand">Märke *</Label>
+                <Input
+                  id="car_brand"
+                  value={formData.car_brand}
+                  onChange={(e) => handleInputChange('car_brand', e.target.value)}
+                  placeholder="Volvo"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="car_model">Modell *</Label>
+                <Input
+                  id="car_model"
+                  value={formData.car_model}
+                  onChange={(e) => handleInputChange('car_model', e.target.value)}
+                  placeholder="V70"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="car_year">År</Label>
+                <Input
+                  id="car_year"
+                  type="number"
+                  value={formData.car_year}
+                  onChange={(e) => handleInputChange('car_year', e.target.value)}
+                  placeholder="2010"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="car_registration_number">Registreringsnummer *</Label>
+                <Input
+                  id="car_registration_number"
+                  value={formData.car_registration_number}
+                  onChange={(e) => handleInputChange('car_registration_number', e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="quote_amount">Uppskattad värdering (kr)</Label>
+                <Input
+                  id="quote_amount"
+                  type="number"
+                  value={formData.quote_amount}
+                  onChange={(e) => handleInputChange('quote_amount', e.target.value)}
+                  placeholder="5000"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Information */}
+          <div>
+            <Label htmlFor="special_instructions">Särskilda instruktioner</Label>
+            <Textarea
+              id="special_instructions"
+              value={formData.special_instructions}
+              onChange={(e) => handleInputChange('special_instructions', e.target.value)}
+              placeholder="Eventuella anteckningar om bilen eller hämtningen..."
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Avbryt
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-tenant-primary hover:bg-tenant-primary/90"
+            >
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Skapa ärende
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
