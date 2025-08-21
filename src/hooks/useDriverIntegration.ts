@@ -556,7 +556,7 @@ export const useDriverIntegration = () => {
         throw new Error(`Failed to reject pickup: ${updateError.message}`);
       }
 
-      // Deactivate driver assignment
+      // Deactivate driver assignment for THIS SPECIFIC pickup only
       const { error: assignmentError } = await supabase
         .from('driver_assignments')
         .update({
@@ -565,8 +565,9 @@ export const useDriverIntegration = () => {
           completed_at: new Date().toISOString(),
           notes: reason || 'Rejected by driver'
         })
-        .eq('pickup_order_id', pickupId)
-        .eq('driver_id', driver.id);
+        .eq('pickup_order_id', pickupId)    // Target specific pickup
+        .eq('driver_id', driver.id)         // AND specific driver
+        .eq('is_active', true);             // AND only active assignments
 
       if (assignmentError) {
         console.warn('Failed to update assignment record:', assignmentError.message);

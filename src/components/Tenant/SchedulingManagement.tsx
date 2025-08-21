@@ -414,14 +414,27 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   };
 
   const handleRescheduleRequest = (request: Request) => {
+    console.log('🔥 RESCHEDULE BUTTON CLICKED:', request);
     setRescheduleRequest(request);
     setIsRescheduleDialogOpen(true);
   };
 
   const handleRescheduleSubmit = (newDate: Date, newTime: string, sendSMS: boolean) => {
+    console.log('🔥 RESCHEDULE SUBMIT CALLED:', { 
+      rescheduleRequest: rescheduleRequest?.id, 
+      newDate, 
+      newTime, 
+      sendSMS 
+    });
     if (!rescheduleRequest) return;
-    
+
     setRescheduleData({
+      requestId: rescheduleRequest.id,
+      newDate,
+      newTime,
+      sendSMS
+    });
+    console.log('🔥 RESCHEDULE DATA SET:', {
       requestId: rescheduleRequest.id,
       newDate,
       newTime,
@@ -432,14 +445,21 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   };
 
   const confirmReschedule = async () => {
-    if (!rescheduleData) return;
+    console.log('🔥 CONFIRM RESCHEDULE FUNCTION CALLED');
+    console.log('🔥 RESCHEDULE DATA:', rescheduleData);
+    
+    if (!rescheduleData) {
+      console.log('❌ NO RESCHEDULE DATA - ABORTING');
+      return;
+    }
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
     const wasAvbokad = originalRequest?.status === 'Avbokad';
-    const newStatus = wasAvbokad ? 'pending' : originalRequest?.status; // Set to 'pending' if was cancelled, else keep current status
+    const newStatus = wasAvbokad ? 'pending' : originalRequest?.status;
 
     console.log('🔄 RESCHEDULE DEBUG:', {
       requestId: rescheduleData.requestId,
+      originalRequest: originalRequest,
       originalStatus: originalRequest?.status,
       wasAvbokad,
       newStatus,
@@ -448,16 +468,17 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     });
 
     try {
-      // Update the request in the database with new date/time and status
       const pickupDateTime = format(rescheduleData.newDate, 'yyyy-MM-dd');
       
-      console.log('🔄 UPDATING DATABASE with:', {
+      console.log('🔄 ABOUT TO UPDATE DATABASE with:', {
         pickup_date: pickupDateTime,
         status: newStatus,
-        requestId: rescheduleData.requestId
+        requestId: rescheduleData.requestId,
+        table: 'customer_requests'
       });
 
-      const { error, data: updatedData } = await supabase
+      console.log('🔄 STARTING SUPABASE UPDATE...');
+      const updateResult = await supabase
         .from('customer_requests')
         .update({
           pickup_date: pickupDateTime,
@@ -465,56 +486,69 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', rescheduleData.requestId)
-        .select(); // Add select to see what was updated
+        .select();
 
-      if (error) {
-        console.error('❌ Database update error:', error);
+      console.log('🔄 SUPABASE UPDATE RESULT:', updateResult);
+
+      if (updateResult.error) {
+        console.error('❌ Database update error:', updateResult.error);
+        console.error('❌ Error details:', JSON.stringify(updateResult.error, null, 2));
         toast({
           title: "Fel",
-          description: "Kunde inte uppdatera hämtningen i databasen.",
+          description: `Database error: ${updateResult.error.message}`,
           variant: "destructive"
         });
         return;
       }
 
-      console.log('✅ Database update successful:', updatedData);
+      console.log('✅ Database update successful:', updateResult.data);
 
-      // Also check if there's a related pickup_order that needs updating
-      const { data: pickupOrderData, error: pickupError } = await supabase
+      // Check for pickup_orders
+      console.log('🔄 CHECKING FOR PICKUP ORDERS...');
+      const pickupOrderQuery = await supabase
         .from('pickup_orders')
         .select('id, status')
         .eq('customer_request_id', rescheduleData.requestId);
 
-      if (pickupOrderData && pickupOrderData.length > 0) {
-        console.log('🔄 Found related pickup_orders:', pickupOrderData);
+      console.log('🔄 PICKUP ORDER QUERY RESULT:', pickupOrderQuery);
+
+      if (pickupOrderQuery.data && pickupOrderQuery.data.length > 0) {
+        console.log('🔄 Found related pickup_orders:', pickupOrderQuery.data);
         
-        // Update pickup_orders status too
-        const { error: pickupUpdateError } = await supabase
+        const pickupUpdateResult = await supabase
           .from('pickup_orders')
           .update({
             status: newStatus,
             updated_at: new Date().toISOString()
           })
-          .eq('customer_request_id', rescheduleData.requestId);
+          .eq('customer_request_id', rescheduleData.requestId)
+          .select();
 
-        if (pickupUpdateError) {
-          console.error('❌ Pickup order update error:', pickupUpdateError);
+        console.log('🔄 PICKUP ORDER UPDATE RESULT:', pickupUpdateResult);
+
+        if (pickupUpdateResult.error) {
+          console.error('❌ Pickup order update error:', pickupUpdateResult.error);
         } else {
-          console.log('✅ Pickup orders updated successfully');
+          console.log('✅ Pickup orders updated successfully:', pickupUpdateResult.data);
         }
       }
 
-      // Update local state to reflect the changes
-      setRequests(prev => prev.map(req => 
-        req.id === rescheduleData.requestId 
-          ? { 
-              ...req, 
-              date: rescheduleData.newDate, 
-              time: rescheduleData.newTime,
-              status: wasAvbokad ? 'Förfrågan' as const : req.status
-            }
-          : req
-      ));
+      // Update local state
+      console.log('🔄 UPDATING LOCAL STATE...');
+      setRequests(prev => {
+        const updated = prev.map(req => 
+          req.id === rescheduleData.requestId 
+            ? { 
+                ...req, 
+                date: rescheduleData.newDate, 
+                time: rescheduleData.newTime,
+                status: wasAvbokad ? 'Förfrågan' as const : req.status
+              }
+            : req
+        );
+        console.log('🔄 LOCAL STATE UPDATED:', updated.find(r => r.id === rescheduleData.requestId));
+        return updated;
+      });
 
       if (rescheduleData.sendSMS) {
         const request = requests.find(r => r.id === rescheduleData.requestId);
@@ -531,18 +565,21 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       });
 
     } catch (error) {
-      console.error('❌ Error rescheduling request:', error);
+      console.error('❌ UNEXPECTED ERROR in confirmReschedule:', error);
+      console.error('❌ Error stack:', error.stack);
       toast({
         title: "Fel",
-        description: "Ett fel uppstod vid omschemaläggning.",
+        description: `Unexpected error: ${error.message}`,
         variant: "destructive"
       });
     }
 
+    console.log('🔄 CLEANING UP STATE...');
     setRescheduleConfirmOpen(false);
     setRescheduleData(null);
     setRescheduleRequest(null);
     setIsDetailDialogOpen(false);
+    console.log('✅ RESCHEDULE FUNCTION COMPLETED');
   };
 
   const cancelReschedule = () => {
@@ -1194,9 +1231,21 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
               <div className="flex gap-3 pt-4">
                 <Button
                   onClick={() => {
+                    console.log('🔥 SAVE BUTTON CLICKED');
                     const dateInput = document.getElementById('reschedule-date') as HTMLInputElement;
                     const timeInput = document.getElementById('reschedule-time') as HTMLInputElement;
                     const smsCheckbox = document.getElementById('send-sms') as HTMLInputElement;
+                    
+                    console.log('🔥 FORM VALUES:', {
+                      date: dateInput?.value,
+                      time: timeInput?.value,
+                      sms: smsCheckbox?.checked
+                    });
+
+                    if (!dateInput?.value || !timeInput?.value) {
+                      console.log('❌ MISSING VALUES - ABORTING');
+                      return;
+                    }
                     
                     const newDate = new Date(dateInput.value);
                     const newTime = timeInput.value;
@@ -1247,7 +1296,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
               <div className="flex gap-3 pt-4">
                 <Button
-                  onClick={confirmReschedule}
+                  onClick={() => {
+                    console.log('🔥 CONFIRM RESCHEDULE BUTTON CLICKED');
+                    confirmReschedule();
+                  }}
                   className="flex-1"
                 >
                   Ja, bekräfta
