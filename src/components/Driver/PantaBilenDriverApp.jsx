@@ -597,7 +597,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            {selectedPickup.status === 'scheduled' && (
+            {(selectedPickup.status === 'pending' || selectedPickup.status === 'scheduled') && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
