@@ -30,6 +30,8 @@ const PantaBilenDriverApp = () => {
     error,
     updateDriverStatus: updateDriverStatusHook, 
     updatePickupStatus: updatePickupStatusHook,
+    selfAssignPickup,
+    rejectAssignedPickup,
     statusHistory,
     historyLoading,
   } = useDriverIntegration();
@@ -124,6 +126,27 @@ const PantaBilenDriverApp = () => {
     if (success) {
       setShowDetailView(false);
       // Hook should automatically refresh the list
+    }
+  };
+
+  const handleSelfAssign = async (pickupId) => {
+    try {
+      await selfAssignPickup(pickupId);
+      // Success feedback will come from the hook's refresh
+    } catch (error) {
+      console.error('Failed to self-assign pickup:', error);
+      // Could add toast notification here
+    }
+  };
+
+  const handleRejectPickup = async (pickupId, reason = 'Kan inte utföra detta uppdrag') => {
+    try {
+      await rejectAssignedPickup(pickupId, reason);
+      setShowDetailView(false);
+      // Success feedback will come from the hook's refresh
+    } catch (error) {
+      console.error('Failed to reject pickup:', error);
+      // Could add toast notification here
     }
   };
 
@@ -310,12 +333,17 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
   );
 
   const PickupCard = ({ pickup }) => {
+    // Check if this pickup is assigned to current driver
+    const isAssignedToCurrentDriver = pickup.assigned_driver_id === currentDriver?.id;
+    const isUnassigned = !pickup.assigned_driver_id;
+
     return (
-      <div
-        className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all cursor-pointer overflow-hidden"
-        onClick={() => openPickupDetail(pickup)}
-      >
-        <div className={`p-5 border-l-4`} style={{ borderLeftColor: getStatusColor(pickup.status) }}>
+      <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
+        <div 
+          className={`p-5 border-l-4 cursor-pointer`} 
+          style={{ borderLeftColor: getStatusColor(pickup.status) }}
+          onClick={() => openPickupDetail(pickup)}
+        >
           <div className="flex justify-between items-center mb-2">
             <div className="text-lg font-bold text-gray-900">
               {pickup.car_registration_number || 'N/A'}
@@ -338,12 +366,34 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             {UI_LABELS.address}: {pickup.pickup_address}
           </div>
           
-          <div className={`inline-block px-3 py-1 rounded-xl text-xs font-semibold`} 
-               style={{ 
-                 backgroundColor: getStatusColor(pickup.status) + '20',
-                 color: getStatusColor(pickup.status)
-               }}>
-            {getStatusText(pickup.status)}
+          <div className="flex justify-between items-center">
+            <div className={`inline-block px-3 py-1 rounded-xl text-xs font-semibold`} 
+                 style={{ 
+                   backgroundColor: getStatusColor(pickup.status) + '20',
+                   color: getStatusColor(pickup.status)
+                 }}>
+              {getStatusText(pickup.status)}
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+              {isUnassigned && (
+                <button
+                  onClick={() => handleSelfAssign(pickup.id)}
+                  className="px-3 py-1 bg-green-600 text-white text-xs rounded-full hover:bg-green-700 transition-colors"
+                >
+                  Välj uppdrag
+                </button>
+              )}
+              {isAssignedToCurrentDriver && pickup.status === 'assigned' && (
+                <button
+                  onClick={() => handleRejectPickup(pickup.id)}
+                  className="px-3 py-1 bg-red-600 text-white text-xs rounded-full hover:bg-red-700 transition-colors"
+                >
+                  Avvisa
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -459,11 +509,28 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             )}
             
             {selectedPickup.status === 'in_progress' && (
+              <>
+                <button 
+                  className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold"
+                  onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
+                >
+                  {UI_LABELS.completePickup}
+                </button>
+                <button 
+                  className="w-full bg-red-600 text-white py-4 rounded-xl text-base font-semibold"
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
+                >
+                  Avvisa uppdrag
+                </button>
+              </>
+            )}
+            
+            {selectedPickup.status === 'assigned' && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <button 
-                className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold"
-                onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
+                className="w-full bg-red-600 text-white py-4 rounded-xl text-base font-semibold"
+                onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
               >
-                {UI_LABELS.completePickup}
+                Avvisa uppdrag
               </button>
             )}
             

@@ -106,13 +106,13 @@ export const useDriverIntegration = () => {
     }
   }, [session?.user?.id]);
 
-  // Load pickup orders for the driver
+  // Load pickup orders for the driver (including unassigned)
   const loadPickups = useCallback(async (driverId?: string) => {
     if (!driverId) return;
 
     try {
-      // Use direct query to pickup_orders table
-      const { data: directPickupData, error: directError } = await supabase
+      // Get assigned pickups for this driver
+      const { data: assignedPickups, error: assignedError } = await supabase
         .from('pickup_orders')
         .select(`
           *,
@@ -128,12 +128,37 @@ export const useDriverIntegration = () => {
         .eq('assigned_driver_id', driverId)
         .order('created_at', { ascending: false });
 
-      if (directError) {
-        throw new Error(`Failed to load pickups: ${directError.message}`);
+      if (assignedError) {
+        throw new Error(`Failed to load assigned pickups: ${assignedError.message}`);
       }
 
-      // Map the direct query result to expected format
-      const mappedPickups: PickupOrder[] = directPickupData?.map(pickup => ({
+      // Get unassigned pickups from the same tenant
+      const { data: unassignedPickups, error: unassignedError } = await supabase
+        .from('pickup_orders')
+        .select(`
+          *,
+          customer_requests (
+            car_registration_number,
+            car_brand,
+            car_model,
+            car_year,
+            owner_name,
+            pickup_address
+          )
+        `)
+        .is('assigned_driver_id', null)
+        .eq('tenant_id', driver?.tenant_id)
+        .order('created_at', { ascending: false });
+
+      if (unassignedError) {
+        console.warn('Failed to load unassigned pickups:', unassignedError.message);
+      }
+
+      // Combine both datasets
+      const allPickups = [...(assignedPickups || []), ...(unassignedPickups || [])];
+
+      // Map the combined result to expected format
+      const mappedPickups: PickupOrder[] = allPickups?.map(pickup => ({
         id: pickup.id,
         pickup_id: pickup.id,
         car_registration_number: pickup.customer_requests?.car_registration_number || '',
@@ -190,7 +215,7 @@ export const useDriverIntegration = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, []);
+  }, [driver?.tenant_id]);
 
   // Update driver status
   const updateDriverStatus = useCallback(async (driverId: string, status: string) => {
@@ -258,6 +283,7 @@ export const useDriverIntegration = () => {
   const unassignDriver = useCallback(async (orderId: string) => {
     await updatePickupStatus(orderId, 'pending', 'Driver unassigned');
   }, [updatePickupStatus]);
+
 
   const calculateOrderPrice = useCallback(async (order: any) => {
     setIsCalculatingPrice(true);
@@ -332,6 +358,104 @@ export const useDriverIntegration = () => {
       setLoading(false);
     }
   }, [loadDriverInfo]);
+
+  // Self-assign driver to unassigned pickup
+  const selfAssignPickup = useCallback(async (pickupId: string) => {
+    if (!driver?.id) {
+      throw new Error('No driver available for assignment');
+    }
+
+    try {
+      // Update the pickup order to assign this driver
+      const { error: updateError } = await supabase
+        .from('pickup_orders')
+        .update({
+          assigned_driver_id: driver.id,
+          status: 'assigned',
+          driver_notes: 'Self-assigned by driver',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pickupId);
+
+      if (updateError) {
+        throw new Error(`Failed to self-assign pickup: ${updateError.message}`);
+      }
+
+      // Create driver assignment record
+      const { error: assignmentError } = await supabase
+        .from('driver_assignments')
+        .insert({
+          driver_id: driver.id,
+          pickup_order_id: pickupId,
+          assigned_at: new Date().toISOString(),
+          status: 'scheduled',
+          assignment_type: 'pickup',
+          role: 'primary',
+          is_active: true
+        });
+
+      if (assignmentError) {
+        console.warn('Failed to create assignment record:', assignmentError.message);
+      }
+
+      // Refresh data
+      await refreshData();
+      return true;
+
+    } catch (err) {
+      console.error('Error self-assigning pickup:', err);
+      throw new Error(err instanceof Error ? err.message : 'Failed to self-assign pickup');
+    }
+  }, [driver?.id, refreshData]);
+
+  // Reject/disapprove assigned pickup
+  const rejectAssignedPickup = useCallback(async (pickupId: string, reason?: string) => {
+    if (!driver?.id) {
+      throw new Error('No driver available');
+    }
+
+    try {
+      // Update the pickup order to unassign driver
+      const { error: updateError } = await supabase
+        .from('pickup_orders')
+        .update({
+          assigned_driver_id: null,
+          status: 'pending',
+          driver_notes: reason || 'Rejected by driver',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pickupId)
+        .eq('assigned_driver_id', driver.id);
+
+      if (updateError) {
+        throw new Error(`Failed to reject pickup: ${updateError.message}`);
+      }
+
+      // Deactivate driver assignment
+      const { error: assignmentError } = await supabase
+        .from('driver_assignments')
+        .update({
+          is_active: false,
+          status: 'canceled',
+          completed_at: new Date().toISOString(),
+          notes: reason || 'Rejected by driver'
+        })
+        .eq('pickup_order_id', pickupId)
+        .eq('driver_id', driver.id);
+
+      if (assignmentError) {
+        console.warn('Failed to update assignment record:', assignmentError.message);
+      }
+
+      // Refresh data
+      await refreshData();
+      return true;
+
+    } catch (err) {
+      console.error('Error rejecting pickup:', err);
+      throw new Error(err instanceof Error ? err.message : 'Failed to reject pickup');
+    }
+  }, [driver?.id, refreshData]);
 
   // Initialize data on mount
   useEffect(() => {
@@ -451,6 +575,8 @@ export const useDriverIntegration = () => {
     updatePickupStatus,
     assignDriver,
     unassignDriver,
+    selfAssignPickup,
+    rejectAssignedPickup,
     calculateOrderPrice,
     updateOrderPricing,
     bulkCalculatePricing,
