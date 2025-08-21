@@ -67,53 +67,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [selectedRequestForScheduling, setSelectedRequestForScheduling] = useState<Request | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [driversLoading, setDriversLoading] = useState(true);
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
 
-  // Mock data - in real app this would come from database
-  const [requests, setRequests] = useState<Request[]>([
-    {
-      id: 'REQ001',
-      date: new Date(),
-      time: '09:00',
-      customerName: 'Anna Andersson',
-      address: 'Storgatan 15, 11143 Stockholm',
-      phone: '08-123 45 67',
-      carBrand: 'Volvo',
-      carModel: 'V70',
-      registrationNumber: 'ABC123',
-      status: 'Förfrågan',
-      notes: 'Bilen startar inte, behöver bogseras'
-    },
-    {
-      id: 'REQ002',
-      date: new Date(new Date().setDate(new Date().getDate() + 1)),
-      time: '11:30',
-      customerName: 'Erik Johansson',
-      address: 'Kungsgatan 42, 41119 Göteborg',
-      phone: '031-987 65 43',
-      carBrand: 'Saab',
-      carModel: '9-3',
-      registrationNumber: 'DEF456',
-      status: 'Bekräftad',
-      assignedDriver: 'Maria Larsson'
-    },
-    {
-      id: 'REQ003',
-      date: new Date(new Date().setDate(new Date().getDate() + 2)),
-      time: '14:00',
-      customerName: 'Maria Nilsson',
-      address: 'Malmövägen 88, 21456 Malmö',
-      phone: '040-555 66 77',
-      carBrand: 'BMW',
-      carModel: 'X5',
-      registrationNumber: 'GHI789',
-      status: 'Förfrågan'
-    }
-  ]);
-
-  // Fetch drivers for the current tenant
+  // Fetch drivers and customer requests for the current tenant
   useEffect(() => {
     if (user?.tenant_id) {
       fetchDrivers();
+      fetchCustomerRequests();
     }
   }, [user?.tenant_id]);
 
@@ -155,6 +116,82 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       });
     } finally {
       setDriversLoading(false);
+    }
+  };
+
+  const fetchCustomerRequests = async () => {
+    if (!user?.tenant_id) return;
+    
+    try {
+      setRequestsLoading(true);
+      const { data, error } = await supabase
+        .from('customer_requests')
+        .select('*')
+        .eq('tenant_id', user.tenant_id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching customer requests:', error);
+        toast({
+          title: "Fel",
+          description: "Kunde inte ladda kundförfrågningar",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Convert database format to component format
+      const formattedRequests: Request[] = (data || []).map(request => {
+        // Convert status from database to Swedish
+        let status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
+        switch (request.status) {
+          case 'pending':
+            status = 'Förfrågan';
+            break;
+          case 'assigned':
+          case 'in_progress':
+            status = 'Bekräftad';
+            break;
+          case 'completed':
+            status = 'Utförd';
+            break;
+          case 'cancelled':
+            status = 'Avbokad';
+            break;
+          default:
+            status = 'Förfrågan';
+        }
+
+        // Use pickup_date if available, otherwise use created_at
+        const requestDate = request.pickup_date 
+          ? new Date(request.pickup_date)
+          : new Date(request.created_at);
+
+        return {
+          id: request.id,
+          date: requestDate,
+          time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
+          customerName: request.owner_name || 'Okänd kund',
+          address: request.pickup_address || 'Ingen adress angiven',
+          phone: request.contact_phone || 'Inget telefonnummer',
+          carBrand: request.car_brand || 'Okänt märke',
+          carModel: request.car_model || 'Okänd modell',
+          registrationNumber: request.car_registration_number || 'Okänt reg.nr',
+          status,
+          notes: request.special_instructions
+        };
+      });
+
+      setRequests(formattedRequests);
+    } catch (error) {
+      console.error('Error fetching customer requests:', error);
+      toast({
+        title: "Fel", 
+        description: "Kunde inte ladda kundförfrågningar",
+        variant: "destructive"
+      });
+    } finally {
+      setRequestsLoading(false);
     }
   };
 
