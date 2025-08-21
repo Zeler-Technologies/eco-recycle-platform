@@ -299,8 +299,7 @@ export const useDriverIntegration = () => {
           pickup_order_id: pickupId,
           new_status: status,
           driver_notes: notes || null,
-          changed_by: driver?.driver_id,
-          changed_at: new Date().toISOString()
+          changed_by: driver?.driver_id
         })
         .select()
         .single();

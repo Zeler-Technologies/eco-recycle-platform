@@ -580,13 +580,13 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
-                  onClick={() => updatePickupStatusHook(selectedPickup.pickup_id, 'in_progress')}
+                  onClick={() => updatePickupStatusHook(selectedPickup.id, 'in_progress')}
                 >
                   {UI_LABELS.startPickup}
                 </button>
                 <button 
                   className="flex-1 px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
-                  onClick={() => handleRejectPickup(selectedPickup.pickup_id)}
+                  onClick={() => handleRejectPickup(selectedPickup.id)}
                 >
                   Avvisa uppdrag
                 </button>
@@ -597,7 +597,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               <div className="flex flex-col gap-2 items-center">
                 <button 
                   className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
-                  onClick={() => handleCompletePickup(selectedPickup.pickup_id)}
+                  onClick={() => handleCompletePickup(selectedPickup.id)}
                 >
                   {UI_LABELS.completePickup}
                 </button>
