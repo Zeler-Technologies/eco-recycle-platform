@@ -336,18 +336,50 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   // Get available requests that can be added to schedule (status 'Förfrågan')
   const availableRequests = requests.filter(request => request.status === 'Förfrågan');
 
-  const handleAddRequestToSchedule = (requestId: string, newDate: Date, newTime: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === requestId 
-        ? { ...req, date: newDate, time: newTime }
-        : req
-    ));
-    setIsAddPickupDialogOpen(false);
-    setSelectedRequestForScheduling(null);
-    toast({
-      title: "Hämtning tillagd",
-      description: "Förfrågan har lagts till i schemat."
-    });
+  const handleAddRequestToSchedule = async (requestId: string, newDate: Date, newTime: string) => {
+    try {
+      // Update the request in the database to confirmed status with pickup date
+      const pickupDateTime = format(newDate, 'yyyy-MM-dd');
+      const { error } = await supabase
+        .from('customer_requests')
+        .update({
+          status: 'confirmed',
+          pickup_date: pickupDateTime
+        })
+        .eq('id', requestId);
+
+      if (error) {
+        console.error('Error updating request status:', error);
+        toast({
+          title: "Fel",
+          description: "Kunde inte uppdatera ärendet",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, date: newDate, time: newTime, status: 'Bekräftad' as const }
+          : req
+      ));
+      
+      setIsAddPickupDialogOpen(false);
+      setSelectedRequestForScheduling(null);
+      
+      toast({
+        title: "Hämtning schemalagd",
+        description: "Förfrågan har bekräftats och lagts till i schemat."
+      });
+    } catch (error) {
+      console.error('Error scheduling request:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte schemalägga hämtningen",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleScheduleRequest = (request: Request) => {
