@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -62,6 +63,7 @@ interface StatusHistoryItem {
 }
 
 export const useDriverIntegration = () => {
+  const queryClient = useQueryClient();
   const [pickups, setPickups] = useState<PickupOrder[]>([]);
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
@@ -339,6 +341,11 @@ export const useDriverIntegration = () => {
           ? { ...pickup, status, driver_notes: notes }
           : pickup
       ));
+
+      // Invalidate all related queries to force refresh across all views
+      await queryClient.invalidateQueries({ queryKey: ['pickup-orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['customer-requests'] });
+      await queryClient.invalidateQueries({ queryKey: ['tenant-customers'] });
 
       // Also reload pickups to ensure we have the latest data
       if (driver?.driver_id) {

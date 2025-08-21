@@ -87,6 +87,18 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   }, [user?.tenant_id]);
 
+  // Refetch data when component becomes visible (when user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.tenant_id) {
+        fetchCustomerRequests();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.tenant_id]);
+
   const fetchDrivers = async () => {
     if (!user?.tenant_id) return;
     
