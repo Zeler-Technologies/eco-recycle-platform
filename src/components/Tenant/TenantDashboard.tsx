@@ -363,9 +363,10 @@ const TenantDashboard = () => {
                 ) : (
                   recentOrders.map((order, index) => {
                     const { vehicle, location } = formatOrderDisplay(order);
-                    const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.status);
+                    const hasDriver = order.driver_name && order.driver_name.trim() !== '';
+                    const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.status) || hasDriver;
                     return (
-                      <div key={order.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${isAssigned ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
+                      <div key={order.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-tenant-accent rounded-full">
                             <Car className="h-4 w-4 text-tenant-primary" />
@@ -377,7 +378,7 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                            {isAssigned && order.driver_name && (
+                            {hasDriver && (
                               <p className="text-sm font-medium text-green-700 mt-1">
                                 <strong>Förare: {order.driver_name}</strong>
                               </p>
@@ -385,8 +386,8 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(order.status)}>
-                            {order.status === 'pending' ? 'Ny' : 
+                          <Badge className={getStatusColor(hasDriver && order.status === 'pending' ? 'assigned' : order.status)}>
+                            {order.status === 'pending' ? (hasDriver ? 'Tilldelad' : 'Ny') : 
                              order.status === 'assigned' ? 'Tilldelad' :
                              order.status === 'in_progress' ? 'Pågående' :
                              order.status === 'completed' ? 'Klar' : 
@@ -478,10 +479,10 @@ const TenantDashboard = () => {
                 // Sort items - assigned/scheduled first
                 todaySchedule
                   .sort((a, b) => {
-                    const isAssignedA = ['assigned', 'scheduled', 'confirmed'].includes(a.status);
-                    const isAssignedB = ['assigned', 'scheduled', 'confirmed'].includes(b.status);
-                    if (isAssignedA && !isAssignedB) return -1;
-                    if (!isAssignedA && isAssignedB) return 1;
+                    const hasDriverA = a.driver_name && a.driver_name.trim() !== '';
+                    const hasDriverB = b.driver_name && b.driver_name.trim() !== '';
+                    if (hasDriverA && !hasDriverB) return -1;
+                    if (!hasDriverA && hasDriverB) return 1;
                     return 0;
                   })
                   .map((schedule, index) => {
@@ -492,10 +493,10 @@ const TenantDashboard = () => {
                     
                     const vehicle = `${schedule.car_brand} ${schedule.car_model}${schedule.car_year ? ` ${schedule.car_year}` : ''} (${formatRegistrationNumber(schedule.car_registration_number) || 'Ingen reg.nr'})`;
                     const location = schedule.pickup_address || 'Ej angivet';
-                    const isAssigned = ['assigned', 'scheduled', 'confirmed'].includes(schedule.status);
+                    const hasDriver = schedule.driver_name && schedule.driver_name.trim() !== '';
                     
                     return (
-                      <div key={schedule.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${isAssigned ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
+                      <div key={schedule.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-tenant-accent rounded-full">
                             <Car className="h-4 w-4 text-tenant-primary" />
@@ -507,16 +508,16 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                            {isAssigned && schedule.driver_name && (
+                            {hasDriver && (
                               <p className="text-sm font-medium text-green-700 mt-1">
-                                Förare: {schedule.driver_name}
+                                <strong>Förare: {schedule.driver_name}</strong>
                               </p>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(schedule.status)}>
-                            {schedule.status === 'pending' ? 'Ny' : 
+                          <Badge className={getStatusColor(hasDriver && schedule.status === 'pending' ? 'assigned' : schedule.status)}>
+                            {schedule.status === 'pending' ? (hasDriver ? 'Tilldelad' : 'Ny') : 
                              schedule.status === 'assigned' ? 'Tilldelad' :
                              schedule.status === 'in_progress' ? 'Pågående' :
                              schedule.status === 'completed' ? 'Klar' : 
