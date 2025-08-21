@@ -431,37 +431,69 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     setRescheduleConfirmOpen(true);
   };
 
-  const confirmReschedule = () => {
+  const confirmReschedule = async () => {
     if (!rescheduleData) return;
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
     const wasAvbokad = originalRequest?.status === 'Avbokad';
+    const newStatus = wasAvbokad ? 'pending' : originalRequest?.status; // Set to 'pending' if was cancelled, else keep current status
 
-    // Update the request with new date and time, and reset status to 'Förfrågan' if it was cancelled
-    setRequests(prev => prev.map(req => 
-      req.id === rescheduleData.requestId 
-        ? { 
-            ...req, 
-            date: rescheduleData.newDate, 
-            time: rescheduleData.newTime,
-            status: wasAvbokad ? 'Förfrågan' as const : req.status
-          }
-        : req
-    ));
+    try {
+      // Update the request in the database with new date/time and status
+      const pickupDateTime = format(rescheduleData.newDate, 'yyyy-MM-dd');
+      const { error } = await supabase
+        .from('customer_requests')
+        .update({
+          pickup_date: pickupDateTime,
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rescheduleData.requestId);
 
-    if (rescheduleData.sendSMS) {
-      const request = requests.find(r => r.id === rescheduleData.requestId);
-      if (request) {
+      if (error) {
+        console.error('Error updating customer request:', error);
         toast({
-          description: `SMS skickat till ${request?.customerName} om den nya tiden: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}`
+          title: "Fel",
+          description: "Kunde inte uppdatera hämtningen i databasen.",
+          variant: "destructive"
         });
+        return;
       }
-    }
 
-    toast({
-      title: wasAvbokad ? "Hämtning återaktiverad och omschemalagd" : "Hämtning omschemalagd",
-      description: `Ny tid: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}${wasAvbokad ? ' - Status ändrad till Förfrågan' : ''}`
-    });
+      // Update local state to reflect the changes
+      setRequests(prev => prev.map(req => 
+        req.id === rescheduleData.requestId 
+          ? { 
+              ...req, 
+              date: rescheduleData.newDate, 
+              time: rescheduleData.newTime,
+              status: wasAvbokad ? 'Förfrågan' as const : req.status
+            }
+          : req
+      ));
+
+      if (rescheduleData.sendSMS) {
+        const request = requests.find(r => r.id === rescheduleData.requestId);
+        if (request) {
+          toast({
+            description: `SMS skickat till ${request?.customerName} om den nya tiden: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}`
+          });
+        }
+      }
+
+      toast({
+        title: wasAvbokad ? "Hämtning återaktiverad och omschemalagd" : "Hämtning omschemalagd",
+        description: `Ny tid: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}${wasAvbokad ? ' - Status ändrad till Förfrågan' : ''}`
+      });
+
+    } catch (error) {
+      console.error('Error rescheduling request:', error);
+      toast({
+        title: "Fel",
+        description: "Ett fel uppstod vid omschemaläggning.",
+        variant: "destructive"
+      });
+    }
 
     setRescheduleConfirmOpen(false);
     setRescheduleData(null);
