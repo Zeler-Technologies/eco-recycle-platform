@@ -80,6 +80,7 @@ const TenantDashboard = () => {
         .select(`
           id,
           owner_name,
+          contact_phone,
           car_brand,
           car_model,
           car_year,
@@ -307,7 +308,7 @@ const TenantDashboard = () => {
                             <Car className="h-4 w-4 text-tenant-primary" />
                           </div>
                           <div>
-                            <h4 className="font-semibold">{order.id?.slice(0, 8)} - {order.owner_name}</h4>
+                            <h4 className="font-semibold">{order.owner_name} - {order.contact_phone || 'Inget telefonnummer'}</h4>
                             <p className="text-sm text-muted-foreground">{vehicle}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
