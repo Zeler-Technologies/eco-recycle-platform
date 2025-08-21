@@ -131,21 +131,21 @@ const PantaBilenDriverApp = () => {
   };
 
   // Debug: explicit handler for Start Pickup with detailed logs
-  const handleStartPickup = (pickupId) => {
+  const handleStartPickup = async (pickupId) => {
     try {
       console.log('🔴 BUTTON CLICKED - Start Pickup');
       console.log('🔴 Pickup ID:', pickupId);
       console.log('🔴 Selected pickup:', selectedPickup);
 
-      updatePickupStatusHook(pickupId, 'in_progress')
-        .then((result) => {
-          console.log('🟢 SUCCESS: updatePickupStatusHook resolved', result);
-        })
-        .catch((error) => {
-          console.error('🔴 ERROR from updatePickupStatusHook:', error);
-        });
-    } catch (e) {
-      console.error('🔴 UNEXPECTED ERROR in handleStartPickup:', e);
+      const result = await updatePickupStatusHook(pickupId, 'in_progress');
+      console.log('🟢 SUCCESS: updatePickupStatusHook resolved', result);
+      
+      if (result?.success) {
+        setShowDetailView(false);
+        // Hook should automatically refresh the list
+      }
+    } catch (error) {
+      console.error('🔴 ERROR from updatePickupStatusHook:', error);
     }
   };
   const handleSelfAssign = async (pickupId) => {

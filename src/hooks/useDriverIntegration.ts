@@ -536,12 +536,12 @@ export const useDriverIntegration = () => {
         throw new Error(`Failed to reject pickup: ${updateError.message}`);
       }
 
-      // Also update the customer request status to cancelled
+      // Also update the customer request status to rejected
       if (pickupOrder.customer_request_id) {
         const { error: requestError } = await supabase
           .from('customer_requests')
           .update({
-            status: 'cancelled',
+            status: 'rejected',
             updated_at: new Date().toISOString()
           })
           .eq('id', pickupOrder.customer_request_id);
