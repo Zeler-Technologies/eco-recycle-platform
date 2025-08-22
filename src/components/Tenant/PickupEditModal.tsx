@@ -104,9 +104,37 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         }
       }
 
-      // Assign driver if selected and not "none"
-      if (selectedDriverId && selectedDriverId !== 'none') {
-        // First, deactivate any existing assignments
+      // Handle driver assignment/unassignment
+      if (selectedDriverId === 'none') {
+        console.log('🔴 UNASSIGNING DRIVER');
+        
+        // UNASSIGN DRIVER CASE - Deactivate existing assignments
+        const { error: unassignError } = await supabase
+          .from('driver_assignments')
+          .update({ is_active: false })
+          .eq('customer_request_id', pickup.id)
+          .eq('is_active', true);
+
+        if (unassignError) {
+          console.error('Error unassigning driver:', unassignError);
+          throw unassignError;
+        }
+
+        // Update status back to 'scheduled' for self-assignment availability
+        const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+          pickup_id: pickup.id,
+          new_status: 'scheduled'
+        });
+
+        if (statusError) {
+          console.error('Error updating status to scheduled:', statusError);
+          throw statusError;
+        }
+
+      } else if (selectedDriverId) {
+        console.log('🔴 ASSIGNING DRIVER:', selectedDriverId);
+        
+        // ASSIGN DRIVER CASE - First deactivate any existing assignments
         await supabase
           .from('driver_assignments')
           .update({ is_active: false })
@@ -127,17 +155,17 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           console.error('Error assigning driver:', assignmentError);
           throw assignmentError;
         }
-      }
 
-      // Update status to scheduled using unified function
-      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: pickup.id,
-        new_status: 'scheduled'
-      });
+        // Update status to assigned
+        const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+          pickup_id: pickup.id,
+          new_status: 'assigned'
+        });
 
-      if (statusError) {
-        console.error('Error updating status:', statusError);
-        throw statusError;
+        if (statusError) {
+          console.error('Error updating status to assigned:', statusError);
+          throw statusError;
+        }
       }
 
       toast({
