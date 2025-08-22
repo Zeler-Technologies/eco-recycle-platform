@@ -203,6 +203,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         console.log('⏭️ NO DRIVER CHANGES NEEDED');
       }
 
+      console.log('✅ SAVE COMPLETED SUCCESSFULLY');
       toast({
         title: "Uppdaterat",
         description: "Hämtning har uppdaterats framgångsrikt"
@@ -211,13 +212,14 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error updating pickup:', error);
+      console.error('🔴 SAVE ERROR:', error);
       toast({
         title: "Fel",
         description: "Kunde inte uppdatera hämtningen",
         variant: "destructive"
       });
     } finally {
+      console.log('🔴 RESETTING LOADING STATE');
       setLoading(false);
     }
   };
