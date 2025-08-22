@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, User, DollarSign } from 'lucide-react';
+import { Calendar, Clock, User, DollarSign, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -237,93 +237,165 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Redigera hämtning</DialogTitle>
+          <DialogDescription>
+            Uppdatera information för {pickup.owner_name}
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Customer Info */}
-          <div className="bg-muted/30 p-3 rounded-lg">
-            <p className="font-semibold">{pickup.owner_name}</p>
-            <p className="text-sm text-muted-foreground">
-              {pickup.car_brand} {pickup.car_model} ({pickup.car_registration_number})
-            </p>
-            <p className="text-sm text-muted-foreground">{pickup.pickup_address}</p>
+          {/* Customer Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Kundinformation</h3>
+            
+            <div className="bg-muted/30 p-3 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Namn</p>
+                  <p className="font-semibold">{pickup.owner_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Telefon</p>
+                  <p className="font-medium">{pickup.contact_phone || 'Ej angivet'}</p>
+                </div>
+              </div>
+              
+              <div className="mt-3">
+                <p className="text-sm text-muted-foreground">Hämtadress</p>
+                <p className="font-medium">{pickup.pickup_address || 'Ej angivet'}</p>
+              </div>
+            </div>
           </div>
 
-          {/* Schedule Date */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Hämtningsdatum
-            </Label>
-            <Input
-              type="date"
-              value={scheduleDate}
-              onChange={(e) => setScheduleDate(e.target.value)}
-            />
+          {/* Car Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Bilinformation</h3>
+            
+            <div className="bg-muted/30 p-3 rounded-lg">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Märke</p>
+                  <p className="font-medium">{pickup.car_brand}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Modell</p>
+                  <p className="font-medium">{pickup.car_model}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">År</p>
+                  <p className="font-medium">{pickup.car_year || 'Ej angivet'}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mt-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Registreringsnummer</p>
+                  <p className="font-medium">{pickup.car_registration_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className="font-medium capitalize">{pickup.status}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Schedule Time */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Tid
-            </Label>
-            <Input
-              type="time"
-              value={scheduleTime}
-              onChange={(e) => setScheduleTime(e.target.value)}
-            />
+          {/* Schedule Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Schemaläggning</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Hämtningsdatum
+                </Label>
+                <Input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Tid
+                </Label>
+                <Input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Driver Assignment */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Förare
-            </Label>
-            <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Välj förare (valfritt)" />
-              </SelectTrigger>
-              <SelectContent className="bg-white z-50">
-                <SelectItem value="none">Ingen förare tilldelad</SelectItem>
-                {drivers.map((driver) => (
-                  <SelectItem key={driver.id} value={driver.id}>
-                    {driver.full_name} - {driver.driver_status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Förartilldelning</h3>
+            
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Förare
+              </Label>
+              <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Välj förare (valfritt)" />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  <SelectItem value="none">Ingen förare tilldelad</SelectItem>
+                  {drivers.map((driver) => (
+                    <SelectItem key={driver.id} value={driver.id}>
+                      {driver.full_name} ({driver.driver_status || 'offline'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Reimbursement */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Ersättning (kr)
-            </Label>
-            <Input
-              type="number"
-              value={reimbursement}
-              onChange={(e) => setReimbursement(e.target.value)}
-              placeholder="Ange ersättning"
-            />
+          {/* Pricing Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Värdering</h3>
+            
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Ersättning (kr)
+              </Label>
+              <Input
+                type="number"
+                value={reimbursement}
+                onChange={(e) => setReimbursement(e.target.value)}
+                placeholder="Ange ersättning"
+                className="bg-white"
+              />
+            </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+            >
               Avbryt
             </Button>
             <Button 
               onClick={handleSave} 
               disabled={loading} 
-              className="flex-1"
+              className="bg-tenant-primary hover:bg-tenant-primary/90"
             >
-              {loading ? 'Sparar...' : 'Spara'}
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Spara ändringar
             </Button>
           </div>
         </div>
