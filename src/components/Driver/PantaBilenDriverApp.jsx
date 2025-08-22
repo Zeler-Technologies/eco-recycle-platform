@@ -410,9 +410,30 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             <div className="text-lg font-bold text-gray-900">
               {pickup.car_registration_number || 'N/A'}
             </div>
-            <div className="flex gap-1">
-              <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
-              <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
+            <div className="flex gap-2 items-center">
+              {pickup.contact_phone && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(`tel:${pickup.contact_phone}`, '_self');
+                  }}
+                  className="text-green-600 hover:text-green-800 p-1 rounded"
+                  aria-label="Ring kund"
+                  title={`Ring ${pickup.contact_phone}`}
+                >
+                  📞
+                </button>
+              )}
+              <button
+                onClick={() => openPickupDetail(pickup)}
+                className="text-indigo-600 text-sm hover:text-indigo-800 font-medium px-2 py-1 rounded"
+              >
+                Visa detaljer
+              </button>
+              <div className="flex gap-1">
+                <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
+                <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
+              </div>
             </div>
           </div>
           
@@ -477,7 +498,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   const PickupList = () => {
     // Debug logging for pickup data
-    console.log('PickupList debug:', {
+     console.log('🔴 PICKUP CARD DEBUG:', {
       totalPickups: pickups.length,
       filteredPickups: filteredPickups.length,
       currentFilter,
@@ -486,7 +507,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
         id: p.id,
         status: p.status,
         assigned_driver_id: p.assigned_driver_id,
-        car_registration: p.car_registration_number
+        car_registration: p.car_registration_number,
+        contact_phone: p.contact_phone,
+        owner_name: p.owner_name
       }))
     });
 
@@ -589,7 +612,22 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               </div>
               <div className="flex flex-col py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-600 font-medium mb-1">Telefon</span>
-                <span className="text-sm text-gray-900 font-medium">{selectedPickup.contact_phone || 'Ej angivet'}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-900 font-medium">
+                    {selectedPickup.contact_phone || 'Ej angivet'}
+                  </span>
+                  {selectedPickup.contact_phone && (
+                    <button
+                      onClick={() => {
+                        window.open(`tel:${selectedPickup.contact_phone}`, '_self');
+                      }}
+                      className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                      aria-label="Ring kund"
+                    >
+                      📞 Ring
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-600 font-medium mb-1">{UI_LABELS.address}</span>
