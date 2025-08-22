@@ -108,113 +108,59 @@ export const useDriverIntegration = () => {
     }
   }, [session?.user?.id]);
 
-  // Load pickup orders for the driver (including unassigned)
+  // Load pickups using unified view
   const loadPickups = useCallback(async (driverId?: string) => {
     if (!driverId) return;
 
     try {
-      // Get assigned pickups for this driver
-      const { data: assignedPickups, error: assignedError } = await supabase
-        .from('pickup_orders')
-        .select(`
-          *,
-          customer_requests (
-            car_registration_number,
-            car_brand,
-            car_model,
-            car_year,
-            owner_name,
-            pickup_address
-          )
-        `)
-        .eq('assigned_driver_id', driverId)
+      console.log('🔄 Loading pickups for driver:', driverId);
+      
+      // Use unified view (bypass TypeScript warnings)
+      const { data, error } = await (supabase as any)
+        .from('v_pickup_status_unified')
+        .select('*')
+        .eq('driver_id', driverId)
         .order('created_at', { ascending: false });
 
-      if (assignedError) {
-        throw new Error(`Failed to load assigned pickups: ${assignedError.message}`);
+      if (error) {
+        console.error('❌ Error loading pickups:', error);
+        throw error;
       }
 
-      // Get the driver's tenant_id to load unassigned pickups
-      const { data: driverData, error: driverError } = await supabase
-        .from('drivers')
-        .select('tenant_id')
-        .eq('id', driverId)
-        .single();
-
-      if (driverError) {
-        console.warn('Failed to get driver tenant_id:', driverError.message);
-      }
-
-      let unassignedPickups = [];
+      console.log('✅ Unified pickup data loaded:', data);
       
-      // Only load unassigned pickups if we have a valid tenant_id
-      if (driverData?.tenant_id) {
-        const { data: unassignedData, error: unassignedError } = await supabase
-          .from('pickup_orders')
-          .select(`
-            *,
-            customer_requests (
-              car_registration_number,
-              car_brand,
-              car_model,
-              car_year,
-              owner_name,
-              pickup_address
-            )
-          `)
-          .is('assigned_driver_id', null)
-          .eq('tenant_id', driverData.tenant_id)
-          .order('created_at', { ascending: false });
-
-        if (unassignedError) {
-          console.warn('Failed to load unassigned pickups:', unassignedError.message);
-        } else {
-          unassignedPickups = unassignedData || [];
-        }
-      }
-
-      // Combine both datasets
-      const allPickups = [...(assignedPickups || []), ...unassignedPickups];
-
-      // Map the combined result to expected format and fix assigned_driver_id format
-      const mappedPickups: PickupOrder[] = allPickups?.map(pickup => {
-        // Fix the assigned_driver_id format - handle both direct values and wrapped objects
-        let assignedDriverId = pickup.assigned_driver_id;
-        if (assignedDriverId && typeof assignedDriverId === 'object' && assignedDriverId.value !== undefined) {
-          assignedDriverId = assignedDriverId.value === 'undefined' ? null : assignedDriverId.value;
-        }
-
-        return {
-          id: pickup.id,
-          pickup_id: pickup.id,
-          car_registration_number: pickup.customer_requests?.car_registration_number || '',
-          car_year: pickup.customer_requests?.car_year,
-          car_brand: pickup.customer_requests?.car_brand || '',
-          car_model: pickup.customer_requests?.car_model || '',
-          owner_name: pickup.customer_requests?.owner_name || '',
-          pickup_address: pickup.customer_requests?.pickup_address || '',
-          final_price: pickup.final_price,
-          status: pickup.status,
-          created_at: pickup.created_at,
-          vehicle_year: pickup.customer_requests?.car_year,
-          vehicle_make: pickup.customer_requests?.car_brand || '',
-          vehicle_model: pickup.customer_requests?.car_model || '',
-          fuel_type: 'gasoline', // Default value
-          pickup_distance: 0, // Default value
-          customer_name: pickup.customer_requests?.owner_name || '',
-          pickup_location: pickup.customer_requests?.pickup_address || '',
-          estimated_arrival: pickup.estimated_arrival,
-          scheduled_at: pickup.scheduled_at,
-          completion_notes: pickup.completion_photos?.join(', ') || '',
-          driver_notes: pickup.driver_notes,
-          assigned_driver_id: assignedDriverId // Use the cleaned value
-        };
-      }) || [];
-
-      setPickups(mappedPickups);
+      // Process and set the pickup data with unified fields
+      const processedPickups: PickupOrder[] = (data || []).map((pickup: any) => ({
+        id: pickup.pickup_order_id || pickup.id,
+        pickup_id: pickup.pickup_order_id || pickup.id,
+        car_registration_number: pickup.car_registration_number || '',
+        car_year: pickup.car_year,
+        car_brand: pickup.car_brand || '',
+        car_model: pickup.car_model || '',
+        owner_name: pickup.owner_name || '',
+        pickup_address: pickup.pickup_address || '',
+        final_price: pickup.final_price,
+        status: pickup.pickup_status, // Use pickup_status from unified view
+        created_at: pickup.created_at,
+        vehicle_year: pickup.car_year,
+        vehicle_make: pickup.car_brand || '',
+        vehicle_model: pickup.car_model || '',
+        fuel_type: 'gasoline',
+        pickup_distance: 0,
+        customer_name: pickup.owner_name || '',
+        pickup_location: pickup.pickup_address || '',
+        estimated_arrival: pickup.estimated_arrival,
+        scheduled_at: pickup.scheduled_at,
+        completion_notes: pickup.completion_photos?.join(', ') || '',
+        driver_notes: pickup.driver_notes,
+        assigned_driver_id: pickup.driver_id
+      }));
+      
+      console.log('✅ Processed pickups:', processedPickups);
+      setPickups(processedPickups);
 
     } catch (err) {
-      console.error('Error loading pickups:', err);
+      console.error('❌ Failed to load pickups:', err);
       setError(err instanceof Error ? err.message : 'Failed to load pickup orders');
     }
   }, []);
@@ -274,95 +220,29 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status with improved synchronization
+  // Update pickup status using unified database function
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
     console.log('📞 updatePickupStatus called with:', { pickupId, status, notes });
     
+    if (!driver?.driver_id) {
+      console.error('❌ No driver ID available');
+      throw new Error('Driver ID not available');
+    }
+
     try {
-      // Get customer request ID and assignment ID first
-      const { data: pickup, error: fetchError } = await supabase
-        .from('pickup_orders')
-        .select('customer_request_id')
-        .eq('id', pickupId)
-        .single();
-
-      if (fetchError) {
-        throw new Error(`Failed to get pickup order: ${fetchError.message}`);
+      // Use unified function (bypass TypeScript warnings)
+      const { data, error } = await (supabase as any).rpc('update_pickup_status_unified', {
+        pickup_id: pickupId,
+        new_status: status,
+        driver_notes_param: notes
+      });
+      
+      if (error) {
+        console.error('❌ Status update failed:', error);
+        throw error;
       }
-
-      // Get active driver assignment for this pickup
-      const { data: assignment, error: assignmentFetchError } = await supabase
-        .from('driver_assignments')
-        .select('id')
-        .eq('pickup_order_id', pickupId)
-        .eq('driver_id', driver?.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (assignmentFetchError) {
-        console.warn('Could not fetch driver assignment:', assignmentFetchError);
-      }
-
-      // STEP 1: Update pickup_orders
-      console.log('STEP 1: Updating pickup_orders...');
-      const { error: pickupError } = await supabase
-        .from('pickup_orders')
-        .update({ 
-          status,
-          driver_notes: notes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', pickupId);
-
-      if (pickupError) {
-        throw new Error(`STEP 1 ERROR: Failed to update pickup_orders: ${pickupError.message}`);
-      }
-      console.log('STEP 1 OK: pickup_orders updated');
-
-      // STEP 2: Update customer_requests
-      if (pickup.customer_request_id) {
-        console.log('STEP 2: Updating customer_requests...');
-        const { error: requestError } = await supabase
-          .from('customer_requests')
-          .update({
-            status: status === 'rejected' ? 'cancelled' : status,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', pickup.customer_request_id);
-
-        if (requestError) {
-          console.warn('STEP 2 WARN: Failed to update customer_requests', requestError);
-        } else {
-          console.log('STEP 2 OK: customer_requests updated');
-        }
-      }
-
-      // STEP 3: Update driver_assignments
-      if (assignment?.id) {
-        console.log('STEP 3: Updating driver_assignments...');
-        const assignmentStatus = status === 'rejected' ? 'canceled' : 
-                                status === 'in_progress' ? 'picked_up' :
-                                status === 'completed' ? 'completed' : 'scheduled';
-        
-        const { error: assignmentError } = await supabase
-          .from('driver_assignments')
-          .update({
-            status: assignmentStatus,
-            notes: notes || 'Status updated by driver',
-            ...(status === 'in_progress' && { started_at: new Date().toISOString() }),
-            ...(status === 'completed' && { completed_at: new Date().toISOString() }),
-            ...(status === 'rejected' && { is_active: false, completed_at: new Date().toISOString() })
-          })
-          .eq('id', assignment.id);
-
-        if (assignmentError) {
-          console.warn('STEP 3 WARN: Failed to update driver_assignments', assignmentError);
-        } else {
-          console.log('STEP 3 OK: driver_assignments updated');
-        }
-      }
-
-      console.log('✅ All status updates successful (or warnings only)');
+      
+      console.log('✅ Status updated successfully:', data);
 
       // Optimistic UI update
       setPickups(prev => prev.map(pickup => 
@@ -371,15 +251,13 @@ export const useDriverIntegration = () => {
           : pickup
       ));
 
+      // Refresh data after update
+      await loadPickups(driver.driver_id);
+      
       // Invalidate related queries to refresh other views
       await queryClient.invalidateQueries({ queryKey: ['pickup-orders'] });
       await queryClient.invalidateQueries({ queryKey: ['customer-requests'] });
       await queryClient.invalidateQueries({ queryKey: ['tenant-customers'] });
-
-      // Ensure latest data for driver list
-      if (driver?.driver_id) {
-        setTimeout(() => loadPickups(driver.driver_id), 100);
-      }
 
       return { success: true };
     } catch (err) {
@@ -730,6 +608,36 @@ export const useDriverIntegration = () => {
     };
   }, [driver?.driver_id, loadPickups]);
 
+  // Get available pickups for self-assignment
+  const getAvailablePickups = useCallback(async () => {
+    if (!driver?.tenant_id) {
+      console.log('❌ No tenant ID available');
+      return [];
+    }
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from('v_pickup_status_unified')
+        .select('*')
+        .eq('pickup_status', 'scheduled')
+        .eq('tenant_id', driver.tenant_id)
+        .is('driver_id', null);
+      
+      if (error) throw error;
+      console.log('✅ Available pickups loaded:', data);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Failed to load available pickups:', error);
+      return [];
+    }
+  }, [driver?.tenant_id]);
+
+  // Self-assign a pickup
+  const selfAssign = useCallback(async (pickupId: string) => {
+    console.log('🔄 Self-assigning pickup:', pickupId);
+    return updatePickupStatus(pickupId, 'assigned', 'Self-assigned by driver');
+  }, [updatePickupStatus]);
+
   return {
     pickups,
     driver,
@@ -748,6 +656,8 @@ export const useDriverIntegration = () => {
     calculateOrderPrice,
     updateOrderPricing,
     bulkCalculatePricing,
-    refreshData
+    refreshData,
+    getAvailablePickups,
+    selfAssign
   };
 };

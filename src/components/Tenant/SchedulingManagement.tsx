@@ -145,14 +145,17 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     
     try {
       setRequestsLoading(true);
-      const { data, error } = await supabase
-        .from('customer_requests')
+      console.log('🔄 Fetching pickups for tenant:', user.tenant_id);
+      
+      // Use unified view (bypass TypeScript warnings)
+      const { data, error } = await (supabase as any)
+        .from('v_pickup_status_unified')
         .select('*')
         .eq('tenant_id', user.tenant_id)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching customer requests:', error);
+        console.error('❌ Error fetching pickups:', error);
         toast({
           title: "Fel",
           description: "Kunde inte ladda kundförfrågningar",
@@ -161,32 +164,19 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Get driver assignments for all requests
-      let driverAssignments: any[] = [];
-      if (data && data.length > 0) {
-        const requestIds = data.map(req => req.id);
-        const { data: assignmentsData } = await supabase
-          .from('driver_assignments')
-          .select(`
-            customer_request_id,
-            driver_id,
-            drivers(full_name)
-          `)
-          .in('customer_request_id', requestIds)
-          .eq('is_active', true);
-        
-        driverAssignments = assignmentsData || [];
-      }
-
-      // Convert database format to component format
-      const formattedRequests: Request[] = (data || []).map(request => {
-        // Convert status from database to Swedish
+      console.log('✅ Unified pickups fetched:', data);
+      
+      // Convert unified view data to component format
+      const formattedRequests: Request[] = (data || []).map((item: any) => {
+        // Convert status from pickup_status to Swedish
         let status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
-        switch (request.status) {
+        switch (item.pickup_status) {
           case 'pending':
+          case 'customer_request':
             status = 'Förfrågan';
             break;
           case 'assigned':
+          case 'pickup_accepted':
           case 'in_progress':
             status = 'Bekräftad';
             break;
@@ -194,6 +184,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             status = 'Utförd';
             break;
           case 'cancelled':
+          case 'rejected':
             status = 'Avbokad';
             break;
           default:
@@ -201,27 +192,23 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         }
 
         // Use pickup_date if available, otherwise use created_at
-        const requestDate = request.pickup_date 
-          ? new Date(request.pickup_date)
-          : new Date(request.created_at);
-
-        // Find assigned driver
-        const assignment = driverAssignments.find(a => a.customer_request_id === request.id);
-        const assignedDriver = assignment?.drivers?.full_name || null;
+        const requestDate = item.pickup_date 
+          ? new Date(item.pickup_date)
+          : new Date(item.created_at);
 
         return {
-          id: request.id,
+          id: item.customer_request_id || item.id,
           date: requestDate,
           time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
-          customerName: request.owner_name || 'Okänd kund',
-          address: request.pickup_address || 'Ingen adress angiven',
-          phone: request.contact_phone || 'Inget telefonnummer',
-          carBrand: request.car_brand || 'Okänt märke',
-          carModel: request.car_model || 'Okänd modell',
-          registrationNumber: request.car_registration_number || 'Okänt reg.nr',
+          customerName: item.owner_name || 'Okänd kund',
+          address: item.pickup_address || 'Ingen adress angiven',
+          phone: item.contact_phone || 'Inget telefonnummer',
+          carBrand: item.car_brand || 'Okänt märke',
+          carModel: item.car_model || 'Okänd modell',
+          registrationNumber: item.car_registration_number || 'Okänt reg.nr',
           status,
-          notes: request.special_instructions,
-          assignedDriver
+          notes: item.special_instructions,
+          assignedDriver: item.driver_name || null
         };
       });
 
@@ -354,11 +341,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
   const handleCancelRequest = async (requestId: string) => {
     try {
-      // Update database
-      const { error } = await supabase
-        .from('customer_requests')
-        .update({ status: 'cancelled' })
-        .eq('id', requestId);
+      // Use unified function (bypass TypeScript warnings)
+      const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
+        pickup_id: requestId,
+        new_status: 'cancelled'
+      });
 
       if (error) {
         console.error('Error cancelling request:', error);
@@ -379,6 +366,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         title: "Förfrågan avbokad",
         description: "Förfrågan har avbokats framgångsrikt",
       });
+      
+      // Refresh data
+      fetchCustomerRequests();
     } catch (error) {
       console.error('Error cancelling request:', error);
       toast({
@@ -396,15 +386,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
   const handleAddRequestToSchedule = async (requestId: string, newDate: Date, newTime: string) => {
     try {
-      // Update the request in the database to confirmed status with pickup date
-      const pickupDateTime = format(newDate, 'yyyy-MM-dd');
-      const { error } = await supabase
-        .from('customer_requests')
-        .update({
-          status: 'confirmed',
-          pickup_date: pickupDateTime
-        })
-        .eq('id', requestId);
+      // Use unified function (bypass TypeScript warnings)
+      const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
+        pickup_id: requestId,
+        new_status: 'scheduled'
+      });
 
       if (error) {
         console.error('Error updating request status:', error);
@@ -414,6 +400,17 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           variant: "destructive"
         });
         return;
+      }
+
+      // Update pickup date separately if needed
+      const pickupDateTime = format(newDate, 'yyyy-MM-dd');
+      const { error: dateError } = await supabase
+        .from('pickup_orders')
+        .update({ scheduled_at: pickupDateTime })
+        .eq('customer_request_id', requestId);
+
+      if (dateError) {
+        console.error('Error updating pickup date:', dateError);
       }
 
       // Update local state
@@ -430,6 +427,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         title: "Hämtning schemalagd",
         description: "Förfrågan har bekräftats och lagts till i schemat."
       });
+      
+      // Refresh data
+      fetchCustomerRequests();
     } catch (error) {
       console.error('Error scheduling request:', error);
       toast({
