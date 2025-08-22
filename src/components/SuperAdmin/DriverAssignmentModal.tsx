@@ -50,38 +50,32 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
   const fetchAvailableRequests = async () => {
     setLoading(true);
     setErrorMsg(null);
-    console.info('Fetching available pickup requests using unified view', { driverId: driver.id });
+    console.info('Fetching available pickup requests for driver assignment', { driverId: driver.id });
     try {
-      console.log('🟢 FETCHING FROM UNIFIED VIEW FOR DRIVER:', driver.id);
-      
-      // Use unified view to get available pickups
+      // First try to query customer_requests with driver assignments to find unassigned requests
       const { data, error } = await supabase
-        .from('v_pickup_status_unified')
+        .from('customer_requests')
         .select(`
-          pickup_order_id,
-          customer_request_id,
-          car_registration_number,
-          car_brand,
-          car_model,
+          id,
           owner_name,
           pickup_address,
-          pickup_status,
-          status_display_text,
-          scheduled_pickup_date,
-          driver_id,
-          driver_name,
+          car_brand,
+          car_model,
+          status,
+          contact_phone,
+          car_registration_number,
           tenant_id,
-          contact_phone
+          created_at
         `)
-        .eq('pickup_status', 'scheduled')
-        .is('driver_id', null)
-        .order('scheduled_pickup_date', { ascending: true })
+        .eq('status', 'pending')
+        .eq('tenant_id', 1) // Filter by current tenant
+        .order('created_at', { ascending: false })
         .limit(50);
 
-      console.log('🟢 UNIFIED VIEW RESULTS:', { data, error });
+      console.log('🟢 CUSTOMER REQUESTS RESULTS:', { data, error });
 
       if (error) {
-        console.error('🔴 UNIFIED VIEW QUERY ERROR:', {
+        console.error('🔴 CUSTOMER REQUESTS QUERY ERROR:', {
           message: error.message,
           code: error.code,
           details: error.details,
@@ -90,32 +84,54 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
         throw error;
       }
 
-      const mapped = (data ?? []).map((d: any) => ({
-        pickup_order_id: d.pickup_order_id,
-        customer_request_id: d.customer_request_id,
-        owner_name: d.owner_name || 'Unknown',
-        pickup_address: d.pickup_address || 'Unknown',
-        car_brand: d.car_brand || 'Unknown',
-        car_model: d.car_model || 'Unknown',
-        status: d.pickup_status,
-        quote_amount: d.quote_amount,
-        contact_phone: d.contact_phone,
-        car_registration: d.car_registration_number
-      }));
+      // Filter out requests that already have active driver assignments
+      const requestIds = (data ?? []).map(d => d.id);
+      
+      if (requestIds.length === 0) {
+        setAvailableRequests([]);
+        return;
+      }
 
-      console.log('🟢 MAPPED UNIFIED REQUESTS:', mapped);
+      // Check for existing assignments
+      const { data: assignments, error: assignmentError } = await supabase
+        .from('driver_assignments')
+        .select('customer_request_id')
+        .in('customer_request_id', requestIds)
+        .eq('is_active', true);
+
+      if (assignmentError) {
+        console.warn('Could not check assignments, showing all requests:', assignmentError);
+      }
+
+      const assignedRequestIds = new Set(assignments?.map(a => a.customer_request_id) || []);
+
+      const mapped = (data ?? [])
+        .filter(d => !assignedRequestIds.has(d.id))
+        .map((d: any) => ({
+          pickup_order_id: d.id, // Use customer_request id as pickup_order_id for now
+          customer_request_id: d.id,
+          owner_name: d.owner_name || 'Unknown Customer',
+          pickup_address: d.pickup_address || 'Address TBD',
+          car_brand: d.car_brand || 'Unknown',
+          car_model: d.car_model || 'Unknown',
+          status: d.status,
+          contact_phone: d.contact_phone,
+          car_registration: d.car_registration_number
+        }));
+
+      console.log('🟢 MAPPED AVAILABLE REQUESTS:', mapped);
       setAvailableRequests(mapped);
     } catch (error) {
       const msg =
         (error as any)?.message ||
         (error as any)?.error?.message ||
         (typeof error === 'string' ? error : 'Unknown error');
-      console.error('Failed to load available requests via RPC', {
+      console.error('Failed to load available requests', {
         driverId: driver.id,
         errorMessage: msg,
         error,
       });
-      setErrorMsg('Kunde inte ladda lediga uppdrag. Behörighet eller nätverksfel.');
+      setErrorMsg('Could not load available requests. Please try again.');
       toast.error('Failed to load available requests');
     } finally {
       setLoading(false);
