@@ -215,51 +215,7 @@ const PantaBilenDriverApp = () => {
   };
 
   if (loading) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 🚨 EMERGENCY DEBUG SECTION */}
-      <div style={{
-        background: 'red', 
-        color: 'white', 
-        padding: '20px', 
-        margin: '20px',
-        border: '5px solid yellow',
-        zIndex: 9999,
-        position: 'relative'
-      }}>
-        <h1>🚨 EMERGENCY DEBUG SECTION 🚨</h1>
-        <p>If you can see this, React is rendering</p>
-        
-        <button 
-          onClick={() => {
-            alert('BASIC REACT ONCLICK WORKS!');
-            console.log('🔴 EMERGENCY: Basic button clicked at', new Date());
-          }}
-          style={{background: 'green', color: 'white', padding: '10px', margin: '5px'}}
-        >
-          TEST BASIC ONCLICK
-        </button>
-        
-        <button 
-          onClick={() => {
-            console.log('🔴 EMERGENCY: Console test button clicked');
-            console.log('🔴 EMERGENCY: Component state check');
-          }}
-          style={{background: 'blue', color: 'white', padding: '10px', margin: '5px'}}
-        >
-          TEST CONSOLE
-        </button>
-
-        <button 
-          onClick={() => {
-            setEmergencyTest('CLICKED_AT_' + Date.now());
-            console.log('🔴 EMERGENCY: State test clicked');
-          }}
-          style={{background: 'purple', color: 'white', padding: '10px', margin: '5px'}}
-        >
-          STATE TEST: {emergencyTest}
-        </button>
-      </div>
+    return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
@@ -784,6 +740,50 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   return (
     <div className="min-h-screen bg-gray-100" onClick={() => setShowPickupActions(null)}>
+      {/* 🚨 EMERGENCY DEBUG SECTION */}
+      <div style={{
+        background: 'red', 
+        color: 'white', 
+        padding: '20px', 
+        margin: '20px',
+        border: '5px solid yellow',
+        zIndex: 9999,
+        position: 'relative'
+      }}>
+        <h1>🚨 EMERGENCY DEBUG SECTION 🚨</h1>
+        <p>If you can see this, React is rendering</p>
+        
+        <button 
+          onClick={() => {
+            alert('BASIC REACT ONCLICK WORKS!');
+            console.log('🔴 EMERGENCY: Basic button clicked at', new Date());
+          }}
+          style={{background: 'green', color: 'white', padding: '10px', margin: '5px'}}
+        >
+          TEST BASIC ONCLICK
+        </button>
+        
+        <button 
+          onClick={() => {
+            console.log('🔴 EMERGENCY: Console test button clicked');
+            console.log('🔴 EMERGENCY: Component state check');
+          }}
+          style={{background: 'blue', color: 'white', padding: '10px', margin: '5px'}}
+        >
+          TEST CONSOLE
+        </button>
+
+        <button 
+          onClick={() => {
+            setEmergencyTest('CLICKED_AT_' + Date.now());
+            console.log('🔴 EMERGENCY: State test clicked');
+          }}
+          style={{background: 'purple', color: 'white', padding: '10px', margin: '5px'}}
+        >
+          STATE TEST: {emergencyTest}
+        </button>
+      </div>
+      
       <AuthStatusBar />
       <StatusBar />
       <AppHeader />
