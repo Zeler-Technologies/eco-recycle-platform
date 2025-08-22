@@ -408,7 +408,10 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
         >
           <div className="flex justify-between items-center mb-2">
             <div className="text-lg font-bold text-gray-900">
-              {pickup.car_registration_number || 'N/A'}
+              {pickup.car_registration_number ? 
+                `${pickup.car_registration_number.slice(0, 3)} ${pickup.car_registration_number.slice(3)}` : 
+                'N/A'
+              }
             </div>
             <div className="flex gap-2 items-center">
               {pickup.contact_phone && (
