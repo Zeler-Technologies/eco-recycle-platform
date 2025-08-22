@@ -54,7 +54,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     try {
       console.log('🔴 FETCHING REAL CUSTOMER REQUESTS FOR DRIVER:', driver.id);
       
-      // Get real pending customer requests that don't have drivers assigned
+      // Get real pending customer requests that don't have active driver assignments
       const { data, error } = await supabase
         .from('customer_requests')
         .select(`
@@ -69,7 +69,11 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
           car_registration_number
         `)
         .in('status', ['pending'])
-        .is('driver_id', null)
+        .not('id', 'in', `(
+          SELECT customer_request_id 
+          FROM driver_assignments 
+          WHERE is_active = true AND customer_request_id IS NOT NULL
+        )`)
         .order('created_at', { ascending: true })
         .limit(50);
 
