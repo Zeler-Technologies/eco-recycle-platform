@@ -69,21 +69,27 @@ const PantaBilenDriverApp = () => {
     console.log('🔴 Initial props:', { currentDriver, pickups, user });
   }, []);
 
-  // 🔴 FIXED BUTTON HANDLER - DIRECT STATE UPDATE
+  // 🚨 ENHANCED BUTTON HANDLER WITH FULL DEBUG
   const handleActionToggle = (pickupId) => {
-    console.log('🔴 BUTTON HANDLER CALLED');
-    console.log('🔴 Pickup ID received:', pickupId);
-    console.log('🔴 Current showPickupActions:', showPickupActions);
+    console.log('🚨 === HANDLER START ===');
+    console.log('🚨 HANDLER - pickupId received:', pickupId);
+    console.log('🚨 HANDLER - pickupId type:', typeof pickupId);
+    console.log('🚨 HANDLER - Current showPickupActions:', showPickupActions);
+    console.log('🚨 HANDLER - showPickupActions type:', typeof showPickupActions);
+    console.log('🚨 HANDLER - Equality check:', showPickupActions === pickupId);
     
-    // Force state update to exact value
     const newState = showPickupActions === pickupId ? null : pickupId;
-    console.log('🔴 Setting state to:', newState);
-    setShowPickupActions(newState);
+    console.log('🚨 HANDLER - New state calculated:', newState);
+    console.log('🚨 HANDLER - About to set state...');
     
-    // Force re-render by logging after state set
-    setTimeout(() => {
-      console.log('🔴 State after update:', showPickupActions);
-    }, 100);
+    try {
+      setShowPickupActions(newState);
+      console.log('🚨 HANDLER - State set successfully');
+    } catch (error) {
+      console.error('🚨 HANDLER - ERROR setting state:', error);
+    }
+    
+    console.log('🚨 === HANDLER END ===');
   };
 
   // 🔴 TRACK STATE CHANGES
@@ -467,15 +473,35 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                 <>
                   <button
                     onClick={(e) => {
+                      console.log('🚨 === BUTTON DEBUG START ===');
+                      console.log('🚨 EVENT:', e.type, e.target);
+                      console.log('🚨 EVENT PREVENTED:', e.defaultPrevented);
+                      
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('🔴 BUTTON PHYSICALLY CLICKED');
-                      console.log('🔴 Pickup object:', pickup);
-                      console.log('🔴 Pickup.pickup_order_id:', pickup.pickup_order_id);
-                      console.log('🔴 Pickup.id:', pickup.id);
+                      
+                      console.log('🚨 PICKUP OBJECT FULL:', JSON.stringify(pickup, null, 2));
+                      console.log('🚨 PICKUP.pickup_order_id:', pickup.pickup_order_id);
+                      console.log('🚨 PICKUP.id:', pickup.id);
+                      console.log('🚨 PICKUP assigned_driver_id:', pickup.assigned_driver_id);
+                      console.log('🚨 CURRENT DRIVER ID:', currentDriver?.id);
+                      
                       const targetId = pickup.pickup_order_id || pickup.id;
-                      console.log('🔴 Target ID for handler:', targetId);
-                      handleActionToggle(targetId);
+                      console.log('🚨 TARGET ID CALCULATED:', targetId);
+                      console.log('🚨 TARGET ID TYPE:', typeof targetId);
+                      
+                      console.log('🚨 CURRENT showPickupActions:', showPickupActions);
+                      console.log('🚨 CURRENT showPickupActions TYPE:', typeof showPickupActions);
+                      console.log('🚨 COMPARISON RESULT:', showPickupActions === targetId);
+                      
+                      console.log('🚨 ABOUT TO CALL handleActionToggle');
+                      try {
+                        handleActionToggle(targetId);
+                        console.log('🚨 handleActionToggle CALL COMPLETED');
+                      } catch (error) {
+                        console.error('🚨 ERROR IN handleActionToggle:', error);
+                      }
+                      console.log('🚨 === BUTTON DEBUG END ===');
                     }}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
                       isUnassigned 
