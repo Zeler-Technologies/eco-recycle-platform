@@ -456,7 +456,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {(isUnassigned || isAssignedToCurrentDriver) && (
                 <>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       console.log('🔴 BUTTON PHYSICALLY CLICKED');
                       console.log('🔴 Pickup object:', pickup);
                       console.log('🔴 Pickup.pickup_order_id:', pickup.pickup_order_id);
@@ -470,6 +472,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                         ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                         : 'bg-orange-600 hover:bg-orange-700 text-white'
                     }`}
+                    style={{zIndex: 1000}}
                   >
                     {isUnassigned ? 'Hantera uppdrag' : 'Hantera tilldelat'}
                     <span className={`transition-transform ${showActions ? 'rotate-180' : ''}`}>▼</span>
