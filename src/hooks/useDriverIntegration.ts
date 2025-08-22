@@ -110,8 +110,12 @@ export const useDriverIntegration = () => {
 
   // Load pickups using unified view
   const loadPickups = useCallback(async (driverId?: string) => {
-    if (!driverId) return;
+    if (!driverId) {
+      console.log('🔴 LOAD PICKUPS - NO DRIVER ID PROVIDED');
+      return;
+    }
 
+    console.log('🔴 LOADING PICKUPS - START for driver:', driverId);
     try {
       console.log('🔄 Loading pickups for driver:', driverId);
       
@@ -122,8 +126,12 @@ export const useDriverIntegration = () => {
         .eq('driver_id', driverId)
         .order('created_at', { ascending: false });
 
+      console.log('🔴 SUPABASE RESULT:', { data, error });
+      console.log('🔴 DATA COUNT:', data?.length);
+
       if (error) {
         console.error('❌ Error loading pickups:', error);
+        console.error('🔴 LOAD PICKUPS ERROR:', error);
         throw error;
       }
 

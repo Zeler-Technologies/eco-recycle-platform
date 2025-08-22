@@ -36,6 +36,16 @@ const PantaBilenDriverApp = () => {
     historyLoading,
   } = useDriverIntegration();
 
+  // 🔴 CRITICAL DEBUG LOGGING
+  console.log('🔴 DRIVER APP RENDER:');
+  console.log('🔴 User:', user);
+  console.log('🔴 Current Driver:', currentDriver);
+  console.log('🔴 Pickups:', pickups);
+  console.log('🔴 Pickups count:', pickups?.length);
+  console.log('🔴 Loading:', loading);
+  console.log('🔴 Error:', error);
+  console.log('🔴 Show pickup actions:', showPickupActions);
+
   // Local state
   const [currentView, setCurrentView] = useState('list');
   const [currentFilter, setCurrentFilter] = useState('all');
@@ -45,6 +55,20 @@ const PantaBilenDriverApp = () => {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showStatusHistory, setShowStatusHistory] = useState(false);
   const [showPickupActions, setShowPickupActions] = useState(null); // For pickup action dropdown
+
+  // 🔴 COMPONENT MOUNT DEBUG
+  useEffect(() => {
+    console.log('🔴 DRIVER APP MOUNTED');
+    console.log('🔴 Initial props:', { currentDriver, pickups, user });
+  }, []);
+
+  // 🔴 DEBUG BUTTON HANDLER
+  const handleActionToggle = (pickupId) => {
+    console.log('🔴 BUTTON CLICKED:', pickupId);
+    console.log('🔴 Current showActions:', showPickupActions);
+    console.log('🔴 Setting to:', showPickupActions === pickupId ? null : pickupId);
+    setShowPickupActions(showPickupActions === pickupId ? null : pickupId);
+  };
 
   // Memoized filtered and sorted pickups
   const filteredPickups = useMemo(() => {
@@ -410,7 +434,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {(isUnassigned || isAssignedToCurrentDriver) && (
                 <>
                   <button
-                    onClick={() => setShowPickupActions(showActions ? null : pickup.id)}
+                    onClick={() => handleActionToggle(pickup.id)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
                       isUnassigned 
                         ? 'bg-blue-600 hover:bg-blue-700 text-white' 
