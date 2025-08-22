@@ -37,7 +37,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
     if (pickup && isOpen) {
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
-      setSelectedDriverId('');
+      setSelectedDriverId('none');
       fetchDrivers();
     }
   }, [pickup, isOpen]);
@@ -86,8 +86,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         }
       }
 
-      // Assign driver if selected
-      if (selectedDriverId) {
+      // Assign driver if selected and not "none"
+      if (selectedDriverId && selectedDriverId !== 'none') {
         // First, deactivate any existing assignments
         await supabase
           .from('driver_assignments')
@@ -196,8 +196,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Välj förare (valfritt)" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Ingen förare tilldelad</SelectItem>
+              <SelectContent className="bg-white z-50">
+                <SelectItem value="none">Ingen förare tilldelad</SelectItem>
                 {drivers.map((driver) => (
                   <SelectItem key={driver.id} value={driver.id}>
                     {driver.full_name} - {driver.driver_status}
