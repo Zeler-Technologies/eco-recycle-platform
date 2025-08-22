@@ -401,20 +401,58 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     const isUnassigned = pickup.assigned_driver_id === null || pickup.assigned_driver_id === undefined;
     const isMenuVisible = showPickupActions === pickupId;
 
-    // Debug logging for this specific pickup
-    console.log(`🚨 PICKUP CARD DEBUG [${pickupId}]:`, {
-      pickupId,
-      showPickupActions,
-      isMenuVisible,
-      currentDriverId: currentDriver?.id,
-      assignedDriverId: pickup.assigned_driver_id,
-      isAssignedToCurrentDriver,
-      isUnassigned,
-      shouldShowButton: (isUnassigned || isAssignedToCurrentDriver)
+    // 🔴 CRITICAL ID DEBUG - Add this logging:
+    console.log('🔴 PICKUP CARD ID CHECK:', {
+      car_registration: pickup.car_registration_number,
+      pickup_order_id: pickup.pickup_order_id,
+      pickup_id: pickup.id,
+      calculated_pickupId: pickupId,
+      showPickupActions_state: showPickupActions,
+      isMenuVisible: isMenuVisible,
+      ID_MATCH: pickupId === showPickupActions,
+      id_types: {
+        pickupId: typeof pickupId,
+        showPickupActions: typeof showPickupActions
+      }
     });
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
+        {/* 🔴 FORCE MENU VISIBLE FOR TESTING */}
+        {isMenuVisible && (
+          <div style={{
+            background: 'yellow',
+            border: '5px solid red', 
+            padding: '20px',
+            position: 'fixed',
+            top: '100px',
+            left: '100px', 
+            zIndex: 999999,
+            width: '300px'
+          }}>
+            <h2>✅ MENU FOUND!</h2>
+            <p>Pickup ID: {pickupId}</p>
+            <p>State ID: {showPickupActions}</p>
+            <p>Match: {pickupId === showPickupActions ? 'YES' : 'NO'}</p>
+          </div>
+        )}
+        
+        {/* Also add UNCONDITIONAL menu for testing */}
+        {showPickupActions === "c8094517-8be7-4740-88ab-23c254711d86" && (
+          <div style={{
+            background: 'green',
+            border: '5px solid black',
+            padding: '20px', 
+            position: 'fixed',
+            top: '300px',
+            left: '100px',
+            zIndex: 999999
+          }}>
+            <h2>🟢 HARDCODED MENU TEST!</h2>
+            <p>This should appear if state contains the exact ID</p>
+          </div>
+        )}
+
         <div 
           className={`p-5 border-l-4`} 
           style={{ borderLeftColor: getStatusColor(pickup.status) }}
