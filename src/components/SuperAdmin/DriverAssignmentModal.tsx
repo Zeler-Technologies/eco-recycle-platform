@@ -49,10 +49,13 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     setErrorMsg(null);
     console.info('Fetching available pickup requests', { driverId: driver.id });
     try {
-      const { data, error } = await supabase.rpc('list_available_pickup_requests', {
-        p_driver_id: driver.id, // Ensure we pass the driver.id (not auth_user_id)
-        p_limit: 50,
-      });
+      const { data, error } = await (supabase as any)
+        .from('v_pickup_status_unified')
+        .select('pickup_order_id, customer_request_id, owner_name, pickup_address, car_brand, car_model, pickup_status, assigned_driver_id, created_at')
+        .is('assigned_driver_id', null)
+        .in('pickup_status', ['pending','scheduled'])
+        .order('created_at', { ascending: true })
+        .limit(50);
 
       if (error) throw error;
 
@@ -63,7 +66,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
         pickup_address: d.pickup_address,
         car_brand: d.car_brand,
         car_model: d.car_model,
-        status: d.status,
+        status: d.pickup_status,
       }));
 
       setAvailableRequests(mapped);
@@ -88,26 +91,57 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     setAssignmentLoading(pickupOrderId);
     console.info('Assigning driver to pickup', { driverId: driver.id, pickupOrderId });
     try {
-      const { data, error } = await supabase.rpc('assign_driver_to_pickup', {
-        p_driver_id: driver.id, // Ensure driver.id is used
-        p_pickup_order_id: pickupOrderId,
-        p_notes: null,
-      });
+      // 1) Deactivate existing active assignments for this pickup
+      const { error: deactivateError } = await supabase
+        .from('driver_assignments')
+        .update({ is_active: false })
+        .eq('pickup_order_id', pickupOrderId)
+        .eq('is_active', true);
+      if (deactivateError) throw deactivateError;
 
-      if (error) throw error;
+      // 2) Create new assignment
+      const { error: insertError } = await supabase
+        .from('driver_assignments')
+        .insert({
+          driver_id: driver.id,
+          pickup_order_id: pickupOrderId,
+          role: assignmentRole,
+          assignment_type: 'pickup',
+          status: 'scheduled',
+          is_active: true,
+        });
+      if (insertError) throw insertError;
+
+      // 3) Get related customer_request_id to update status via unified function
+      const { data: po, error: fetchError } = await supabase
+        .from('pickup_orders')
+        .select('customer_request_id')
+        .eq('id', pickupOrderId)
+        .single();
+      if (fetchError) throw fetchError;
+
+      // 4) Update status to 'assigned' using the unified RPC
+      const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
+        pickup_id: po?.customer_request_id ?? pickupOrderId,
+        new_status: 'assigned',
+        driver_notes_param: `Assigned to ${driver.full_name}`,
+        completion_photos_param: null,
+      });
+      if (statusError) throw statusError;
 
       toast.success('Driver assigned successfully');
       onSuccess();
     } catch (error) {
-      const msg =
-        (error as any)?.message ||
-        (error as any)?.error?.message ||
-        (typeof error === 'string' ? error : 'Unknown error');
-      console.error('Failed to assign driver via RPC', {
+      const e: any = error;
+      const msg = e?.message || e?.error?.message || (typeof error === 'string' ? error : 'Unknown error');
+      console.error('Failed to assign driver (direct ops)', {
         driverId: driver.id,
         pickupOrderId,
-        errorMessage: msg,
-        error,
+        code: e?.code,
+        details: e?.details,
+        hint: e?.hint,
+        message: msg,
+        error: e,
       });
       toast.error('Failed to assign driver');
     } finally {
