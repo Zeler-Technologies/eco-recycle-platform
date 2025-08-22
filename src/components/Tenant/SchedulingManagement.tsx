@@ -499,6 +499,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
     const wasAvbokad = originalRequest?.status === 'Avbokad';
+    // Use proper status values that match the database constraint
     const newStatus = wasAvbokad ? 'pending' : originalRequest?.status;
 
     console.log('🔄 RESCHEDULE DEBUG:', {
