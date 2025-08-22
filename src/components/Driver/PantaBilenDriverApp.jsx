@@ -69,18 +69,21 @@ const PantaBilenDriverApp = () => {
     console.log('🔴 Initial props:', { currentDriver, pickups, user });
   }, []);
 
-  // 🔴 DEBUG BUTTON HANDLER - COMPREHENSIVE
+  // 🔴 FIXED BUTTON HANDLER - DIRECT STATE UPDATE
   const handleActionToggle = (pickupId) => {
     console.log('🔴 BUTTON HANDLER CALLED');
     console.log('🔴 Pickup ID received:', pickupId);
-    console.log('🔴 Pickup ID type:', typeof pickupId);
     console.log('🔴 Current showPickupActions:', showPickupActions);
-    console.log('🔴 Comparison result:', showPickupActions === pickupId);
-    console.log('🔴 Setting state to:', showPickupActions === pickupId ? null : pickupId);
     
-    setShowPickupActions(showPickupActions === pickupId ? null : pickupId);
+    // Force state update to exact value
+    const newState = showPickupActions === pickupId ? null : pickupId;
+    console.log('🔴 Setting state to:', newState);
+    setShowPickupActions(newState);
     
-    console.log('🔴 State set complete');
+    // Force re-render by logging after state set
+    setTimeout(() => {
+      console.log('🔴 State after update:', showPickupActions);
+    }, 100);
   };
 
   // 🔴 TRACK STATE CHANGES
