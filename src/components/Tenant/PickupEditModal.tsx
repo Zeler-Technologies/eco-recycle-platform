@@ -38,62 +38,29 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       console.log('🔴 MODAL OPENED WITH PICKUP:', pickup);
       console.log('🔴 PICKUP.DRIVER_ID:', pickup?.driver_id);
       console.log('🔴 TYPEOF DRIVER_ID:', typeof pickup?.driver_id);
-      console.log('🔴 PICKUP.ASSIGNED_DRIVER_ID:', pickup?.assigned_driver_id);
       console.log('🔴 SELECTED_DRIVER_ID STATE:', selectedDriverId);
       
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
+      
+      // Set driver ID directly from pickup data
+      if (pickup.driver_id) {
+        console.log('🟢 SETTING DRIVER ID FROM PICKUP:', pickup.driver_id);
+        setSelectedDriverId(pickup.driver_id);
+      } else {
+        console.log('🔴 NO DRIVER ID IN PICKUP, SETTING TO NONE');
+        setSelectedDriverId('none');
+      }
+      
       fetchDrivers();
-      // Check for existing driver assignment
-      fetchCurrentDriverAssignment();
     }
   }, [pickup, isOpen]);
 
-  const fetchCurrentDriverAssignment = async () => {
-    try {
-      // First check if pickup already has driver info from unified view
-      if (pickup.driver_name && pickup.driver_name !== 'Ingen förare tilldelad') {
-        console.log('🟢 DRIVER NAME FOUND:', pickup.driver_name);
-        // Find driver by name in the drivers list we'll fetch
-        const { data: drivers, error } = await supabase
-          .from('drivers')
-          .select('id, full_name')
-          .eq('tenant_id', pickup.tenant_id)
-          .eq('is_active', true);
-
-        if (!error && drivers) {
-          const matchingDriver = drivers.find(d => d.full_name === pickup.driver_name);
-          if (matchingDriver) {
-            console.log('🟢 FOUND MATCHING DRIVER:', matchingDriver);
-            setSelectedDriverId(matchingDriver.id);
-            return;
-          }
-        }
-      }
-
-      // Fallback to checking driver_assignments table
-      const { data: assignment, error } = await supabase
-        .from('driver_assignments')
-        .select('driver_id')
-        .eq('customer_request_id', pickup.id)
-        .eq('is_active', true)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error fetching current assignment:', error);
-        setSelectedDriverId('none');
-        return;
-      }
-
-      setSelectedDriverId(assignment?.driver_id || 'none');
-    } catch (error) {
-      console.error('Error fetching current assignment:', error);
-      setSelectedDriverId('none');
-    }
-  };
+  // Removed fetchCurrentDriverAssignment - no longer needed as we get driver_id directly from parent
 
   const fetchDrivers = async () => {
     try {
+      console.log('🔴 FETCHING DRIVERS FOR TENANT:', pickup.tenant_id);
       const { data, error } = await supabase
         .from('drivers')
         .select('id, full_name, phone_number, driver_status')
@@ -101,6 +68,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         .eq('is_active', true);
 
       if (error) throw error;
+      console.log('🔴 DRIVERS FETCHED:', data);
       setDrivers(data || []);
     } catch (error) {
       console.error('Error fetching drivers:', error);

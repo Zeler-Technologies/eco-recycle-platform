@@ -102,24 +102,29 @@ const TenantDashboard = () => {
       // Get driver assignments for recent orders
       if (ordersData && ordersData.length > 0) {
         const orderIds = ordersData.map(order => order.id);
+        console.log('🔴 FETCHING DRIVER ASSIGNMENTS FOR ORDERS:', orderIds);
         const { data: orderAssignmentsData } = await supabase
           .from('driver_assignments')
           .select(`
             customer_request_id,
             driver_id,
-            drivers(full_name)
+            drivers(id, full_name)
           `)
           .in('customer_request_id', orderIds)
           .eq('is_active', true);
+        console.log('🔴 ORDER ASSIGNMENTS RESULT:', orderAssignmentsData);
 
         // Combine orders with driver info
         const ordersWithDrivers = ordersData.map(order => {
           const assignment = orderAssignmentsData?.find(a => a.customer_request_id === order.id);
           return {
             ...order,
-            driver_name: assignment?.drivers?.full_name || null
+            driver_id: assignment?.driver_id || null,
+            driver_name: assignment?.drivers?.full_name || null,
+            tenant_id: user?.tenant_id
           };
         });
+        console.log('🔴 ORDERS WITH DRIVER DATA:', ordersWithDrivers);
         setRecentOrders(ordersWithDrivers);
       } else {
         setRecentOrders([]);
@@ -164,7 +169,7 @@ const TenantDashboard = () => {
           .select(`
             customer_request_id,
             driver_id,
-            drivers(full_name)
+            drivers(id, full_name)
           `)
           .in('customer_request_id', requestIds)
           .eq('is_active', true);
@@ -174,7 +179,9 @@ const TenantDashboard = () => {
           const assignment = assignmentsData?.find(a => a.customer_request_id === item.id);
           return {
             ...item,
-            driver_name: assignment?.drivers?.full_name || null
+            driver_id: assignment?.driver_id || null,
+            driver_name: assignment?.drivers?.full_name || null,
+            tenant_id: user?.tenant_id
           };
         });
         setTodaySchedule(transformedData);
@@ -376,6 +383,8 @@ const TenantDashboard = () => {
                         key={order.id || index} 
                         className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors cursor-pointer ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
                         onClick={() => {
+                          console.log('🔴 OPENING MODAL WITH ORDER:', order);
+                          console.log('🔴 HAS DRIVER_ID:', !!order?.driver_id);
                           setSelectedPickup(order);
                           setShowEditModal(true);
                         }}
