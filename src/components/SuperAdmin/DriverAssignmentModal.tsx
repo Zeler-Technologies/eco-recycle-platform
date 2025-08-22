@@ -49,26 +49,53 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     setErrorMsg(null);
     console.info('Fetching available pickup requests', { driverId: driver.id });
     try {
-      const { data, error } = await (supabase as any)
-        .from('v_pickup_status_unified')
-        .select('pickup_order_id, customer_request_id, owner_name, pickup_address, car_brand, car_model, pickup_status, assigned_driver_id, created_at')
+      console.log('🔴 FETCHING AVAILABLE REQUESTS FOR DRIVER:', driver.id);
+      
+      // Use direct pickup_orders query with joins - more reliable than view
+      const { data, error } = await supabase
+        .from('pickup_orders')
+        .select(`
+          id,
+          customer_request_id,
+          scheduled_pickup_date,
+          assigned_driver_id,
+          status,
+          customer_requests!inner(
+            owner_name,
+            pickup_address,
+            car_brand,
+            car_model,
+            status
+          )
+        `)
         .is('assigned_driver_id', null)
-        .in('pickup_status', ['pending','scheduled'])
+        .in('status', ['pending', 'scheduled'])
         .order('created_at', { ascending: true })
         .limit(50);
 
-      if (error) throw error;
+      console.log('🔴 QUERY RESULT:', { data, error });
+
+      if (error) {
+        console.error('🔴 QUERY ERROR DETAILS:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
 
       const mapped = (data ?? []).map((d: any) => ({
-        pickup_order_id: d.pickup_order_id,
+        pickup_order_id: d.id,
         customer_request_id: d.customer_request_id,
-        owner_name: d.owner_name,
-        pickup_address: d.pickup_address,
-        car_brand: d.car_brand,
-        car_model: d.car_model,
-        status: d.pickup_status,
+        owner_name: d.customer_requests?.owner_name || 'Unknown',
+        pickup_address: d.customer_requests?.pickup_address || 'Unknown',
+        car_brand: d.customer_requests?.car_brand || 'Unknown',
+        car_model: d.customer_requests?.car_model || 'Unknown',
+        status: d.status,
       }));
 
+      console.log('🔴 MAPPED REQUESTS:', mapped);
       setAvailableRequests(mapped);
     } catch (error) {
       const msg =
