@@ -66,14 +66,14 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
           status,
           quote_amount,
           contact_phone,
-          car_registration_number
+          car_registration_number,
+          driver_assignments!left (
+            id,
+            is_active
+          )
         `)
-        .in('status', ['pending'])
-        .not('id', 'in', `(
-          SELECT customer_request_id 
-          FROM driver_assignments 
-          WHERE is_active = true AND customer_request_id IS NOT NULL
-        )`)
+        .eq('status', 'pending')
+        .is('driver_assignments.id', null)
         .order('created_at', { ascending: true })
         .limit(50);
 
