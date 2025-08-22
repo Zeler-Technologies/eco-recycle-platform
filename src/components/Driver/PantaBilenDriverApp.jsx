@@ -50,8 +50,8 @@ const PantaBilenDriverApp = () => {
   const [showStatusHistory, setShowStatusHistory] = useState(false);
   const [showPickupActions, setShowPickupActions] = useState(null); // For pickup action dropdown
   
-  // 🚨 EMERGENCY STATE TEST
-  const [emergencyTest, setEmergencyTest] = useState('NOT_CLICKED');
+  // 🚨 ULTRA SIMPLE TEST - Emergency bypass
+  const [simpleTest, setSimpleTest] = useState(false);
 
   // 🔴 CRITICAL DEBUG LOGGING (after state declarations)
   console.log('🔴 DRIVER APP RENDER:');
@@ -728,6 +728,45 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* 🔴 ULTRA SIMPLE TEST - Add this FIRST */}
+      <div style={{background: 'purple', color: 'white', padding: '20px', margin: '20px'}}>
+        <h1>🔴 ULTRA SIMPLE BYPASS TEST</h1>
+        <p>simpleTest state: {simpleTest ? 'TRUE' : 'FALSE'}</p>
+        
+        <button 
+          onClick={() => {
+            console.log('🔴 SIMPLE TEST - Setting to true');
+            setSimpleTest(true);
+          }}
+          style={{background: 'green', padding: '10px', margin: '5px'}}
+        >
+          SET TRUE
+        </button>
+        
+        <button 
+          onClick={() => {
+            console.log('🔴 SIMPLE TEST - Setting to false'); 
+            setSimpleTest(false);
+          }}
+          style={{background: 'red', padding: '10px', margin: '5px'}}
+        >
+          SET FALSE
+        </button>
+        
+        {simpleTest && (
+          <div style={{
+            background: 'yellow', 
+            border: '10px solid red', 
+            padding: '30px',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            marginTop: '20px'
+          }}>
+            ✅ SIMPLE TEST MENU VISIBLE!
+          </div>
+        )}
+      </div>
+
       {/* EMERGENCY ISOLATION TEST - Add at top of return statement */}
       <div style={{padding: '20px', background: 'blue', color: 'white', margin: '20px', zIndex: 99999}}>
         <h2>🔴 STATE TEST</h2>
