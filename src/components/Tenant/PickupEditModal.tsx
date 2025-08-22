@@ -137,7 +137,9 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           console.log('🔴 UPDATING STATUS TO SCHEDULED...');
           const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
             pickup_id: pickup.id,
-            new_status: 'scheduled'
+            new_status: 'scheduled',
+            driver_notes_param: 'Driver unassigned - available for self-assignment',
+            completion_photos_param: null
           });
 
           if (statusError) {
@@ -188,7 +190,9 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           console.log('🔴 UPDATING STATUS TO ASSIGNED...');
           const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
             pickup_id: pickup.id,
-            new_status: 'assigned'
+            new_status: 'assigned',
+            driver_notes_param: 'Driver assigned via admin modal',
+            completion_photos_param: null
           });
 
           if (statusError) {
