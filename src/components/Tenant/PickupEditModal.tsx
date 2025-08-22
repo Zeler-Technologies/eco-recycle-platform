@@ -37,10 +37,33 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
     if (pickup && isOpen) {
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
-      setSelectedDriverId('none');
       fetchDrivers();
+      // Check for existing driver assignment
+      fetchCurrentDriverAssignment();
     }
   }, [pickup, isOpen]);
+
+  const fetchCurrentDriverAssignment = async () => {
+    try {
+      const { data: assignment, error } = await supabase
+        .from('driver_assignments')
+        .select('driver_id')
+        .eq('customer_request_id', pickup.id)
+        .eq('is_active', true)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error fetching current assignment:', error);
+        setSelectedDriverId('none');
+        return;
+      }
+
+      setSelectedDriverId(assignment?.driver_id || 'none');
+    } catch (error) {
+      console.error('Error fetching current assignment:', error);
+      setSelectedDriverId('none');
+    }
+  };
 
   const fetchDrivers = async () => {
     try {
