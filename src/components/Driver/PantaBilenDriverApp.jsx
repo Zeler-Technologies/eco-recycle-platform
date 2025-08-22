@@ -62,13 +62,24 @@ const PantaBilenDriverApp = () => {
     console.log('🔴 Initial props:', { currentDriver, pickups, user });
   }, []);
 
-  // 🔴 DEBUG BUTTON HANDLER
+  // 🔴 DEBUG BUTTON HANDLER - COMPREHENSIVE
   const handleActionToggle = (pickupId) => {
-    console.log('🔴 BUTTON CLICKED:', pickupId);
-    console.log('🔴 Current showActions:', showPickupActions);
-    console.log('🔴 Setting to:', showPickupActions === pickupId ? null : pickupId);
+    console.log('🔴 BUTTON HANDLER CALLED');
+    console.log('🔴 Pickup ID received:', pickupId);
+    console.log('🔴 Pickup ID type:', typeof pickupId);
+    console.log('🔴 Current showPickupActions:', showPickupActions);
+    console.log('🔴 Comparison result:', showPickupActions === pickupId);
+    console.log('🔴 Setting state to:', showPickupActions === pickupId ? null : pickupId);
+    
     setShowPickupActions(showPickupActions === pickupId ? null : pickupId);
+    
+    console.log('🔴 State set complete');
   };
+
+  // 🔴 TRACK STATE CHANGES
+  useEffect(() => {
+    console.log('🔴 STATE CHANGED - showPickupActions:', showPickupActions);
+  }, [showPickupActions]);
 
   // Memoized filtered and sorted pickups
   const filteredPickups = useMemo(() => {
@@ -445,7 +456,15 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {(isUnassigned || isAssignedToCurrentDriver) && (
                 <>
                   <button
-                    onClick={() => handleActionToggle(pickupId)}
+                    onClick={() => {
+                      console.log('🔴 BUTTON PHYSICALLY CLICKED');
+                      console.log('🔴 Pickup object:', pickup);
+                      console.log('🔴 Pickup.pickup_order_id:', pickup.pickup_order_id);
+                      console.log('🔴 Pickup.id:', pickup.id);
+                      const targetId = pickup.pickup_order_id || pickup.id;
+                      console.log('🔴 Target ID for handler:', targetId);
+                      handleActionToggle(targetId);
+                    }}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
                       isUnassigned 
                         ? 'bg-blue-600 hover:bg-blue-700 text-white' 
@@ -456,44 +475,51 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                     <span className={`transition-transform ${showActions ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                   
-                  {showActions && (
-                    <div className="absolute right-0 top-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-48 z-50">
-                      <div className="py-2">
-                        {isUnassigned && (
+                  {(() => {
+                    const pickupId = pickup.pickup_order_id || pickup.id;
+                    const showActions = showPickupActions === pickupId;
+                    console.log('🔴 RENDER CHECK - Pickup:', pickupId, 'showPickupActions:', showPickupActions, 'Show:', showActions);
+                    
+                    return showActions && (
+                      <div className="absolute right-0 top-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-48 z-50" style={{border: '2px solid red', background: 'yellow'}}>
+                        <div className="py-2">
+                          <p style={{color: 'red', fontWeight: 'bold', padding: '10px'}}>MENU VISIBLE FOR: {pickupId}</p>
+                          {isUnassigned && (
+                            <button
+                              onClick={() => {
+                                handleSelfAssign(pickup.id);
+                                setShowPickupActions(null);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 text-green-700 font-medium flex items-center gap-2"
+                            >
+                              <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                              Välj detta uppdrag
+                            </button>
+                          )}
+                          
+                          {isAssignedToCurrentDriver && (
+                            <button
+                              onClick={() => {
+                                handleRejectPickup(pickup.id);
+                                setShowPickupActions(null);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-700 font-medium flex items-center gap-2"
+                            >
+                              <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                              Avvisa uppdrag
+                            </button>
+                          )}
+                          
                           <button
-                            onClick={() => {
-                              handleSelfAssign(pickup.id);
-                              setShowPickupActions(null);
-                            }}
-                            className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 text-green-700 font-medium flex items-center gap-2"
+                            onClick={() => setShowPickupActions(null)}
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-600 border-t border-gray-100"
                           >
-                            <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                            Välj detta uppdrag
+                            Avbryt
                           </button>
-                        )}
-                        
-                        {isAssignedToCurrentDriver && (
-                          <button
-                            onClick={() => {
-                              handleRejectPickup(pickup.id);
-                              setShowPickupActions(null);
-                            }}
-                            className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-700 font-medium flex items-center gap-2"
-                          >
-                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                            Avvisa uppdrag
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => setShowPickupActions(null)}
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-600 border-t border-gray-100"
-                        >
-                          Avbryt
-                        </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </>
               )}
             </div>
