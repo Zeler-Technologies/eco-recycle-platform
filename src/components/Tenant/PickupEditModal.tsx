@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,15 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [reimbursement, setReimbursement] = useState('');
+  
+  // Editable customer and car information
+  const [ownerName, setOwnerName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [carBrand, setCarBrand] = useState('');
+  const [carModel, setCarModel] = useState('');
+  const [carYear, setCarYear] = useState('');
+  const [carRegistration, setCarRegistration] = useState('');
 
   // Load initial data when pickup changes
   useEffect(() => {
@@ -41,6 +51,15 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
+      
+      // Initialize editable fields
+      setOwnerName(pickup.owner_name || '');
+      setContactPhone(pickup.contact_phone || '');
+      setPickupAddress(pickup.pickup_address || '');
+      setCarBrand(pickup.car_brand || '');
+      setCarModel(pickup.car_model || '');
+      setCarYear(pickup.car_year?.toString() || '');
+      setCarRegistration(pickup.car_registration_number || '');
       
       // Set driver ID directly from pickup data
       if (pickup.driver_id) {
@@ -57,6 +76,13 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       setSelectedDriverId('none');
       setScheduleDate('');
       setReimbursement('');
+      setOwnerName('');
+      setContactPhone('');
+      setPickupAddress('');
+      setCarBrand('');
+      setCarModel('');
+      setCarYear('');
+      setCarRegistration('');
       setLoading(false);
     }
   }, [pickup, isOpen]);
@@ -99,23 +125,27 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       }
       console.log('✅ PICKUP DATE UPDATED');
 
-      // Update reimbursement in customer_requests
-      console.log('🔴 CHECKING REIMBURSEMENT UPDATE...');
-      if (reimbursement && parseFloat(reimbursement) !== pickup.quote_amount) {
-        console.log('🔴 UPDATING REIMBURSEMENT...');
-        const { error: reimbursementError } = await supabase
-          .from('customer_requests')
-          .update({ quote_amount: parseFloat(reimbursement) })
-          .eq('id', pickup.id);
+      // Update customer and car information in customer_requests
+      console.log('🔴 UPDATING CUSTOMER REQUEST INFO...');
+      const { error: customerRequestError } = await supabase
+        .from('customer_requests')
+        .update({
+          owner_name: ownerName,
+          contact_phone: contactPhone,
+          pickup_address: pickupAddress,
+          car_brand: carBrand,
+          car_model: carModel,
+          car_year: carYear ? parseInt(carYear) : null,
+          car_registration_number: carRegistration,
+          quote_amount: reimbursement ? parseFloat(reimbursement) : null
+        })
+        .eq('id', pickup.id);
 
-        if (reimbursementError) {
-          console.error('🔴 ERROR UPDATING REIMBURSEMENT:', reimbursementError);
-          throw reimbursementError;
-        }
-        console.log('✅ REIMBURSEMENT UPDATED');
-      } else {
-        console.log('⏭️ SKIPPING REIMBURSEMENT UPDATE');
+      if (customerRequestError) {
+        console.error('🔴 ERROR UPDATING CUSTOMER REQUEST:', customerRequestError);
+        throw customerRequestError;
       }
+      console.log('✅ CUSTOMER REQUEST UPDATED');
 
       // Handle driver assignment/unassignment
       console.log('🔴 HANDLING DRIVER ASSIGNMENT, selectedDriverId:', selectedDriverId);
@@ -250,22 +280,39 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Kundinformation</h3>
             
-            <div className="bg-muted/30 p-3 rounded-lg">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Namn</p>
-                  <p className="font-semibold">{pickup.owner_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Telefon</p>
-                  <p className="font-medium">{pickup.contact_phone || 'Ej angivet'}</p>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="owner_name">Namn</Label>
+                <Input
+                  id="owner_name"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  placeholder="För- och efternamn"
+                  className="bg-white"
+                />
               </div>
               
-              <div className="mt-3">
-                <p className="text-sm text-muted-foreground">Hämtadress</p>
-                <p className="font-medium">{pickup.pickup_address || 'Ej angivet'}</p>
+              <div className="space-y-2">
+                <Label htmlFor="contact_phone">Telefon</Label>
+                <Input
+                  id="contact_phone"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="08-123 45 67"
+                  className="bg-white"
+                />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pickup_address">Hämtadress</Label>
+              <Input
+                id="pickup_address"
+                value={pickupAddress}
+                onChange={(e) => setPickupAddress(e.target.value)}
+                placeholder="Gata, postnummer, ort"
+                className="bg-white"
+              />
             </div>
           </div>
 
@@ -273,29 +320,57 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Bilinformation</h3>
             
-            <div className="bg-muted/30 p-3 rounded-lg">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Märke</p>
-                  <p className="font-medium">{pickup.car_brand}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Modell</p>
-                  <p className="font-medium">{pickup.car_model}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">År</p>
-                  <p className="font-medium">{pickup.car_year || 'Ej angivet'}</p>
-                </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="car_brand">Märke</Label>
+                <Input
+                  id="car_brand"
+                  value={carBrand}
+                  onChange={(e) => setCarBrand(e.target.value)}
+                  placeholder="Volvo"
+                  className="bg-white"
+                />
               </div>
               
-              <div className="grid grid-cols-2 gap-4 mt-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Registreringsnummer</p>
-                  <p className="font-medium">{pickup.car_registration_number}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
+              <div className="space-y-2">
+                <Label htmlFor="car_model">Modell</Label>
+                <Input
+                  id="car_model"
+                  value={carModel}
+                  onChange={(e) => setCarModel(e.target.value)}
+                  placeholder="V70"
+                  className="bg-white"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="car_year">År</Label>
+                <Input
+                  id="car_year"
+                  type="number"
+                  value={carYear}
+                  onChange={(e) => setCarYear(e.target.value)}
+                  placeholder="2010"
+                  className="bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="car_registration">Registreringsnummer</Label>
+                <Input
+                  id="car_registration"
+                  value={carRegistration}
+                  onChange={(e) => setCarRegistration(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  className="bg-white"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <div className="p-2 bg-muted/30 rounded-md">
                   <p className="font-medium capitalize">{pickup.status}</p>
                 </div>
               </div>
@@ -389,14 +464,35 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
             >
               Avbryt
             </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={loading} 
-              className="bg-tenant-primary hover:bg-tenant-primary/90"
-            >
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Spara ändringar
-            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  disabled={loading} 
+                  className="bg-tenant-primary hover:bg-tenant-primary/90"
+                >
+                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Spara ändringar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Är du säker allt är rätt? Alla ändringar kommer att sparas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleSave}
+                    className="bg-tenant-primary hover:bg-tenant-primary/90"
+                  >
+                    Ok
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </DialogContent>
