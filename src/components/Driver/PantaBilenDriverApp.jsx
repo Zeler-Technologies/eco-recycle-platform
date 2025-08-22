@@ -401,6 +401,18 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     const isUnassigned = pickup.assigned_driver_id === null || pickup.assigned_driver_id === undefined;
     const isMenuVisible = showPickupActions === pickupId;
 
+    // Debug logging for this specific pickup
+    console.log(`🚨 PICKUP CARD DEBUG [${pickupId}]:`, {
+      pickupId,
+      showPickupActions,
+      isMenuVisible,
+      currentDriverId: currentDriver?.id,
+      assignedDriverId: pickup.assigned_driver_id,
+      isAssignedToCurrentDriver,
+      isUnassigned,
+      shouldShowButton: (isUnassigned || isAssignedToCurrentDriver)
+    });
+
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
         <div 
