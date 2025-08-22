@@ -716,6 +716,31 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* EMERGENCY ISOLATION TEST - Add at top of return statement */}
+      <div style={{padding: '20px', background: 'blue', color: 'white', margin: '20px', zIndex: 99999}}>
+        <h2>🔴 STATE TEST</h2>
+        <p>Current showPickupActions: {JSON.stringify(showPickupActions)}</p>
+        
+        <button 
+          onClick={() => setShowPickupActions('test-123')}
+          style={{background: 'green', color: 'white', padding: '10px', margin: '5px'}}
+        >
+          SET TEST STATE
+        </button>
+        
+        <button 
+          onClick={() => setShowPickupActions(null)}
+          style={{background: 'red', color: 'white', padding: '10px', margin: '5px'}}
+        >
+          CLEAR STATE
+        </button>
+        
+        {showPickupActions === 'test-123' && (
+          <div style={{background: 'yellow', border: '5px solid red', padding: '20px', position: 'relative', zIndex: 99999}}>
+            <h1>✅ STATE MANAGEMENT WORKS!</h1>
+          </div>
+        )}
+      </div>
       
       <AuthStatusBar />
       <StatusBar />
