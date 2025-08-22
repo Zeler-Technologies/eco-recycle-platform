@@ -33,7 +33,9 @@ interface Props {
 }
 
 interface Request {
-  id: string;
+  id: string; // This will be pickup_order_id
+  pickupOrderId: string;
+  customerRequestId: string;
   date: Date;
   time: string;
   customerName: string;
@@ -197,7 +199,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           : new Date(item.created_at);
 
         return {
-          id: item.customer_request_id || item.pickup_order_id,
+          id: item.pickup_order_id || item.customer_request_id, // Use pickup_order_id as primary
+          pickupOrderId: item.pickup_order_id,
+          customerRequestId: item.customer_request_id,
           date: requestDate,
           time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
           customerName: item.owner_name || 'Okänd kund',
@@ -263,20 +267,23 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Save driver assignment to database
-      const { error } = await supabase
+      const pickupOrderId = currentRequest?.pickupOrderId || requestId;
+
+      // Create driver assignment using pickup_order_id
+      const { error: assignmentError } = await supabase
         .from('driver_assignments')
         .insert({
-          customer_request_id: requestId,
+          pickup_order_id: pickupOrderId,
           driver_id: driverId,
-          is_active: true,
+          status: 'scheduled',
           assigned_at: new Date().toISOString(),
+          is_active: true,
           assignment_type: 'pickup',
           role: 'primary'
         });
 
-      if (error) {
-        console.error('Error assigning driver:', error);
+      if (assignmentError) {
+        console.error('Error creating assignment:', assignmentError);
         toast({
           title: "Fel",
           description: "Kunde inte tilldela föraren",
@@ -285,12 +292,26 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === requestId 
-          ? { ...req, assignedDriver: drivers.find(d => d.id === driverId)?.name }
-          : req
-      ));
+      // Update pickup status using unified function
+      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+        pickup_id: pickupOrderId,
+        new_status: 'assigned',
+        driver_notes_param: 'Assigned via admin interface',
+        completion_photos_param: null
+      });
+
+      if (statusError) {
+        console.error('Error updating status:', statusError);
+        toast({
+          title: "Fel",
+          description: "Kunde inte uppdatera status",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Refresh data to show changes
+      await fetchCustomerRequests();
 
       toast({
         title: "Förare tilldelad",
@@ -341,10 +362,15 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
   const handleCancelRequest = async (requestId: string) => {
     try {
-      // Use unified function (bypass TypeScript warnings)
+      const currentRequest = requests.find(req => req.id === requestId);
+      const pickupOrderId = currentRequest?.pickupOrderId || requestId;
+
+      // Use unified function to cancel pickup
       const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: requestId,
-        new_status: 'cancelled'
+        pickup_id: pickupOrderId,
+        new_status: 'cancelled',
+        driver_notes_param: 'Cancelled by admin',
+        completion_photos_param: null
       });
 
       if (error) {
@@ -357,18 +383,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === requestId ? { ...req, status: 'Avbokad' as const } : req
-      ));
-
       toast({
         title: "Förfrågan avbokad",
         description: "Förfrågan har avbokats framgångsrikt",
       });
       
       // Refresh data
-      fetchCustomerRequests();
+      await fetchCustomerRequests();
     } catch (error) {
       console.error('Error cancelling request:', error);
       toast({
@@ -388,12 +409,18 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     try {
       console.log('🔄 Scheduling pickup:', { requestId, newDate, newTime });
       
-      // Update pickup date in pickup_orders table using correct field name
+      const currentRequest = requests.find(req => req.id === requestId);
+      const pickupOrderId = currentRequest?.pickupOrderId || requestId;
+      
+      // Update pickup date using pickup_order_id
       const pickupDateTime = format(newDate, 'yyyy-MM-dd');
       const { error: dateError } = await supabase
         .from('pickup_orders')
-        .update({ scheduled_pickup_date: pickupDateTime })
-        .eq('customer_request_id', requestId);
+        .update({ 
+          scheduled_pickup_date: pickupDateTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pickupOrderId);
 
       if (dateError) {
         console.error('❌ Error updating pickup date:', dateError);
@@ -409,8 +436,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       // Use unified function to update status
       const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: requestId,
-        new_status: 'scheduled'
+        pickup_id: pickupOrderId,
+        new_status: 'scheduled',
+        driver_notes_param: `Scheduled by admin for ${pickupDateTime}`,
+        completion_photos_param: null
       });
 
       if (error) {
@@ -424,13 +453,6 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       }
 
       console.log('✅ Status updated successfully');
-
-      // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === requestId 
-          ? { ...req, date: newDate, time: newTime, status: 'Bekräftad' as const }
-          : req
-      ));
       
       setIsAddPickupDialogOpen(false);
       setSelectedRequestForScheduling(null);
@@ -499,15 +521,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
     const wasAvbokad = originalRequest?.status === 'Avbokad';
-    // Use proper status values that match the database constraint
-    const newStatus = wasAvbokad ? 'pending' : originalRequest?.status;
+    const pickupOrderId = originalRequest?.pickupOrderId || rescheduleData.requestId;
 
     console.log('🔄 RESCHEDULE DEBUG:', {
       requestId: rescheduleData.requestId,
+      pickupOrderId,
       originalRequest: originalRequest,
       originalStatus: originalRequest?.status,
       wasAvbokad,
-      newStatus,
       newDate: rescheduleData.newDate,
       newTime: rescheduleData.newTime
     });
@@ -515,85 +536,48 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     try {
       const pickupDateTime = format(rescheduleData.newDate, 'yyyy-MM-dd');
       
-      console.log('🔄 ABOUT TO UPDATE DATABASE with:', {
-        pickup_date: pickupDateTime,
-        status: newStatus,
-        requestId: rescheduleData.requestId,
-        table: 'customer_requests'
-      });
-
-      console.log('🔄 STARTING SUPABASE UPDATE...');
-      const updateResult = await supabase
-        .from('customer_requests')
+      console.log('🔄 UPDATING PICKUP DATE...');
+      // Update scheduled pickup date
+      const { error: dateError } = await supabase
+        .from('pickup_orders')
         .update({
-          pickup_date: pickupDateTime,
-          status: newStatus,
+          scheduled_pickup_date: pickupDateTime,
           updated_at: new Date().toISOString()
         })
-        .eq('id', rescheduleData.requestId)
-        .select();
+        .eq('id', pickupOrderId);
 
-      console.log('🔄 SUPABASE UPDATE RESULT:', updateResult);
-
-      if (updateResult.error) {
-        console.error('❌ Database update error:', updateResult.error);
-        console.error('❌ Error details:', JSON.stringify(updateResult.error, null, 2));
+      if (dateError) {
+        console.error('❌ Error updating pickup date:', dateError);
         toast({
           title: "Fel",
-          description: `Database error: ${updateResult.error.message}`,
+          description: "Kunde inte uppdatera hämtningsdatum",
           variant: "destructive"
         });
         return;
       }
 
-      console.log('✅ Database update successful:', updateResult.data);
+      console.log('✅ Pickup date updated successfully');
 
-      // Check for pickup_orders
-      console.log('🔄 CHECKING FOR PICKUP ORDERS...');
-      const pickupOrderQuery = await supabase
-        .from('pickup_orders')
-        .select('id, status')
-        .eq('customer_request_id', rescheduleData.requestId);
+      // Update status using unified function
+      const newStatus = wasAvbokad ? 'pending' : 'scheduled';
+      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+        pickup_id: pickupOrderId,
+        new_status: newStatus,
+        driver_notes_param: `Rescheduled by admin to ${pickupDateTime}${wasAvbokad ? ' - Reactivated from cancelled' : ''}`,
+        completion_photos_param: null
+      });
 
-      console.log('🔄 PICKUP ORDER QUERY RESULT:', pickupOrderQuery);
-
-      if (pickupOrderQuery.data && pickupOrderQuery.data.length > 0) {
-        console.log('🔄 Found related pickup_orders:', pickupOrderQuery.data);
-        
-        const pickupUpdateResult = await supabase
-          .from('pickup_orders')
-          .update({
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('customer_request_id', rescheduleData.requestId)
-          .select();
-
-        console.log('🔄 PICKUP ORDER UPDATE RESULT:', pickupUpdateResult);
-
-        if (pickupUpdateResult.error) {
-          console.error('❌ Pickup order update error:', pickupUpdateResult.error);
-        } else {
-          console.log('✅ Pickup orders updated successfully:', pickupUpdateResult.data);
-        }
+      if (statusError) {
+        console.error('❌ Error updating status:', statusError);
+        toast({
+          title: "Fel",
+          description: "Kunde inte uppdatera status",
+          variant: "destructive"
+        });
+        return;
       }
 
-      // Update local state
-      console.log('🔄 UPDATING LOCAL STATE...');
-      setRequests(prev => {
-        const updated = prev.map(req => 
-          req.id === rescheduleData.requestId 
-            ? { 
-                ...req, 
-                date: rescheduleData.newDate, 
-                time: rescheduleData.newTime,
-                status: wasAvbokad ? 'Förfrågan' as const : req.status
-              }
-            : req
-        );
-        console.log('🔄 LOCAL STATE UPDATED:', updated.find(r => r.id === rescheduleData.requestId));
-        return updated;
-      });
+      console.log('✅ Status updated successfully');
 
       if (rescheduleData.sendSMS) {
         const request = requests.find(r => r.id === rescheduleData.requestId);
@@ -608,6 +592,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         title: wasAvbokad ? "Hämtning återaktiverad och omschemalagd" : "Hämtning omschemalagd",
         description: `Ny tid: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}${wasAvbokad ? ' - Status ändrad till Förfrågan' : ''}`
       });
+
+      // Refresh data to show changes
+      await fetchCustomerRequests();
 
     } catch (error) {
       console.error('❌ UNEXPECTED ERROR in confirmReschedule:', error);
