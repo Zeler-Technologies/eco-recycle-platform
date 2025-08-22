@@ -18,13 +18,16 @@ interface Driver {
 }
 
 interface CustomerRequest {
-  pickup_order_id: string;
+  pickup_order_id: string | null;
   customer_request_id: string;
   owner_name: string;
   pickup_address: string;
   car_brand: string;
   car_model: string;
   status: string;
+  quote_amount?: number;
+  contact_phone?: string;
+  car_registration?: string;
 }
 
 interface DriverAssignmentModalProps {
@@ -49,31 +52,28 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     setErrorMsg(null);
     console.info('Fetching available pickup requests', { driverId: driver.id });
     try {
-      console.log('🔴 FETCHING AVAILABLE REQUESTS FOR DRIVER:', driver.id);
+      console.log('🔴 FETCHING REAL CUSTOMER REQUESTS FOR DRIVER:', driver.id);
       
-      // Use direct pickup_orders query with joins - more reliable than view
+      // Get real pending customer requests that don't have drivers assigned
       const { data, error } = await supabase
-        .from('pickup_orders')
+        .from('customer_requests')
         .select(`
           id,
-          customer_request_id,
-          scheduled_pickup_date,
-          assigned_driver_id,
+          owner_name,
+          pickup_address,
+          car_brand,
+          car_model,
           status,
-          customer_requests!inner(
-            owner_name,
-            pickup_address,
-            car_brand,
-            car_model,
-            status
-          )
+          quote_amount,
+          contact_phone,
+          car_registration_number
         `)
-        .is('assigned_driver_id', null)
-        .in('status', ['pending', 'scheduled'])
+        .in('status', ['pending'])
+        .is('driver_id', null)
         .order('created_at', { ascending: true })
         .limit(50);
 
-      console.log('🔴 QUERY RESULT:', { data, error });
+      console.log('🔴 REAL CUSTOMER REQUESTS:', { data, error });
 
       if (error) {
         console.error('🔴 QUERY ERROR DETAILS:', {
@@ -86,16 +86,19 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
       }
 
       const mapped = (data ?? []).map((d: any) => ({
-        pickup_order_id: d.id,
-        customer_request_id: d.customer_request_id,
-        owner_name: d.customer_requests?.owner_name || 'Unknown',
-        pickup_address: d.customer_requests?.pickup_address || 'Unknown',
-        car_brand: d.customer_requests?.car_brand || 'Unknown',
-        car_model: d.customer_requests?.car_model || 'Unknown',
+        pickup_order_id: null, // Will be created when assigned
+        customer_request_id: d.id,
+        owner_name: d.owner_name || 'Unknown',
+        pickup_address: d.pickup_address || 'Unknown',
+        car_brand: d.car_brand || 'Unknown',
+        car_model: d.car_model || 'Unknown',
         status: d.status,
+        quote_amount: d.quote_amount,
+        contact_phone: d.contact_phone,
+        car_registration: d.car_registration_number
       }));
 
-      console.log('🔴 MAPPED REQUESTS:', mapped);
+      console.log('🔴 MAPPED REAL REQUESTS:', mapped);
       setAvailableRequests(mapped);
     } catch (error) {
       const msg =
@@ -114,56 +117,29 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     }
   };
 
-  const handleAssignRequest = async (pickupOrderId: string) => {
-    setAssignmentLoading(pickupOrderId);
-    console.info('Assigning driver to pickup', { driverId: driver.id, pickupOrderId });
+  const handleAssignRequest = async (customerRequestId: string) => {
+    setAssignmentLoading(customerRequestId);
+    console.info('Assigning driver to customer request', { driverId: driver.id, customerRequestId });
     try {
-      // 1) Deactivate existing active assignments for this pickup
-      const { error: deactivateError } = await supabase
-        .from('driver_assignments')
-        .update({ is_active: false })
-        .eq('pickup_order_id', pickupOrderId)
-        .eq('is_active', true);
-      if (deactivateError) throw deactivateError;
-
-      // 2) Create new assignment
-      const { error: insertError } = await supabase
-        .from('driver_assignments')
-        .insert({
+      // Update customer request to assign driver and set status
+      const { error: updateError } = await supabase
+        .from('customer_requests')
+        .update({
           driver_id: driver.id,
-          pickup_order_id: pickupOrderId,
-          role: assignmentRole,
-          assignment_type: 'pickup',
-          status: 'scheduled',
-          is_active: true,
-        });
-      if (insertError) throw insertError;
-
-      // 3) Get related customer_request_id to update status via unified function
-      const { data: po, error: fetchError } = await supabase
-        .from('pickup_orders')
-        .select('customer_request_id')
-        .eq('id', pickupOrderId)
-        .single();
-      if (fetchError) throw fetchError;
-
-      // 4) Update status to 'assigned' using the unified RPC
-      const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
-        pickup_id: po?.customer_request_id ?? pickupOrderId,
-        new_status: 'assigned',
-        driver_notes_param: `Assigned to ${driver.full_name}`,
-        completion_photos_param: null,
-      });
-      if (statusError) throw statusError;
+          status: 'assigned'
+        })
+        .eq('id', customerRequestId);
+      
+      if (updateError) throw updateError;
 
       toast.success('Driver assigned successfully');
       onSuccess();
     } catch (error) {
       const e: any = error;
       const msg = e?.message || e?.error?.message || (typeof error === 'string' ? error : 'Unknown error');
-      console.error('Failed to assign driver (direct ops)', {
+      console.error('Failed to assign driver to customer request', {
         driverId: driver.id,
-        pickupOrderId,
+        customerRequestId,
         code: e?.code,
         details: e?.details,
         hint: e?.hint,
@@ -232,7 +208,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
             ) : (
               <div className="space-y-3">
                 {availableRequests.map((request) => (
-                  <div key={request.pickup_order_id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/20 transition-colors">
+                  <div key={request.customer_request_id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/20 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="p-2 bg-admin-accent rounded-full">
                         <Car className="h-4 w-4 text-admin-primary" />
@@ -268,11 +244,11 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
                       </div>
                       
                       <Button
-                        onClick={() => handleAssignRequest(request.pickup_order_id)}
-                        disabled={assignmentLoading === request.pickup_order_id}
+                        onClick={() => handleAssignRequest(request.customer_request_id)}
+                        disabled={assignmentLoading === request.customer_request_id}
                         className="bg-admin-primary hover:bg-admin-primary/90"
                       >
-                        {assignmentLoading === request.pickup_order_id ? 'Assigning...' : 'Assign'}
+                        {assignmentLoading === request.customer_request_id ? 'Assigning...' : 'Assign'}
                       </Button>
                     </div>
                   </div>
