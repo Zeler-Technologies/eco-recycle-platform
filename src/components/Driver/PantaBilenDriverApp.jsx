@@ -69,27 +69,14 @@ const PantaBilenDriverApp = () => {
     console.log('🔴 Initial props:', { currentDriver, pickups, user });
   }, []);
 
-  // 🚨 ENHANCED BUTTON HANDLER WITH FULL DEBUG
+  // 🔴 SIMPLIFIED BUTTON HANDLER
   const handleActionToggle = (pickupId) => {
-    console.log('🚨 === HANDLER START ===');
-    console.log('🚨 HANDLER - pickupId received:', pickupId);
-    console.log('🚨 HANDLER - pickupId type:', typeof pickupId);
-    console.log('🚨 HANDLER - Current showPickupActions:', showPickupActions);
-    console.log('🚨 HANDLER - showPickupActions type:', typeof showPickupActions);
-    console.log('🚨 HANDLER - Equality check:', showPickupActions === pickupId);
-    
-    const newState = showPickupActions === pickupId ? null : pickupId;
-    console.log('🚨 HANDLER - New state calculated:', newState);
-    console.log('🚨 HANDLER - About to set state...');
-    
-    try {
-      setShowPickupActions(newState);
-      console.log('🚨 HANDLER - State set successfully');
-    } catch (error) {
-      console.error('🚨 HANDLER - ERROR setting state:', error);
-    }
-    
-    console.log('🚨 === HANDLER END ===');
+    console.log('🔴 Simple toggle for:', pickupId, typeof pickupId);
+    setShowPickupActions(current => {
+      const newState = current === pickupId ? null : pickupId;
+      console.log('🔴 State change:', current, '→', newState);
+      return newState;
+    });
   };
 
   // 🔴 TRACK STATE CHANGES
@@ -412,15 +399,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     // Check if this pickup is assigned to current driver
     const isAssignedToCurrentDriver = pickup.assigned_driver_id === currentDriver?.id;
     const isUnassigned = pickup.assigned_driver_id === null || pickup.assigned_driver_id === undefined;
-    const showActions = showPickupActions === pickupId;
-    
-    console.log('🔴 PICKUP CARD RENDER:', {
-      pickupId,
-      showPickupActions,
-      showActions,
-      pickup_order_id: pickup.pickup_order_id,
-      pickup_id: pickup.id
-    });
+    const isMenuVisible = showPickupActions === pickupId;
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
@@ -467,41 +446,15 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {getStatusText(pickup.status)}
             </div>
             
-            {/* Enhanced Action Menu */}
-            <div className="relative" onClick={(e) => e.stopPropagation()}>
+            {/* Simplified Action Menu */}
+            <div className="relative">
               {(isUnassigned || isAssignedToCurrentDriver) && (
                 <>
                   <button
-                    onClick={(e) => {
-                      console.log('🚨 === BUTTON DEBUG START ===');
-                      console.log('🚨 EVENT:', e.type, e.target);
-                      console.log('🚨 EVENT PREVENTED:', e.defaultPrevented);
-                      
-                      e.preventDefault();
-                      e.stopPropagation();
-                      
-                      console.log('🚨 PICKUP OBJECT FULL:', JSON.stringify(pickup, null, 2));
-                      console.log('🚨 PICKUP.pickup_order_id:', pickup.pickup_order_id);
-                      console.log('🚨 PICKUP.id:', pickup.id);
-                      console.log('🚨 PICKUP assigned_driver_id:', pickup.assigned_driver_id);
-                      console.log('🚨 CURRENT DRIVER ID:', currentDriver?.id);
-                      
+                    onClick={() => {
                       const targetId = pickup.pickup_order_id || pickup.id;
-                      console.log('🚨 TARGET ID CALCULATED:', targetId);
-                      console.log('🚨 TARGET ID TYPE:', typeof targetId);
-                      
-                      console.log('🚨 CURRENT showPickupActions:', showPickupActions);
-                      console.log('🚨 CURRENT showPickupActions TYPE:', typeof showPickupActions);
-                      console.log('🚨 COMPARISON RESULT:', showPickupActions === targetId);
-                      
-                      console.log('🚨 ABOUT TO CALL handleActionToggle');
-                      try {
-                        handleActionToggle(targetId);
-                        console.log('🚨 handleActionToggle CALL COMPLETED');
-                      } catch (error) {
-                        console.error('🚨 ERROR IN handleActionToggle:', error);
-                      }
-                      console.log('🚨 === BUTTON DEBUG END ===');
+                      console.log('🔴 Button clicked:', targetId);
+                      handleActionToggle(targetId);
                     }}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
                       isUnassigned 
@@ -511,54 +464,48 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                     style={{zIndex: 999999, position: 'relative', pointerEvents: 'auto'}}
                   >
                     {isUnassigned ? 'Hantera uppdrag' : 'Hantera tilldelat'}
-                    <span className={`transition-transform ${showActions ? 'rotate-180' : ''}`}>▼</span>
+                    <span className={`transition-transform ${isMenuVisible ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                   
-                  {(() => {
-                    const pickupId = pickup.pickup_order_id || pickup.id;
-                    const showActions = showPickupActions === pickupId;
-                    console.log('🔴 RENDER CHECK - Pickup:', pickupId, 'showPickupActions:', showPickupActions, 'Show:', showActions);
-                    
-                    return showActions && (
-                      <div className="absolute right-0 top-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-48 z-50" style={{border: '2px solid red', background: 'yellow'}}>
-                        <div className="py-2">
-                          <p style={{color: 'red', fontWeight: 'bold', padding: '10px'}}>MENU VISIBLE FOR: {pickupId}</p>
-                          {isUnassigned && (
-                            <button
-                              onClick={() => {
-                                handleSelfAssign(pickup.id);
-                                setShowPickupActions(null);
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 text-green-700 font-medium flex items-center gap-2"
-                            >
-                              <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                              Välj detta uppdrag
-                            </button>
-                          )}
-                          
-                          {isAssignedToCurrentDriver && (
-                            <button
-                              onClick={() => {
-                                handleRejectPickup(pickup.id);
-                                setShowPickupActions(null);
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-700 font-medium flex items-center gap-2"
-                            >
-                              <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                              Avvisa uppdrag
-                            </button>
-                          )}
-                          
+                  {isMenuVisible && (
+                    <div className="absolute right-0 top-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-48 z-50" style={{border: '2px solid red', background: 'yellow'}}>
+                      <div className="py-2">
+                        <p style={{color: 'red', fontWeight: 'bold', padding: '10px'}}>MENU VISIBLE FOR: {pickupId}</p>
+                        {isUnassigned && (
                           <button
-                            onClick={() => setShowPickupActions(null)}
-                            className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-600 border-t border-gray-100"
+                            onClick={() => {
+                              handleSelfAssign(pickup.id);
+                              setShowPickupActions(null);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 text-green-700 font-medium flex items-center gap-2"
                           >
-                            Avbryt
+                            <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                            Välj detta uppdrag
                           </button>
-                        </div>
+                        )}
+                        
+                        {isAssignedToCurrentDriver && (
+                          <button
+                            onClick={() => {
+                              handleRejectPickup(pickup.id);
+                              setShowPickupActions(null);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-700 font-medium flex items-center gap-2"
+                          >
+                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                            Avvisa uppdrag
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => setShowPickupActions(null)}
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-600 border-t border-gray-100"
+                        >
+                          Avbryt
+                        </button>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -595,7 +542,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           </div>
         ) : (
           filteredPickups.map(pickup => (
-            <PickupCard key={pickup.pickup_id || pickup.id} pickup={pickup} />
+            <PickupCard key={pickup.pickup_order_id || pickup.id} pickup={pickup} />
           ))
         )}
       </div>
