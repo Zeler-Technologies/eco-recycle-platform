@@ -35,6 +35,12 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   // Load initial data when pickup changes
   useEffect(() => {
     if (pickup && isOpen) {
+      console.log('🔴 MODAL OPENED WITH PICKUP:', pickup);
+      console.log('🔴 PICKUP.DRIVER_ID:', pickup?.driver_id);
+      console.log('🔴 TYPEOF DRIVER_ID:', typeof pickup?.driver_id);
+      console.log('🔴 PICKUP.ASSIGNED_DRIVER_ID:', pickup?.assigned_driver_id);
+      console.log('🔴 SELECTED_DRIVER_ID STATE:', selectedDriverId);
+      
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
       fetchDrivers();
