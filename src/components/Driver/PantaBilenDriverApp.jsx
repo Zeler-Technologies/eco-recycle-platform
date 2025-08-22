@@ -423,11 +423,16 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           {/* Customer Information */}
           <div className="mb-2">
             <div className="text-sm font-medium text-gray-800">
-              👤 {pickup.owner_name || 'Okänd kund'}
+              👤 {pickup.owner_name || pickup.customer_name || 'Okänd kund'}
             </div>
-            {(pickup.contact_phone || pickup.phone_number) && (
+            {pickup.contact_phone && (
               <div className="text-sm text-gray-600">
-                📞 {pickup.contact_phone || pickup.phone_number}
+                📞 {pickup.contact_phone}
+              </div>
+            )}
+            {pickup.pnr_num && (
+              <div className="text-xs text-gray-500">
+                🆔 {pickup.pnr_num}
               </div>
             )}
           </div>
