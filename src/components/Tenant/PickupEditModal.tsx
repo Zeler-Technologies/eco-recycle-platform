@@ -78,37 +78,48 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   const handleSave = async () => {
     try {
       setLoading(true);
+      console.log('🔴 SAVE STARTED for pickup:', pickup.id);
 
       // Update pickup date in pickup_orders table
       const pickupDateTime = scheduleDate;
+      console.log('🔴 UPDATING PICKUP DATE...');
       const { error: dateError } = await supabase
         .from('pickup_orders')
         .update({ scheduled_pickup_date: pickupDateTime })
         .eq('customer_request_id', pickup.id);
 
       if (dateError) {
-        console.error('Error updating pickup date:', dateError);
+        console.error('🔴 ERROR UPDATING PICKUP DATE:', dateError);
         throw dateError;
       }
+      console.log('✅ PICKUP DATE UPDATED');
 
       // Update reimbursement in customer_requests
+      console.log('🔴 CHECKING REIMBURSEMENT UPDATE...');
       if (reimbursement && parseFloat(reimbursement) !== pickup.quote_amount) {
+        console.log('🔴 UPDATING REIMBURSEMENT...');
         const { error: reimbursementError } = await supabase
           .from('customer_requests')
           .update({ quote_amount: parseFloat(reimbursement) })
           .eq('id', pickup.id);
 
         if (reimbursementError) {
-          console.error('Error updating reimbursement:', reimbursementError);
+          console.error('🔴 ERROR UPDATING REIMBURSEMENT:', reimbursementError);
           throw reimbursementError;
         }
+        console.log('✅ REIMBURSEMENT UPDATED');
+      } else {
+        console.log('⏭️ SKIPPING REIMBURSEMENT UPDATE');
       }
 
       // Handle driver assignment/unassignment
+      console.log('🔴 HANDLING DRIVER ASSIGNMENT, selectedDriverId:', selectedDriverId);
+      
       if (selectedDriverId === 'none') {
-        console.log('🔴 UNASSIGNING DRIVER');
+        console.log('🔴 UNASSIGNING DRIVER PATH');
         
         // UNASSIGN DRIVER CASE - Deactivate existing assignments
+        console.log('🔴 DEACTIVATING DRIVER ASSIGNMENTS...');
         const { error: unassignError } = await supabase
           .from('driver_assignments')
           .update({ is_active: false })
@@ -116,31 +127,46 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           .eq('is_active', true);
 
         if (unassignError) {
-          console.error('Error unassigning driver:', unassignError);
+          console.error('🔴 ERROR UNASSIGNING DRIVER:', unassignError);
           throw unassignError;
         }
+        console.log('✅ DRIVER ASSIGNMENTS DEACTIVATED');
 
-        // Update status back to 'scheduled' for self-assignment availability
-        const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
-          pickup_id: pickup.id,
-          new_status: 'scheduled'
-        });
+        // Skip status update for cancelled pickups
+        if (pickup.status !== 'cancelled') {
+          console.log('🔴 UPDATING STATUS TO SCHEDULED...');
+          const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+            pickup_id: pickup.id,
+            new_status: 'scheduled'
+          });
 
-        if (statusError) {
-          console.error('Error updating status to scheduled:', statusError);
-          throw statusError;
+          if (statusError) {
+            console.error('🔴 ERROR UPDATING STATUS TO SCHEDULED:', statusError);
+            throw statusError;
+          }
+          console.log('✅ STATUS UPDATED TO SCHEDULED');
+        } else {
+          console.log('⏭️ SKIPPING STATUS UPDATE - PICKUP IS CANCELLED');
         }
 
       } else if (selectedDriverId) {
-        console.log('🔴 ASSIGNING DRIVER:', selectedDriverId);
+        console.log('🔴 ASSIGNING DRIVER PATH:', selectedDriverId);
         
         // ASSIGN DRIVER CASE - First deactivate any existing assignments
-        await supabase
+        console.log('🔴 DEACTIVATING EXISTING ASSIGNMENTS...');
+        const { error: deactivateError } = await supabase
           .from('driver_assignments')
           .update({ is_active: false })
           .eq('customer_request_id', pickup.id);
 
+        if (deactivateError) {
+          console.error('🔴 ERROR DEACTIVATING ASSIGNMENTS:', deactivateError);
+          throw deactivateError;
+        }
+        console.log('✅ EXISTING ASSIGNMENTS DEACTIVATED');
+
         // Create new assignment
+        console.log('🔴 CREATING NEW ASSIGNMENT...');
         const { error: assignmentError } = await supabase
           .from('driver_assignments')
           .insert({
@@ -152,20 +178,29 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           });
 
         if (assignmentError) {
-          console.error('Error assigning driver:', assignmentError);
+          console.error('🔴 ERROR CREATING ASSIGNMENT:', assignmentError);
           throw assignmentError;
         }
+        console.log('✅ NEW ASSIGNMENT CREATED');
 
-        // Update status to assigned
-        const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
-          pickup_id: pickup.id,
-          new_status: 'assigned'
-        });
+        // Skip status update for cancelled pickups
+        if (pickup.status !== 'cancelled') {
+          console.log('🔴 UPDATING STATUS TO ASSIGNED...');
+          const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+            pickup_id: pickup.id,
+            new_status: 'assigned'
+          });
 
-        if (statusError) {
-          console.error('Error updating status to assigned:', statusError);
-          throw statusError;
+          if (statusError) {
+            console.error('🔴 ERROR UPDATING STATUS TO ASSIGNED:', statusError);
+            throw statusError;
+          }
+          console.log('✅ STATUS UPDATED TO ASSIGNED');
+        } else {
+          console.log('⏭️ SKIPPING STATUS UPDATE - PICKUP IS CANCELLED');
         }
+      } else {
+        console.log('⏭️ NO DRIVER CHANGES NEEDED');
       }
 
       toast({
