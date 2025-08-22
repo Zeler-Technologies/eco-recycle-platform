@@ -768,7 +768,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
   );
 
   return (
-    <div className="min-h-screen bg-gray-100" onClick={() => setShowPickupActions(null)}>
+    <div className="min-h-screen bg-gray-100">
       
       <AuthStatusBar />
       <StatusBar />
