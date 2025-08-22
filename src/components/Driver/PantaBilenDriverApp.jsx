@@ -399,137 +399,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
     // Check if this pickup is assigned to current driver
     const isAssignedToCurrentDriver = pickup.assigned_driver_id === currentDriver?.id;
     const isUnassigned = pickup.assigned_driver_id === null || pickup.assigned_driver_id === undefined;
-    const isMenuVisible = showPickupActions === pickupId;
-
-    // 🔴 CRITICAL ID DEBUG - Add this logging:
-    console.log('🔴 PICKUP CARD ID CHECK:', {
-      car_registration: pickup.car_registration_number,
-      pickup_order_id: pickup.pickup_order_id,
-      pickup_id: pickup.id,
-      calculated_pickupId: pickupId,
-      showPickupActions_state: showPickupActions,
-      isMenuVisible: isMenuVisible,
-      ID_MATCH: pickupId === showPickupActions,
-      id_types: {
-        pickupId: typeof pickupId,
-        showPickupActions: typeof showPickupActions
-      }
-    });
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
-        {/* Real Pickup Actions Menu */}
-        {isMenuVisible && (
-          <div style={{
-            background: 'white',           // Real menu styling (not debug yellow)
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            padding: '8px 0',
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 999999,
-            minWidth: '200px'
-          }}>
-            <div style={{padding: '8px 16px', borderBottom: '1px solid #e5e7eb', fontWeight: 'bold'}}>
-              {pickup.car_registration_number}
-            </div>
-            
-            {/* Self-assign action for unassigned pickups */}
-            {isUnassigned && (
-              <button
-                onClick={() => {
-                  console.log('🔴 Self-assigning pickup:', pickupId);
-                  handleSelfAssign(pickup.id);
-                  setShowPickupActions(null);
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: '#059669'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#f0fdf4'}
-                onMouseOut={(e) => e.target.style.background = 'transparent'}
-              >
-                <span style={{marginRight: '8px'}}>✓</span>
-                Välj detta uppdrag
-              </button>
-            )}
-            
-            {/* Reject action for assigned pickups */}
-            {isAssignedToCurrentDriver && (
-              <button
-                onClick={() => {
-                  console.log('🔴 Rejecting pickup:', pickupId);
-                  handleRejectPickup(pickup.id);
-                  setShowPickupActions(null);
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left', 
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: '#dc2626'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#fef2f2'}
-                onMouseOut={(e) => e.target.style.background = 'transparent'}
-              >
-                <span style={{marginRight: '8px'}}>✗</span>
-                Avvisa uppdrag
-              </button>
-            )}
-            
-            {/* Cancel action */}
-            <button
-              onClick={() => {
-                console.log('🔴 Canceling menu');
-                setShowPickupActions(null);
-              }}
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                padding: '12px 16px', 
-                border: 'none',
-                borderTop: '1px solid #e5e7eb',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: '#6b7280'
-              }}
-              onMouseOver={(e) => e.target.style.background = '#f9fafb'}
-              onMouseOut={(e) => e.target.style.background = 'transparent'}
-            >
-              Avbryt
-            </button>
-          </div>
-        )}
-        
-        {/* Also add UNCONDITIONAL menu for testing */}
-        {showPickupActions === "c8094517-8be7-4740-88ab-23c254711d86" && (
-          <div style={{
-            background: 'green',
-            border: '5px solid black',
-            padding: '20px', 
-            position: 'fixed',
-            top: '300px',
-            left: '100px',
-            zIndex: 999999
-          }}>
-            <h2>🟢 HARDCODED MENU TEST!</h2>
-            <p>This should appear if state contains the exact ID</p>
-          </div>
-        )}
-
         <div 
           className={`p-5 border-l-4`} 
           style={{ borderLeftColor: getStatusColor(pickup.status) }}
@@ -538,17 +410,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             <div className="text-lg font-bold text-gray-900">
               {pickup.car_registration_number || 'N/A'}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => openPickupDetail(pickup)}
-                className="text-indigo-600 text-sm hover:text-indigo-800 font-medium px-2 py-1 rounded"
-              >
-                Visa detaljer
-              </button>
-              <div className="flex gap-1">
-                <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
-                <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
-              </div>
+            <div className="flex gap-1">
+              <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
+              <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
             </div>
           </div>
           
@@ -573,67 +437,19 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {getStatusText(pickup.status)}
             </div>
             
-            {/* Simplified Action Menu */}
+            {/* Action Button - Opens Modal */}
             <div className="relative">
               {(isUnassigned || isAssignedToCurrentDriver) && (
-                <>
-                  <button
-                    onClick={() => {
-                      const targetId = pickup.pickup_order_id || pickup.id;
-                      console.log('🔴 Button clicked:', targetId);
-                      handleActionToggle(targetId);
-                    }}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
-                      isUnassigned 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                        : 'bg-orange-600 hover:bg-orange-700 text-white'
-                    }`}
-                    style={{zIndex: 999999, position: 'relative', pointerEvents: 'auto'}}
-                  >
-                    {isUnassigned ? 'Hantera uppdrag' : 'Hantera tilldelat'}
-                    <span className={`transition-transform ${isMenuVisible ? 'rotate-180' : ''}`}>▼</span>
-                  </button>
-                  
-                  {isMenuVisible && (
-                    <div className="absolute right-0 top-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg min-w-48 z-50" style={{border: '2px solid red', background: 'yellow'}}>
-                      <div className="py-2">
-                        <p style={{color: 'red', fontWeight: 'bold', padding: '10px'}}>MENU VISIBLE FOR: {pickupId}</p>
-                        {isUnassigned && (
-                          <button
-                            onClick={() => {
-                              handleSelfAssign(pickup.id);
-                              setShowPickupActions(null);
-                            }}
-                            className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 text-green-700 font-medium flex items-center gap-2"
-                          >
-                            <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                            Välj detta uppdrag
-                          </button>
-                        )}
-                        
-                        {isAssignedToCurrentDriver && (
-                          <button
-                            onClick={() => {
-                              handleRejectPickup(pickup.id);
-                              setShowPickupActions(null);
-                            }}
-                            className="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-700 font-medium flex items-center gap-2"
-                          >
-                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                            Avvisa uppdrag
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => setShowPickupActions(null)}
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-600 border-t border-gray-100"
-                        >
-                          Avbryt
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <button
+                  onClick={() => openPickupDetail(pickup)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                    isUnassigned 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'bg-orange-600 hover:bg-orange-700 text-white'
+                  }`}
+                >
+                  {isUnassigned ? 'Hantera uppdrag' : 'Hantera tilldelat'}
+                </button>
               )}
             </div>
           </div>
@@ -843,71 +659,6 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* 🔴 ULTRA SIMPLE TEST - Add this FIRST */}
-      <div style={{background: 'purple', color: 'white', padding: '20px', margin: '20px'}}>
-        <h1>🔴 ULTRA SIMPLE BYPASS TEST</h1>
-        <p>simpleTest state: {simpleTest ? 'TRUE' : 'FALSE'}</p>
-        
-        <button 
-          onClick={() => {
-            console.log('🔴 SIMPLE TEST - Setting to true');
-            setSimpleTest(true);
-          }}
-          style={{background: 'green', padding: '10px', margin: '5px'}}
-        >
-          SET TRUE
-        </button>
-        
-        <button 
-          onClick={() => {
-            console.log('🔴 SIMPLE TEST - Setting to false'); 
-            setSimpleTest(false);
-          }}
-          style={{background: 'red', padding: '10px', margin: '5px'}}
-        >
-          SET FALSE
-        </button>
-        
-        {simpleTest && (
-          <div style={{
-            background: 'yellow', 
-            border: '10px solid red', 
-            padding: '30px',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            marginTop: '20px'
-          }}>
-            ✅ SIMPLE TEST MENU VISIBLE!
-          </div>
-        )}
-      </div>
-
-      {/* EMERGENCY ISOLATION TEST - Add at top of return statement */}
-      <div style={{padding: '20px', background: 'blue', color: 'white', margin: '20px', zIndex: 99999}}>
-        <h2>🔴 STATE TEST</h2>
-        <p>Current showPickupActions: {JSON.stringify(showPickupActions)}</p>
-        
-        <button 
-          onClick={() => setShowPickupActions('test-123')}
-          style={{background: 'green', color: 'white', padding: '10px', margin: '5px'}}
-        >
-          SET TEST STATE
-        </button>
-        
-        <button 
-          onClick={() => setShowPickupActions(null)}
-          style={{background: 'red', color: 'white', padding: '10px', margin: '5px'}}
-        >
-          CLEAR STATE
-        </button>
-        
-        {showPickupActions === 'test-123' && (
-          <div style={{background: 'yellow', border: '5px solid red', padding: '20px', position: 'relative', zIndex: 99999}}>
-            <h1>✅ STATE MANAGEMENT WORKS!</h1>
-          </div>
-        )}
-      </div>
-      
       <AuthStatusBar />
       <StatusBar />
       <AppHeader />
