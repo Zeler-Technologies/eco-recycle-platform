@@ -51,6 +51,27 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
 
   const fetchCurrentDriverAssignment = async () => {
     try {
+      // First check if pickup already has driver info from unified view
+      if (pickup.driver_name && pickup.driver_name !== 'Ingen förare tilldelad') {
+        console.log('🟢 DRIVER NAME FOUND:', pickup.driver_name);
+        // Find driver by name in the drivers list we'll fetch
+        const { data: drivers, error } = await supabase
+          .from('drivers')
+          .select('id, full_name')
+          .eq('tenant_id', pickup.tenant_id)
+          .eq('is_active', true);
+
+        if (!error && drivers) {
+          const matchingDriver = drivers.find(d => d.full_name === pickup.driver_name);
+          if (matchingDriver) {
+            console.log('🟢 FOUND MATCHING DRIVER:', matchingDriver);
+            setSelectedDriverId(matchingDriver.id);
+            return;
+          }
+        }
+      }
+
+      // Fallback to checking driver_assignments table
       const { data: assignment, error } = await supabase
         .from('driver_assignments')
         .select('driver_id')
