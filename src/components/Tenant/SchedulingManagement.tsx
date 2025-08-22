@@ -191,13 +191,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             status = 'Förfrågan';
         }
 
-        // Use pickup_date if available, otherwise use created_at
-        const requestDate = item.pickup_date 
-          ? new Date(item.pickup_date)
+        // Use scheduled_pickup_date if available, otherwise use created_at
+        const requestDate = item.scheduled_pickup_date 
+          ? new Date(item.scheduled_pickup_date + 'T09:00:00')  // Add default time to prevent timezone issues
           : new Date(item.created_at);
 
         return {
-          id: item.customer_request_id || item.id,
+          id: item.customer_request_id || item.pickup_order_id,
           date: requestDate,
           time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
           customerName: item.owner_name || 'Okänd kund',
@@ -207,7 +207,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           carModel: item.car_model || 'Okänd modell',
           registrationNumber: item.car_registration_number || 'Okänt reg.nr',
           status,
-          notes: item.special_instructions,
+          notes: item.driver_notes,
           assignedDriver: item.driver_name || null
         };
       });
