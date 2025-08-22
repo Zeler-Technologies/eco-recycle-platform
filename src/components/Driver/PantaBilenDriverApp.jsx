@@ -424,16 +424,34 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             background: 'yellow',
             border: '5px solid red', 
             padding: '20px',
-            position: 'fixed',
-            top: '100px',
-            left: '100px', 
+            position: 'fixed',        // Changed from absolute to fixed
+            top: '50%',               // Center on screen
+            left: '50%',
+            transform: 'translate(-50%, -50%)',  // Perfect centering
             zIndex: 999999,
-            width: '300px'
+            width: '400px',
+            height: '300px',
+            fontSize: '16px',
+            color: 'black'
           }}>
-            <h2>✅ MENU FOUND!</h2>
-            <p>Pickup ID: {pickupId}</p>
-            <p>State ID: {showPickupActions}</p>
-            <p>Match: {pickupId === showPickupActions ? 'YES' : 'NO'}</p>
+            <h2>✅ PICKUP MENU WORKING!</h2>
+            <p><strong>Pickup ID:</strong> {pickupId}</p>
+            <p><strong>State ID:</strong> {showPickupActions}</p>
+            <p><strong>Car:</strong> {pickup.car_registration_number}</p>
+            <p><strong>Match:</strong> {pickupId === showPickupActions ? 'YES' : 'NO'}</p>
+            
+            {/* Add actual menu content */}
+            <div style={{marginTop: '20px'}}>
+              <button 
+                onClick={() => setShowPickupActions(null)}
+                style={{background: 'red', color: 'white', padding: '10px', marginRight: '10px'}}
+              >
+                CLOSE MENU
+              </button>
+              <button style={{background: 'blue', color: 'white', padding: '10px'}}>
+                PICKUP ACTION
+              </button>
+            </div>
           </div>
         )}
         
