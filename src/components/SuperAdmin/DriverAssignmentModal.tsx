@@ -50,29 +50,30 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
   const fetchAvailableRequests = async () => {
     setLoading(true);
     setErrorMsg(null);
-    console.info('Fetching available pickup requests for driver assignment', { driverId: driver.id });
+    console.info('Fetching available pickup orders for driver assignment', { driverId: driver.id });
     try {
-      // First try to query customer_requests with driver assignments to find unassigned requests
+      // Query pickup_orders with customer_requests data to find unassigned orders
       const { data, error } = await supabase
-        .from('customer_requests')
+        .from('pickup_orders')
         .select(`
           id,
-          owner_name,
-          pickup_address,
-          car_brand,
-          car_model,
+          customer_request_id,
           status,
-          contact_phone,
-          car_registration_number,
-          tenant_id,
-          created_at
+          created_at,
+          customer_requests!inner (
+            owner_name,
+            pickup_address,
+            car_brand,
+            car_model,
+            contact_phone,
+            car_registration_number
+          )
         `)
         .eq('status', 'pending')
-        .eq('tenant_id', 1) // Filter by current tenant
         .order('created_at', { ascending: false })
         .limit(50);
 
-      console.log('🟢 CUSTOMER REQUESTS RESULTS:', { data, error });
+      console.log('🟢 PICKUP ORDERS RESULTS:', { data, error });
 
       if (error) {
         console.error('🔴 CUSTOMER REQUESTS QUERY ERROR:', {
@@ -84,39 +85,39 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
         throw error;
       }
 
-      // Filter out requests that already have active driver assignments
-      const requestIds = (data ?? []).map(d => d.id);
+      // Filter out pickup orders that already have active driver assignments
+      const pickupOrderIds = (data ?? []).map(d => d.id);
       
-      if (requestIds.length === 0) {
+      if (pickupOrderIds.length === 0) {
         setAvailableRequests([]);
         return;
       }
 
-      // Check for existing assignments
+      // Check for existing assignments using pickup_order_id
       const { data: assignments, error: assignmentError } = await supabase
         .from('driver_assignments')
-        .select('customer_request_id')
-        .in('customer_request_id', requestIds)
+        .select('pickup_order_id')
+        .in('pickup_order_id', pickupOrderIds)
         .eq('is_active', true);
 
       if (assignmentError) {
         console.warn('Could not check assignments, showing all requests:', assignmentError);
       }
 
-      const assignedRequestIds = new Set(assignments?.map(a => a.customer_request_id) || []);
+      const assignedPickupOrderIds = new Set(assignments?.map(a => a.pickup_order_id) || []);
 
       const mapped = (data ?? [])
-        .filter(d => !assignedRequestIds.has(d.id))
+        .filter(d => !assignedPickupOrderIds.has(d.id))
         .map((d: any) => ({
-          pickup_order_id: d.id, // Use customer_request id as pickup_order_id for now
-          customer_request_id: d.id,
-          owner_name: d.owner_name || 'Unknown Customer',
-          pickup_address: d.pickup_address || 'Address TBD',
-          car_brand: d.car_brand || 'Unknown',
-          car_model: d.car_model || 'Unknown',
+          pickup_order_id: d.id, // Use the actual pickup order ID
+          customer_request_id: d.customer_request_id,
+          owner_name: d.customer_requests?.owner_name || 'Unknown Customer',
+          pickup_address: d.customer_requests?.pickup_address || 'Address TBD',
+          car_brand: d.customer_requests?.car_brand || 'Unknown',
+          car_model: d.customer_requests?.car_model || 'Unknown',
           status: d.status,
-          contact_phone: d.contact_phone,
-          car_registration: d.car_registration_number
+          contact_phone: d.customer_requests?.contact_phone,
+          car_registration: d.customer_requests?.car_registration_number
         }));
 
       console.log('🟢 MAPPED AVAILABLE REQUESTS:', mapped);
