@@ -36,16 +36,6 @@ const PantaBilenDriverApp = () => {
     historyLoading,
   } = useDriverIntegration();
 
-  // 🔴 CRITICAL DEBUG LOGGING
-  console.log('🔴 DRIVER APP RENDER:');
-  console.log('🔴 User:', user);
-  console.log('🔴 Current Driver:', currentDriver);
-  console.log('🔴 Pickups:', pickups);
-  console.log('🔴 Pickups count:', pickups?.length);
-  console.log('🔴 Loading:', loading);
-  console.log('🔴 Error:', error);
-  console.log('🔴 Show pickup actions:', showPickupActions);
-
   // Local state
   const [currentView, setCurrentView] = useState('list');
   const [currentFilter, setCurrentFilter] = useState('all');
@@ -55,6 +45,16 @@ const PantaBilenDriverApp = () => {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showStatusHistory, setShowStatusHistory] = useState(false);
   const [showPickupActions, setShowPickupActions] = useState(null); // For pickup action dropdown
+
+  // 🔴 CRITICAL DEBUG LOGGING (after state declarations)
+  console.log('🔴 DRIVER APP RENDER:');
+  console.log('🔴 User:', user);
+  console.log('🔴 Current Driver:', currentDriver);
+  console.log('🔴 Pickups:', pickups);
+  console.log('🔴 Pickups count:', pickups?.length);
+  console.log('🔴 Loading:', loading);
+  console.log('🔴 Error:', error);
+  console.log('🔴 Show pickup actions:', showPickupActions);
 
   // 🔴 COMPONENT MOUNT DEBUG
   useEffect(() => {
