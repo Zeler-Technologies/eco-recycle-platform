@@ -140,7 +140,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         // Skip status update for cancelled pickups
         if (pickup.status !== 'cancelled') {
           console.log('🔴 UPDATING STATUS TO SCHEDULED...');
-          const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+          const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
             pickup_id: pickup.id,
             new_status: 'scheduled',
             driver_notes_param: 'Driver unassigned - available for self-assignment',
@@ -156,7 +156,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           console.log('⏭️ SKIPPING STATUS UPDATE - PICKUP IS CANCELLED');
         }
 
-      } else if (selectedDriverId) {
+      } else if (selectedDriverId && selectedDriverId !== 'none') {
         console.log('🔴 ASSIGNING DRIVER PATH:', selectedDriverId);
         
         // ASSIGN DRIVER CASE - First deactivate any existing assignments
@@ -193,7 +193,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         // Skip status update for cancelled pickups
         if (pickup.status !== 'cancelled') {
           console.log('🔴 UPDATING STATUS TO ASSIGNED...');
-          const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+          const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
             pickup_id: pickup.id,
             new_status: 'assigned',
             driver_notes_param: 'Driver assigned via admin modal',
