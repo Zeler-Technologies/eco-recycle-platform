@@ -418,40 +418,99 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
-        {/* 🔴 FORCE MENU VISIBLE FOR TESTING */}
+        {/* Real Pickup Actions Menu */}
         {isMenuVisible && (
           <div style={{
-            background: 'yellow',
-            border: '5px solid red', 
-            padding: '20px',
-            position: 'fixed',        // Changed from absolute to fixed
-            top: '50%',               // Center on screen
+            background: 'white',           // Real menu styling (not debug yellow)
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            padding: '8px 0',
+            position: 'fixed',
+            top: '50%',
             left: '50%',
-            transform: 'translate(-50%, -50%)',  // Perfect centering
+            transform: 'translate(-50%, -50%)',
             zIndex: 999999,
-            width: '400px',
-            height: '300px',
-            fontSize: '16px',
-            color: 'black'
+            minWidth: '200px'
           }}>
-            <h2>✅ PICKUP MENU WORKING!</h2>
-            <p><strong>Pickup ID:</strong> {pickupId}</p>
-            <p><strong>State ID:</strong> {showPickupActions}</p>
-            <p><strong>Car:</strong> {pickup.car_registration_number}</p>
-            <p><strong>Match:</strong> {pickupId === showPickupActions ? 'YES' : 'NO'}</p>
-            
-            {/* Add actual menu content */}
-            <div style={{marginTop: '20px'}}>
-              <button 
-                onClick={() => setShowPickupActions(null)}
-                style={{background: 'red', color: 'white', padding: '10px', marginRight: '10px'}}
-              >
-                CLOSE MENU
-              </button>
-              <button style={{background: 'blue', color: 'white', padding: '10px'}}>
-                PICKUP ACTION
-              </button>
+            <div style={{padding: '8px 16px', borderBottom: '1px solid #e5e7eb', fontWeight: 'bold'}}>
+              {pickup.car_registration_number}
             </div>
+            
+            {/* Self-assign action for unassigned pickups */}
+            {isUnassigned && (
+              <button
+                onClick={() => {
+                  console.log('🔴 Self-assigning pickup:', pickupId);
+                  handleSelfAssign(pickup.id);
+                  setShowPickupActions(null);
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#059669'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#f0fdf4'}
+                onMouseOut={(e) => e.target.style.background = 'transparent'}
+              >
+                <span style={{marginRight: '8px'}}>✓</span>
+                Välj detta uppdrag
+              </button>
+            )}
+            
+            {/* Reject action for assigned pickups */}
+            {isAssignedToCurrentDriver && (
+              <button
+                onClick={() => {
+                  console.log('🔴 Rejecting pickup:', pickupId);
+                  handleRejectPickup(pickup.id);
+                  setShowPickupActions(null);
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left', 
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#dc2626'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#fef2f2'}
+                onMouseOut={(e) => e.target.style.background = 'transparent'}
+              >
+                <span style={{marginRight: '8px'}}>✗</span>
+                Avvisa uppdrag
+              </button>
+            )}
+            
+            {/* Cancel action */}
+            <button
+              onClick={() => {
+                console.log('🔴 Canceling menu');
+                setShowPickupActions(null);
+              }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '12px 16px', 
+                border: 'none',
+                borderTop: '1px solid #e5e7eb',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: '#6b7280'
+              }}
+              onMouseOver={(e) => e.target.style.background = '#f9fafb'}
+              onMouseOut={(e) => e.target.style.background = 'transparent'}
+            >
+              Avbryt
+            </button>
           </div>
         )}
         
