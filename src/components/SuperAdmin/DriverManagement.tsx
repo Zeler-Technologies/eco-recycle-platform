@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Users, Plus, Search, MapPin, Clock, Phone, Car, UserCheck, UserX, Edit, Trash2, Building2 } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Search, MapPin, Clock, Phone, Car, UserCheck, UserX, Edit, Trash2, Building2, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import DriverFormModal from './DriverFormModal';
@@ -26,6 +26,14 @@ interface Driver {
   tenant_id: number;
   scrapyard_id?: number | null;
   max_capacity_kg?: number;
+  currentAssignments?: Assignment[];
+}
+
+interface Assignment {
+  pickup_order_id: string;
+  customer_name: string;
+  car_info: string;
+  pickup_address: string;
 }
 
 interface Scrapyard {
@@ -84,13 +92,108 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
         return;
       }
       
-      setDrivers((data as any) || []);
+      // Fetch current assignments for all drivers
+      const driversWithAssignments = await fetchDriverAssignments((data as any) as Driver[]);
+      setDrivers(driversWithAssignments || []);
     } catch (error) {
       console.error('Error fetching drivers:', error);
       // Set empty array and don't show error for normal cases
       setDrivers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDriverAssignments = async (drivers: Driver[]): Promise<Driver[]> => {
+    if (!drivers.length) return drivers;
+
+    try {
+      const driverIds = drivers.map(d => d.id);
+      
+      // Fetch active assignments for all drivers using a simpler approach
+      const { data: assignments, error } = await supabase
+        .from('driver_assignments')
+        .select(`
+          driver_id,
+          pickup_order_id
+        `)
+        .in('driver_id', driverIds)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching assignments:', error);
+        return drivers;
+      }
+
+      // Get pickup order details for each assignment
+      const pickupOrderIds = assignments?.map(a => a.pickup_order_id) || [];
+      
+      if (pickupOrderIds.length === 0) {
+        return drivers.map(driver => ({ ...driver, currentAssignments: [] }));
+      }
+
+      const { data: pickupOrders, error: pickupError } = await supabase
+        .from('pickup_orders')
+        .select(`
+          id,
+          customer_request_id
+        `)
+        .in('id', pickupOrderIds);
+
+      if (pickupError) {
+        console.error('Error fetching pickup orders:', pickupError);
+        return drivers;
+      }
+
+      // Get customer request details
+      const customerRequestIds = pickupOrders?.map(po => po.customer_request_id) || [];
+      
+      const { data: customerRequests, error: customerError } = await supabase
+        .from('customer_requests')
+        .select(`
+          id,
+          owner_name,
+          car_brand,
+          car_model,
+          pickup_address
+        `)
+        .in('id', customerRequestIds);
+
+      if (customerError) {
+        console.error('Error fetching customer requests:', customerError);
+        return drivers;
+      }
+
+      // Group assignments by driver ID
+      const assignmentsByDriver = new Map<string, Assignment[]>();
+      
+      assignments?.forEach((assignment: any) => {
+        const pickupOrder = pickupOrders?.find(po => po.id === assignment.pickup_order_id);
+        const customerRequest = customerRequests?.find(cr => cr.id === pickupOrder?.customer_request_id);
+        
+        if (customerRequest) {
+          const assignmentInfo: Assignment = {
+            pickup_order_id: assignment.pickup_order_id,
+            customer_name: customerRequest.owner_name || 'Unknown Customer',
+            car_info: `${customerRequest.car_brand || 'Unknown'} ${customerRequest.car_model || 'Model'}`,
+            pickup_address: customerRequest.pickup_address || 'Address TBD'
+          };
+
+          if (!assignmentsByDriver.has(assignment.driver_id)) {
+            assignmentsByDriver.set(assignment.driver_id, []);
+          }
+          assignmentsByDriver.get(assignment.driver_id)!.push(assignmentInfo);
+        }
+      });
+
+      // Add assignments to drivers
+      return drivers.map(driver => ({
+        ...driver,
+        currentAssignments: assignmentsByDriver.get(driver.id) || []
+      }));
+    } catch (error) {
+      console.error('Error fetching driver assignments:', error);
+      return drivers;
     }
   };
 
@@ -655,6 +758,33 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                             Last seen: {formatLastSeen(driver.last_location_update)}
                           </span>
                         </div>
+                        
+                        {/* Current Assignments - Make visible when driver has assignments */}
+                        {driver.currentAssignments && driver.currentAssignments.length > 0 && (
+                          <div className="mt-3 p-3 bg-status-processing/10 border border-status-processing/20 rounded-md">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Truck className="h-4 w-4 text-status-processing" />
+                              <span className="text-sm font-medium text-status-processing">
+                                Current Assignments ({driver.currentAssignments.length})
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              {driver.currentAssignments.map((assignment, index) => (
+                                <div key={assignment.pickup_order_id} className="text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{assignment.customer_name}</span>
+                                    <span>•</span>
+                                    <span>{assignment.car_info}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{assignment.pickup_address}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
