@@ -71,7 +71,6 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
           driver_id,
           driver_name,
           tenant_id,
-          quote_amount,
           contact_phone
         `)
         .eq('pickup_status', 'scheduled')
