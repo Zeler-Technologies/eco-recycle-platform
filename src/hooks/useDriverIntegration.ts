@@ -28,15 +28,35 @@ interface Driver {
 interface PickupOrder {
   id: string;
   pickup_id: string;
+  pickup_order_id?: string; // ✅ ADD THIS FIELD
+  customer_request_id?: string;
   car_registration_number: string;
   car_year?: number;
   car_brand: string;
   car_model: string;
   owner_name: string;
   pickup_address: string;
+  pickup_postal_code?: string;
+  pickup_latitude?: number;
+  pickup_longitude?: number;
+  pnr_num?: string;
+  pickup_status?: string;
+  scheduled_pickup_date?: string;
   final_price?: number;
+  driver_notes?: string;
+  completion_photos?: string;
   status: string;
   created_at: string;
+  updated_at?: string;
+  driver_id?: string;
+  driver_name?: string;
+  driver_phone?: string;
+  assigned_at?: string;
+  assignment_active?: boolean;
+  assignment_notes?: string;
+  tenant_id?: number;
+  scrapyard_id?: number;
+  status_display_text?: string;
   vehicle_year?: number;
   vehicle_make: string;
   vehicle_model: string;
@@ -47,7 +67,7 @@ interface PickupOrder {
   estimated_arrival?: string;
   scheduled_at?: string;
   completion_notes?: string;
-  driver_notes?: string;
+  assigned_driver_id?: string;
 }
 
 interface StatusHistoryItem {
@@ -141,15 +161,35 @@ export const useDriverIntegration = () => {
       const processedPickups: PickupOrder[] = (data || []).map((pickup: any) => ({
         id: pickup.pickup_order_id || pickup.id,
         pickup_id: pickup.pickup_order_id || pickup.id,
+        pickup_order_id: pickup.pickup_order_id, // ✅ KEEP THIS FIELD
+        customer_request_id: pickup.customer_request_id,
         car_registration_number: pickup.car_registration_number || '',
         car_year: pickup.car_year,
         car_brand: pickup.car_brand || '',
         car_model: pickup.car_model || '',
         owner_name: pickup.owner_name || '',
         pickup_address: pickup.pickup_address || '',
+        pickup_postal_code: pickup.pickup_postal_code,
+        pickup_latitude: pickup.pickup_latitude,
+        pickup_longitude: pickup.pickup_longitude,
+        pnr_num: pickup.pnr_num,
+        pickup_status: pickup.pickup_status,
+        scheduled_pickup_date: pickup.scheduled_pickup_date,
         final_price: pickup.final_price,
+        driver_notes: pickup.driver_notes,
+        completion_photos: pickup.completion_photos,
         status: pickup.pickup_status, // Use pickup_status from unified view
         created_at: pickup.created_at,
+        updated_at: pickup.updated_at,
+        driver_id: pickup.driver_id,
+        driver_name: pickup.driver_name,
+        driver_phone: pickup.driver_phone,
+        assigned_at: pickup.assigned_at,
+        assignment_active: pickup.assignment_active,
+        assignment_notes: pickup.assignment_notes,
+        tenant_id: pickup.tenant_id,
+        scrapyard_id: pickup.scrapyard_id,
+        status_display_text: pickup.status_display_text,
         vehicle_year: pickup.car_year,
         vehicle_make: pickup.car_brand || '',
         vehicle_model: pickup.car_model || '',
@@ -160,7 +200,6 @@ export const useDriverIntegration = () => {
         estimated_arrival: pickup.estimated_arrival,
         scheduled_at: pickup.scheduled_at,
         completion_notes: pickup.completion_photos?.join(', ') || '',
-        driver_notes: pickup.driver_notes,
         assigned_driver_id: pickup.driver_id
       }));
       
