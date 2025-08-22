@@ -414,15 +414,17 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               }
             </div>
             <div className="flex gap-2 items-center">
-              {pickup.contact_phone && (
+              {(pickup.contact_phone && pickup.contact_phone !== 'undefined' && 
+                (!pickup.contact_phone._type || pickup.contact_phone._type !== 'undefined')) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(`tel:${pickup.contact_phone}`, '_self');
+                    const phoneNumber = pickup.contact_phone.value || pickup.contact_phone;
+                    window.open(`tel:${phoneNumber}`, '_self');
                   }}
                   className="text-green-600 hover:text-green-800 p-1 rounded"
                   aria-label="Ring kund"
-                  title={`Ring ${pickup.contact_phone}`}
+                  title={`Ring ${pickup.contact_phone.value || pickup.contact_phone}`}
                 >
                   📞
                 </button>
@@ -449,9 +451,10 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             <div className="text-sm font-medium text-gray-800">
               👤 {pickup.owner_name || pickup.customer_name || 'Okänd kund'}
             </div>
-            {pickup.contact_phone && (
+            {(pickup.contact_phone && pickup.contact_phone !== 'undefined' && 
+              (!pickup.contact_phone._type || pickup.contact_phone._type !== 'undefined')) && (
               <div className="text-sm text-gray-600">
-                📞 {pickup.contact_phone}
+                📞 {pickup.contact_phone.value || pickup.contact_phone}
               </div>
             )}
             {pickup.pnr_num && (
