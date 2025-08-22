@@ -274,7 +274,7 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status (complete single-responsibility function)
+  // Update pickup status with improved synchronization
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
     console.log('📞 updatePickupStatus called with:', { pickupId, status, notes });
     
@@ -360,25 +360,6 @@ export const useDriverIntegration = () => {
         } else {
           console.log('STEP 3 OK: driver_assignments updated');
         }
-      }
-
-      // STEP 4: Log status change (optional)
-      const { data, error: logError } = await supabase
-        .from('pickup_status_updates')
-        .insert({
-          pickup_order_id: pickupId,
-          new_status: status,
-          updated_by: driver?.driver_id,
-          notes: notes || 'Status updated by driver',
-          timestamp: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (logError) {
-        console.warn('STEP 4 WARN: Failed to log status change', logError);
-      } else {
-        console.log('STEP 4 OK: Log row id', data?.id);
       }
 
       console.log('✅ All status updates successful (or warnings only)');
