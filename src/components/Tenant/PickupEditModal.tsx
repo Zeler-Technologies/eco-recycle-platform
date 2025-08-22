@@ -38,7 +38,6 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       console.log('🔴 MODAL OPENED WITH PICKUP:', pickup);
       console.log('🔴 PICKUP.DRIVER_ID:', pickup?.driver_id);
       console.log('🔴 TYPEOF DRIVER_ID:', typeof pickup?.driver_id);
-      console.log('🔴 SELECTED_DRIVER_ID STATE:', selectedDriverId);
       
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
@@ -53,6 +52,12 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       }
       
       fetchDrivers();
+    } else if (!isOpen) {
+      // Reset state when modal is closed
+      setSelectedDriverId('none');
+      setScheduleDate('');
+      setReimbursement('');
+      setLoading(false);
     }
   }, [pickup, isOpen]);
 
