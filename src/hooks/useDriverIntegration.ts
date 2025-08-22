@@ -274,76 +274,114 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status with strict step-by-step logging
+  // Update pickup status (complete single-responsibility function)
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
-    console.log('🔵 updatePickupStatus called', { pickupId, status, notes });
+    console.log('📞 updatePickupStatus called with:', { pickupId, status, notes });
+    
     try {
-      console.log('STEP 1: Updating pickup_orders...', { pickupId, status });
-      const t1 = performance.now();
-      const { error: updateError } = await supabase
+      // Get customer request ID and assignment ID first
+      const { data: pickup, error: fetchError } = await supabase
         .from('pickup_orders')
-        .update({
+        .select('customer_request_id')
+        .eq('id', pickupId)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Failed to get pickup order: ${fetchError.message}`);
+      }
+
+      // Get active driver assignment for this pickup
+      const { data: assignment, error: assignmentFetchError } = await supabase
+        .from('driver_assignments')
+        .select('id')
+        .eq('pickup_order_id', pickupId)
+        .eq('driver_id', driver?.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (assignmentFetchError) {
+        console.warn('Could not fetch driver assignment:', assignmentFetchError);
+      }
+
+      // STEP 1: Update pickup_orders
+      console.log('STEP 1: Updating pickup_orders...');
+      const { error: pickupError } = await supabase
+        .from('pickup_orders')
+        .update({ 
           status,
           driver_notes: notes,
           updated_at: new Date().toISOString()
         })
         .eq('id', pickupId);
-      if (updateError) {
-        console.error('STEP 1 FAILED: pickup_orders update error', updateError);
-        throw new Error(`Failed to update pickup status: ${updateError.message}`);
-      }
-      console.log('STEP 1 OK in', Math.round(performance.now() - t1), 'ms');
 
-      console.log('STEP 1b: Fetching customer_request_id for pickup...', pickupId);
-      const { data: orderRow, error: orderFetchError } = await supabase
-        .from('pickup_orders')
-        .select('customer_request_id')
-        .eq('id', pickupId)
-        .maybeSingle();
-      if (orderFetchError) {
-        console.warn('STEP 1b WARN: fetch pickup_orders failed', orderFetchError);
-      } else {
-        console.log('STEP 1b OK: customer_request_id =', orderRow?.customer_request_id);
+      if (pickupError) {
+        throw new Error(`STEP 1 ERROR: Failed to update pickup_orders: ${pickupError.message}`);
       }
+      console.log('STEP 1 OK: pickup_orders updated');
 
-      if (orderRow?.customer_request_id) {
-        console.log('STEP 2: Updating customer_requests...', { id: orderRow.customer_request_id, status });
-        const t2 = performance.now();
-        const { error: crUpdateError } = await supabase
+      // STEP 2: Update customer_requests
+      if (pickup.customer_request_id) {
+        console.log('STEP 2: Updating customer_requests...');
+        const { error: requestError } = await supabase
           .from('customer_requests')
           .update({
-            status,
+            status: status === 'rejected' ? 'cancelled' : status,
             updated_at: new Date().toISOString()
           })
-          .eq('id', orderRow.customer_request_id);
-        if (crUpdateError) {
-          console.error('STEP 2 FAILED: customer_requests update error', crUpdateError);
-          // Surface this so UI can show failure; we cannot rollback client-side
-          throw new Error(`Failed to update customer_requests: ${crUpdateError.message}`);
+          .eq('id', pickup.customer_request_id);
+
+        if (requestError) {
+          console.warn('STEP 2 WARN: Failed to update customer_requests', requestError);
+        } else {
+          console.log('STEP 2 OK: customer_requests updated');
         }
-        console.log('STEP 2 OK in', Math.round(performance.now() - t2), 'ms');
-      } else {
-        console.warn('STEP 2 SKIPPED: No customer_request_id found for pickup', pickupId);
       }
 
-      console.log('STEP 3: Logging status change to pickup_status_updates');
+      // STEP 3: Update driver_assignments
+      if (assignment?.id) {
+        console.log('STEP 3: Updating driver_assignments...');
+        const assignmentStatus = status === 'rejected' ? 'canceled' : 
+                                status === 'in_progress' ? 'picked_up' :
+                                status === 'completed' ? 'completed' : 'scheduled';
+        
+        const { error: assignmentError } = await supabase
+          .from('driver_assignments')
+          .update({
+            status: assignmentStatus,
+            notes: notes || 'Status updated by driver',
+            ...(status === 'in_progress' && { started_at: new Date().toISOString() }),
+            ...(status === 'completed' && { completed_at: new Date().toISOString() }),
+            ...(status === 'rejected' && { is_active: false, completed_at: new Date().toISOString() })
+          })
+          .eq('id', assignment.id);
+
+        if (assignmentError) {
+          console.warn('STEP 3 WARN: Failed to update driver_assignments', assignmentError);
+        } else {
+          console.log('STEP 3 OK: driver_assignments updated');
+        }
+      }
+
+      // STEP 4: Log status change (optional)
       const { data, error: logError } = await supabase
         .from('pickup_status_updates')
         .insert({
           pickup_order_id: pickupId,
           new_status: status,
-          driver_notes: notes || null,
-          changed_by: driver?.driver_id
+          updated_by: driver?.driver_id,
+          notes: notes || 'Status updated by driver',
+          timestamp: new Date().toISOString()
         })
         .select()
-        .maybeSingle();
+        .single();
+
       if (logError) {
-        console.warn('STEP 3 WARN: Failed to log status change', logError);
+        console.warn('STEP 4 WARN: Failed to log status change', logError);
       } else {
-        console.log('STEP 3 OK: Log row id', data?.id);
+        console.log('STEP 4 OK: Log row id', data?.id);
       }
 
-      console.log('✅ Both updates successful (or log warning only)');
+      console.log('✅ All status updates successful (or warnings only)');
 
       // Optimistic UI update
       setPickups(prev => prev.map(pickup => 
@@ -561,8 +599,8 @@ export const useDriverIntegration = () => {
         }
       }
 
-      // Deactivate driver assignment for THIS SPECIFIC pickup only
-      console.log('📍 Step 4: Deactivating driver assignment...');
+      // Update driver assignment for THIS SPECIFIC pickup only
+      console.log('📍 Step 4: Updating driver assignment status...');
       const { error: assignmentError } = await supabase
         .from('driver_assignments')
         .update({
