@@ -1,0 +1,241 @@
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Clock, User, DollarSign } from 'lucide-react';
+import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface PickupEditModalProps {
+  pickup: any;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export const PickupEditModal: React.FC<PickupEditModalProps> = ({
+  pickup,
+  isOpen,
+  onClose,
+  onSuccess
+}) => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  
+  // Form state
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [reimbursement, setReimbursement] = useState('');
+
+  // Load initial data when pickup changes
+  useEffect(() => {
+    if (pickup && isOpen) {
+      setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
+      setReimbursement(pickup.quote_amount?.toString() || '');
+      setSelectedDriverId('');
+      fetchDrivers();
+    }
+  }, [pickup, isOpen]);
+
+  const fetchDrivers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, full_name, phone_number, driver_status')
+        .eq('tenant_id', pickup.tenant_id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setDrivers(data || []);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+
+      // Update pickup date in pickup_orders table
+      const pickupDateTime = scheduleDate;
+      const { error: dateError } = await supabase
+        .from('pickup_orders')
+        .update({ scheduled_pickup_date: pickupDateTime })
+        .eq('customer_request_id', pickup.id);
+
+      if (dateError) {
+        console.error('Error updating pickup date:', dateError);
+        throw dateError;
+      }
+
+      // Update reimbursement in customer_requests
+      if (reimbursement && parseFloat(reimbursement) !== pickup.quote_amount) {
+        const { error: reimbursementError } = await supabase
+          .from('customer_requests')
+          .update({ quote_amount: parseFloat(reimbursement) })
+          .eq('id', pickup.id);
+
+        if (reimbursementError) {
+          console.error('Error updating reimbursement:', reimbursementError);
+          throw reimbursementError;
+        }
+      }
+
+      // Assign driver if selected
+      if (selectedDriverId) {
+        // First, deactivate any existing assignments
+        await supabase
+          .from('driver_assignments')
+          .update({ is_active: false })
+          .eq('customer_request_id', pickup.id);
+
+        // Create new assignment
+        const { error: assignmentError } = await supabase
+          .from('driver_assignments')
+          .insert({
+            customer_request_id: pickup.id,
+            driver_id: selectedDriverId,
+            role: 'primary',
+            assignment_type: 'pickup',
+            is_active: true
+          });
+
+        if (assignmentError) {
+          console.error('Error assigning driver:', assignmentError);
+          throw assignmentError;
+        }
+      }
+
+      // Update status to scheduled using unified function
+      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
+        pickup_id: pickup.id,
+        new_status: 'scheduled'
+      });
+
+      if (statusError) {
+        console.error('Error updating status:', statusError);
+        throw statusError;
+      }
+
+      toast({
+        title: "Uppdaterat",
+        description: "Hämtning har uppdaterats framgångsrikt"
+      });
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Error updating pickup:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte uppdatera hämtningen",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!pickup) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Redigera hämtning</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Customer Info */}
+          <div className="bg-muted/30 p-3 rounded-lg">
+            <p className="font-semibold">{pickup.owner_name}</p>
+            <p className="text-sm text-muted-foreground">
+              {pickup.car_brand} {pickup.car_model} ({pickup.car_registration_number})
+            </p>
+            <p className="text-sm text-muted-foreground">{pickup.pickup_address}</p>
+          </div>
+
+          {/* Schedule Date */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Hämtningsdatum
+            </Label>
+            <Input
+              type="date"
+              value={scheduleDate}
+              onChange={(e) => setScheduleDate(e.target.value)}
+            />
+          </div>
+
+          {/* Schedule Time */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Tid
+            </Label>
+            <Input
+              type="time"
+              value={scheduleTime}
+              onChange={(e) => setScheduleTime(e.target.value)}
+            />
+          </div>
+
+          {/* Driver Assignment */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Förare
+            </Label>
+            <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Välj förare (valfritt)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Ingen förare tilldelad</SelectItem>
+                {drivers.map((driver) => (
+                  <SelectItem key={driver.id} value={driver.id}>
+                    {driver.full_name} - {driver.driver_status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Reimbursement */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Ersättning (kr)
+            </Label>
+            <Input
+              type="number"
+              value={reimbursement}
+              onChange={(e) => setReimbursement(e.target.value)}
+              placeholder="Ange ersättning"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Avbryt
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={loading} 
+              className="flex-1"
+            >
+              {loading ? 'Sparar...' : 'Spara'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

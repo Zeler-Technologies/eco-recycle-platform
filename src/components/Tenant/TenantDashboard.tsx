@@ -12,6 +12,7 @@ import SchedulingManagement from './SchedulingManagement';
 import { ServiceZoneManagement } from './ServiceZoneManagement';
 import { CustomerMessageManagement } from './CustomerMessageManagement';
 import { NewCustomerRequestModal } from './NewCustomerRequestModal';
+import { PickupEditModal } from './PickupEditModal';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
@@ -21,6 +22,8 @@ const TenantDashboard = () => {
   const [showServiceZoneManagement, setShowServiceZoneManagement] = useState(false);
   const [showCustomerMessages, setShowCustomerMessages] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [selectedPickup, setSelectedPickup] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   // State for real tenant data
   const [stats, setStats] = useState({
@@ -369,7 +372,14 @@ const TenantDashboard = () => {
                     const hasDriver = order.driver_name && order.driver_name.trim() !== '';
                     const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.status) || hasDriver;
                     return (
-                      <div key={order.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
+                      <div 
+                        key={order.id || index} 
+                        className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors cursor-pointer ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
+                        onClick={() => {
+                          setSelectedPickup(order);
+                          setShowEditModal(true);
+                        }}
+                      >
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-tenant-accent rounded-full">
                             <Car className="h-4 w-4 text-tenant-primary" />
@@ -555,6 +565,19 @@ const TenantDashboard = () => {
         open={showNewCustomerModal}
         onOpenChange={setShowNewCustomerModal}
         onSuccess={fetchTenantData}
+      />
+
+      {/* Pickup Edit Modal */}
+      <PickupEditModal
+        pickup={selectedPickup}
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedPickup(null);
+        }}
+        onSuccess={() => {
+          fetchTenantData(); // Refresh the data
+        }}
       />
     </div>
   );
