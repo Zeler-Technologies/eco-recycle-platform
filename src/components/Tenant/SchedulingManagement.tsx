@@ -386,14 +386,35 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
   const handleAddRequestToSchedule = async (requestId: string, newDate: Date, newTime: string) => {
     try {
-      // Use unified function (bypass TypeScript warnings)
+      console.log('🔄 Scheduling pickup:', { requestId, newDate, newTime });
+      
+      // Update pickup date in pickup_orders table using correct field name
+      const pickupDateTime = format(newDate, 'yyyy-MM-dd');
+      const { error: dateError } = await supabase
+        .from('pickup_orders')
+        .update({ scheduled_pickup_date: pickupDateTime })
+        .eq('customer_request_id', requestId);
+
+      if (dateError) {
+        console.error('❌ Error updating pickup date:', dateError);
+        toast({
+          title: "Fel",
+          description: "Kunde inte uppdatera hämtningsdatum",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ Pickup date updated successfully');
+
+      // Use unified function to update status
       const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
         pickup_id: requestId,
         new_status: 'scheduled'
       });
 
       if (error) {
-        console.error('Error updating request status:', error);
+        console.error('❌ Error updating request status:', error);
         toast({
           title: "Fel",
           description: "Kunde inte uppdatera ärendet",
@@ -402,16 +423,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Update pickup date separately if needed
-      const pickupDateTime = format(newDate, 'yyyy-MM-dd');
-      const { error: dateError } = await supabase
-        .from('pickup_orders')
-        .update({ scheduled_at: pickupDateTime })
-        .eq('customer_request_id', requestId);
-
-      if (dateError) {
-        console.error('Error updating pickup date:', dateError);
-      }
+      console.log('✅ Status updated successfully');
 
       // Update local state
       setRequests(prev => prev.map(req => 
@@ -428,10 +440,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         description: "Förfrågan har bekräftats och lagts till i schemat."
       });
       
-      // Refresh data
-      fetchCustomerRequests();
+      // Refresh data to show updated pickup date
+      await fetchCustomerRequests();
     } catch (error) {
-      console.error('Error scheduling request:', error);
+      console.error('❌ Error scheduling request:', error);
       toast({
         title: "Fel",
         description: "Kunde inte schemalägga hämtningen",
