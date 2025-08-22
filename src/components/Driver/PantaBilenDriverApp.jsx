@@ -379,10 +379,21 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
   );
 
   const PickupCard = ({ pickup }) => {
+    // Ensure we use the correct pickup ID from unified view
+    const pickupId = pickup.pickup_order_id || pickup.id;
+    
     // Check if this pickup is assigned to current driver
     const isAssignedToCurrentDriver = pickup.assigned_driver_id === currentDriver?.id;
     const isUnassigned = pickup.assigned_driver_id === null || pickup.assigned_driver_id === undefined;
-    const showActions = showPickupActions === pickup.id;
+    const showActions = showPickupActions === pickupId;
+    
+    console.log('🔴 PICKUP CARD RENDER:', {
+      pickupId,
+      showPickupActions,
+      showActions,
+      pickup_order_id: pickup.pickup_order_id,
+      pickup_id: pickup.id
+    });
 
     return (
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
@@ -434,7 +445,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               {(isUnassigned || isAssignedToCurrentDriver) && (
                 <>
                   <button
-                    onClick={() => handleActionToggle(pickup.id)}
+                    onClick={() => handleActionToggle(pickupId)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
                       isUnassigned 
                         ? 'bg-blue-600 hover:bg-blue-700 text-white' 
