@@ -467,41 +467,27 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               </button>
               {/* Debug logging for assigned pickups */}
               {pickup.pickup_status === 'assigned' && debugDriverAssignment(pickup)}
-              {/* Action button for assigned status */}
+              {/* Action buttons for assigned status */}
               {pickup.pickup_status === 'assigned' && isAssignedToCurrentDriver && (
-                <div className="relative">
+                <div className="flex gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleActionToggle(pickupId);
+                      handleAcceptPickup(pickupId);
                     }}
-                    className="text-purple-600 text-sm hover:text-purple-800 font-medium px-2 py-1 rounded border border-purple-200 hover:bg-purple-50"
+                    className="px-3 py-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded flex items-center gap-1"
                   >
-                    Acceptera/Avvisa
+                    ✓ Acceptera
                   </button>
-                  
-                  {showPickupActions === pickupId && (
-                    <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAcceptPickup(pickupId);
-                        }}
-                        className="w-full px-4 py-3 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 first:rounded-t-lg flex items-center justify-center gap-2"
-                      >
-                        ✓ Acceptera uppdrag
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRejectPickup(pickupId);
-                        }}
-                        className="w-full px-4 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 last:rounded-b-lg flex items-center justify-center gap-2"
-                      >
-                        ✗ Avvisa uppdrag
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRejectPickup(pickupId);
+                    }}
+                    className="px-3 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded flex items-center gap-1"
+                  >
+                    ✗ Avvisa
+                  </button>
                 </div>
               )}
               
