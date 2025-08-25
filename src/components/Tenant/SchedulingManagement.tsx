@@ -1303,6 +1303,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                     </Button>
                   </>
                 )}
+                
+                {/* OK Button - Green color to confirm and close */}
+                <Button
+                  onClick={() => setIsDetailDialogOpen(false)}
+                  className="ml-auto bg-green-600 hover:bg-green-700 text-white"
+                >
+                  OK
+                </Button>
               </div>
             </div>
           )}
