@@ -56,20 +56,6 @@ export type Database = {
             foreignKeyName: "auth_users_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "auth_users_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "auth_users_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -117,20 +103,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "bidding_system_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "bidding_system_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
           {
             foreignKeyName: "bidding_system_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -231,20 +203,6 @@ export type Database = {
             foreignKeyName: "billing_configuration_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "billing_configuration_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "billing_configuration_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -299,20 +257,6 @@ export type Database = {
             foreignKeyName: "bonus_offers_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "bonus_offers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "bonus_offers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -351,13 +295,6 @@ export type Database = {
           pnr_num_norm?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "car_images_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["car_id"]
-          },
           {
             foreignKeyName: "car_images_car_id_fkey"
             columns: ["car_id"]
@@ -486,20 +423,6 @@ export type Database = {
             foreignKeyName: "car_pricing_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "car_pricing_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "car_pricing_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -609,13 +532,6 @@ export type Database = {
             foreignKeyName: "cars_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "cars_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -639,20 +555,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cars_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "cars_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "cars_tenant_id_fkey"
@@ -809,13 +711,6 @@ export type Database = {
             foreignKeyName: "customer_requests_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -839,20 +734,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "customer_requests_tenant_id_fkey"
@@ -923,13 +804,6 @@ export type Database = {
             foreignKeyName: "customers_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["car_id"]
-          },
-          {
-            foreignKeyName: "customers_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
           },
@@ -939,13 +813,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "available_scrapyards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
           },
           {
             foreignKeyName: "customers_scrapyard_id_fkey"
@@ -1001,13 +868,6 @@ export type Database = {
             foreignKeyName: "deletion_info_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["car_id"]
-          },
-          {
-            foreignKeyName: "deletion_info_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
           },
@@ -1042,20 +902,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "distance_rules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "distance_rules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
           {
             foreignKeyName: "distance_rules_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1149,64 +995,8 @@ export type Database = {
             foreignKeyName: "driver_assignments_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
@@ -1255,64 +1045,8 @@ export type Database = {
             foreignKeyName: "driver_locations_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_locations_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_locations_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_locations_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "driver_locations_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_locations_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_locations_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_locations_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_locations_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
@@ -1381,106 +1115,8 @@ export type Database = {
             foreignKeyName: "driver_notifications_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
@@ -1531,20 +1167,6 @@ export type Database = {
           tenant_id?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "driver_status_history_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_status_history_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
           {
             foreignKeyName: "driver_status_history_driver_id_fkey"
             columns: ["driver_id"]
@@ -1630,13 +1252,6 @@ export type Database = {
             foreignKeyName: "drivers_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "drivers_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -1660,20 +1275,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "drivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "drivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "drivers_tenant_id_fkey"
@@ -1836,20 +1437,6 @@ export type Database = {
             foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "margin_alert_thresholds_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -1910,22 +1497,8 @@ export type Database = {
             foreignKeyName: "payments_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["car_id"]
-          },
-          {
-            foreignKeyName: "payments_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
             referencedRelation: "cars"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["customer_id"]
           },
           {
             foreignKeyName: "payments_customer_id_fkey"
@@ -1938,190 +1511,91 @@ export type Database = {
             foreignKeyName: "payments_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "payments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "payments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "payments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "payments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "payments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
       pickup_orders: {
         Row: {
-          actual_arrival: string | null
           actual_pickup_date: string | null
           assigned_driver_id: string | null
           completion_photos: string[] | null
           created_at: string
-          customer_request_id: string | null
-          customer_signature: string | null
+          customer_request_id: string
           driver_id: string | null
           driver_name: string | null
           driver_notes: string | null
-          driver_signature: string | null
-          estimated_arrival: string | null
           final_price: number | null
           id: string
-          scheduled_at: string | null
           scheduled_pickup_date: string | null
           status: string | null
-          tenant_id: number | null
+          tenant_id: number
           updated_at: string
         }
         Insert: {
-          actual_arrival?: string | null
           actual_pickup_date?: string | null
           assigned_driver_id?: string | null
           completion_photos?: string[] | null
           created_at?: string
-          customer_request_id?: string | null
-          customer_signature?: string | null
+          customer_request_id: string
           driver_id?: string | null
           driver_name?: string | null
           driver_notes?: string | null
-          driver_signature?: string | null
-          estimated_arrival?: string | null
           final_price?: number | null
           id?: string
-          scheduled_at?: string | null
           scheduled_pickup_date?: string | null
           status?: string | null
-          tenant_id?: number | null
+          tenant_id: number
           updated_at?: string
         }
         Update: {
-          actual_arrival?: string | null
           actual_pickup_date?: string | null
           assigned_driver_id?: string | null
           completion_photos?: string[] | null
           created_at?: string
-          customer_request_id?: string | null
-          customer_signature?: string | null
+          customer_request_id?: string
           driver_id?: string | null
           driver_name?: string | null
           driver_notes?: string | null
-          driver_signature?: string | null
-          estimated_arrival?: string | null
           final_price?: number | null
           id?: string
-          scheduled_at?: string | null
           scheduled_pickup_date?: string | null
           status?: string | null
-          tenant_id?: number | null
+          tenant_id?: number
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "pickup_orders_customer_request_id_fkey"
+            foreignKeyName: "fk_pickup_orders_customer_request"
             columns: ["customer_request_id"]
             isOneToOne: false
             referencedRelation: "car_complete_view"
             referencedColumns: ["customer_request_id"]
           },
           {
-            foreignKeyName: "pickup_orders_customer_request_id_fkey"
+            foreignKeyName: "fk_pickup_orders_customer_request"
             columns: ["customer_request_id"]
             isOneToOne: false
             referencedRelation: "customer_requests"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "pickup_orders_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_driver_id_fkey"
+            foreignKeyName: "fk_pickup_orders_driver"
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
+            foreignKeyName: "fk_pickup_orders_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
           {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
+            foreignKeyName: "fk_pickup_orders_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2191,64 +1665,8 @@ export type Database = {
             foreignKeyName: "pickup_status_updates_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickup_status_updates_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
@@ -2371,20 +1789,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
           {
             foreignKeyName: "scrap_yard_locations_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -2550,13 +1954,6 @@ export type Database = {
             foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -2580,20 +1977,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
           },
           {
             foreignKeyName: "scrapyard_invoices_tenant_id_fkey"
@@ -2679,20 +2062,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "scrapyards_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scrapyards_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
           {
             foreignKeyName: "scrapyards_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -2848,13 +2217,6 @@ export type Database = {
             foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "tenant_bidding_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -2956,20 +2318,6 @@ export type Database = {
             foreignKeyName: "user_tenant_id_fkey"
             columns: ["tenants_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "user_tenant_id_fkey"
-            columns: ["tenants_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "user_tenant_id_fkey"
-            columns: ["tenants_id"]
-            isOneToOne: false
             referencedRelation: "scrapyard_invoice_summaries"
             referencedColumns: ["tenant_id"]
           },
@@ -3014,13 +2362,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "available_scrapyards"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_roles_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
           },
           {
             foreignKeyName: "user_roles_scrapyard_id_fkey"
@@ -3150,80 +2491,6 @@ export type Database = {
           },
         ]
       }
-      car_pickup_payments: {
-        Row: {
-          actual_pickup_date: string | null
-          amount: number | null
-          brand: string | null
-          car_id: string | null
-          color: string | null
-          customer_email: string | null
-          customer_id: string | null
-          customer_name: string | null
-          customer_phone: string | null
-          driver_id: string | null
-          driver_name: string | null
-          final_price: number | null
-          license_plate: string | null
-          model: string | null
-          payment_date: string | null
-          payment_id: string | null
-          payment_method: string | null
-          payment_status: string | null
-          pickup_order_id: string | null
-          pickup_status: string | null
-          price_offered: number | null
-          price_payed: number | null
-          scheduled_pickup_date: string | null
-          scrapyard_id: number | null
-          scrapyard_name: string | null
-          tenant_id: number | null
-          tenant_name: string | null
-        }
-        Relationships: []
-      }
-      driver_tenant_orders: {
-        Row: {
-          driver_id: string | null
-          driver_name: string | null
-          order_created_at: string | null
-          order_id: string | null
-          order_status: string | null
-          tenant_id: number | null
-          tenant_name: string | null
-          tenants_id: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "drivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "drivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "drivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "drivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["tenants_id"]
-          },
-        ]
-      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -3305,13 +2572,6 @@ export type Database = {
             foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
             columns: ["scrapyard_id"]
             isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "scrapyard_invoices_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
             referencedRelation: "monthly_cancelled_invoices"
             referencedColumns: ["scrapyard_id"]
           },
@@ -3335,124 +2595,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      pickup_order_notifications: {
-        Row: {
-          driver_id: string | null
-          message: string | null
-          notification_created_at: string | null
-          notification_id: string | null
-          order_created_at: string | null
-          order_id: string | null
-          pickup_order_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "driver_notifications_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "drivers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "driver_notifications_pickup_order_id_fkey"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["pickup_order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_order_notifications"
-            referencedColumns: ["order_id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_orders_enriched"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_driver_notifications_pickup_order"
-            columns: ["pickup_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_pickup_status_unified"
-            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
@@ -3509,289 +2651,6 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: []
-      }
-      v_pickup_orders_enriched: {
-        Row: {
-          actual_arrival: string | null
-          actual_pickup_date: string | null
-          completion_photos: string[] | null
-          created_at: string | null
-          customer_request_id: string | null
-          customer_signature: string | null
-          driver_id: string | null
-          driver_name: string | null
-          driver_notes: string | null
-          driver_signature: string | null
-          estimated_arrival: string | null
-          final_price: number | null
-          id: string | null
-          scheduled_pickup_date: string | null
-          scrapyard_id: number | null
-          status: string | null
-          tenant_id: number | null
-          updated_at: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "available_scrapyards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_cancelled_invoices"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_reports"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_customer_request_id_fkey"
-            columns: ["customer_request_id"]
-            isOneToOne: false
-            referencedRelation: "car_complete_view"
-            referencedColumns: ["customer_request_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_customer_request_id_fkey"
-            columns: ["customer_request_id"]
-            isOneToOne: false
-            referencedRelation: "customer_requests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "drivers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["tenants_id"]
-          },
-        ]
-      }
-      v_pickup_status_unified: {
-        Row: {
-          assigned_at: string | null
-          assignment_active: boolean | null
-          assignment_notes: string | null
-          car_brand: string | null
-          car_model: string | null
-          car_registration_number: string | null
-          car_year: number | null
-          completion_photos: string[] | null
-          contact_phone: string | null
-          created_at: string | null
-          customer_request_id: string | null
-          driver_id: string | null
-          driver_name: string | null
-          driver_notes: string | null
-          driver_phone: string | null
-          final_price: number | null
-          owner_name: string | null
-          pickup_address: string | null
-          pickup_latitude: number | null
-          pickup_longitude: number | null
-          pickup_order_id: string | null
-          pickup_postal_code: string | null
-          pickup_status: string | null
-          pnr_num: string | null
-          scheduled_pickup_date: string | null
-          scrapyard_id: number | null
-          status_display_text: string | null
-          tenant_id: number | null
-          updated_at: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "available_scrapyards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_cancelled_invoices"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_reports"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["scrapyard_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_scrapyard_id_fkey"
-            columns: ["scrapyard_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "scrapyard_invoice_summaries"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "customer_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["tenants_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "car_pickup_payments"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "driver_tenant_orders"
-            referencedColumns: ["driver_id"]
-          },
-          {
-            foreignKeyName: "driver_assignments_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "drivers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_customer_requests_registration"
-            columns: ["car_registration_number"]
-            isOneToOne: false
-            referencedRelation: "car_complete_view"
-            referencedColumns: ["car_registration_number"]
-          },
-          {
-            foreignKeyName: "fk_customer_requests_registration"
-            columns: ["car_registration_number"]
-            isOneToOne: false
-            referencedRelation: "car_registrations"
-            referencedColumns: ["car_registration_number"]
-          },
-          {
-            foreignKeyName: "pickup_orders_customer_request_id_fkey"
-            columns: ["customer_request_id"]
-            isOneToOne: false
-            referencedRelation: "car_complete_view"
-            referencedColumns: ["customer_request_id"]
-          },
-          {
-            foreignKeyName: "pickup_orders_customer_request_id_fkey"
-            columns: ["customer_request_id"]
-            isOneToOne: false
-            referencedRelation: "customer_requests"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Functions: {
