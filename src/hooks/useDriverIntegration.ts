@@ -141,11 +141,22 @@ export const useDriverIntegration = () => {
     try {
       console.log('🔄 Loading pickups for driver:', driverId);
       
-      // Use unified view (bypass TypeScript warnings)
+      // Get driver's tenant info first
+      const { data: driverData, error: driverError } = await supabase
+        .from('drivers')
+        .select('tenant_id, scrapyard_id')
+        .eq('id', driverId)
+        .single();
+
+      if (driverError) {
+        throw new Error(`Failed to get driver tenant info: ${driverError.message}`);
+      }
+
+      // Use unified view to get all pickups for the driver's tenant/scrapyard
       const { data, error } = await (supabase as any)
         .from('v_pickup_status_unified')
         .select('*')
-        .eq('driver_id', driverId)
+        .eq('tenant_id', driverData.tenant_id)
         .order('created_at', { ascending: false });
 
       console.log('🔴 SUPABASE RESULT:', { data, error });
