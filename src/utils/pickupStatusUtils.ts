@@ -12,12 +12,17 @@ export const updatePickupStatus = async (
 ) => {
   console.log(`🔄 Updating pickup ${pickupOrderId} status to: ${newStatus}`);
   
-  const { data, error } = await supabase.rpc('update_pickup_status_unified', {
-    p_pickup_order_id: pickupOrderId,
-    p_new_status: newStatus,
-    p_driver_notes: driverNotes || null,
-    p_completion_photos: completionPhotos || null
-  });
+  // Update pickup_orders.status directly (single source of truth)
+  // The trigger will sync to customer_requests.status automatically
+  const { data, error } = await supabase
+    .from('pickup_orders')
+    .update({ 
+      status: newStatus,
+      driver_notes: driverNotes || null,
+      completion_photos: completionPhotos || null
+    })
+    .eq('id', pickupOrderId)
+    .select();
 
   if (error) {
     console.error('❌ Error updating pickup status:', error);

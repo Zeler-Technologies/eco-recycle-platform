@@ -2910,6 +2910,116 @@ export type Database = {
           },
         ]
       }
+      v_unified_pickup_status: {
+        Row: {
+          actual_pickup_date: string | null
+          assigned_driver_id: string | null
+          car_brand: string | null
+          car_model: string | null
+          car_registration_number: string | null
+          car_year: number | null
+          completion_photos: string[] | null
+          contact_phone: string | null
+          current_status: string | null
+          customer_request_id: string | null
+          driver_name: string | null
+          driver_notes: string | null
+          estimated_value: number | null
+          final_price: number | null
+          owner_name: string | null
+          pickup_address: string | null
+          pickup_created_at: string | null
+          pickup_latitude: number | null
+          pickup_longitude: number | null
+          pickup_order_id: string | null
+          pickup_postal_code: string | null
+          pickup_updated_at: string | null
+          quote_amount: number | null
+          request_created_at: string | null
+          scheduled_pickup_date: string | null
+          scrapyard_id: number | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "available_scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_cancelled_invoices"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_reports"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["scrapyard_id"]
+          },
+          {
+            foreignKeyName: "customer_requests_scrapyard_id_fkey"
+            columns: ["scrapyard_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_customer_requests_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_customer_requests_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_registrations"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_pickup_orders_customer_request"
+            columns: ["customer_request_id"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["customer_request_id"]
+          },
+          {
+            foreignKeyName: "fk_pickup_orders_customer_request"
+            columns: ["customer_request_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_pickup_orders_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_pickup_orders_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
     }
     Functions: {
       _driver_status_to_enum: {

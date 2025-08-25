@@ -49,19 +49,18 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch customer requests stats for this tenant
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('customer_requests')
-        .select('status, created_at')
+      // Fetch unified pickup data for stats calculation
+      const { data: unifiedData, error: unifiedError } = await supabase
+        .from('v_unified_pickup_status')
+        .select('current_status, pickup_created_at')
         .eq('tenant_id', user?.tenant_id);
 
-      if (requestsError) throw requestsError;
+      if (unifiedError) throw unifiedError;
 
-      // Calculate stats from requests
-      const today = new Date().toDateString();
-      const newRequests = requestsData?.filter(r => r.status === 'pending').length || 0;
-      const inProgress = requestsData?.filter(r => ['assigned', 'in_progress'].includes(r.status)).length || 0;
-      const completed = requestsData?.filter(r => r.status === 'completed').length || 0;
+      // Calculate stats from unified data (using pickup_orders.status as source of truth)
+      const newRequests = unifiedData?.filter(r => r.current_status === 'pending').length || 0;
+      const inProgress = unifiedData?.filter(r => ['assigned', 'in_progress'].includes(r.current_status)).length || 0;
+      const completed = unifiedData?.filter(r => r.current_status === 'completed').length || 0;
 
       // Fetch active drivers count for this tenant
       const { data: driversData, error: driversError } = await supabase
@@ -79,11 +78,13 @@ const TenantDashboard = () => {
         activeDrivers: driversData?.length || 0
       });
 
-      // Fetch recent orders from tenant's customers with driver info
+      // Fetch recent orders from unified view with driver info
       const { data: ordersData, error: ordersError } = await supabase
-        .from('customer_requests')
+        .from('v_unified_pickup_status')
         .select(`
-          id,
+          pickup_order_id,
+          customer_request_id,
+          current_status,
           owner_name,
           contact_phone,
           car_brand,
@@ -91,46 +92,35 @@ const TenantDashboard = () => {
           car_year,
           car_registration_number,
           pickup_address,
-          status,
           quote_amount,
-          created_at
+          request_created_at,
+          driver_name,
+          assigned_driver_id
         `)
         .eq('tenant_id', user?.tenant_id)
-        .order('created_at', { ascending: false })
+        .order('request_created_at', { ascending: false })
         .limit(5);
 
       if (ordersError) throw ordersError;
 
-      // Get driver assignments for recent orders
-      if (ordersData && ordersData.length > 0) {
-        const orderIds = ordersData.map(order => order.id);
-        console.log('🔴 FETCHING DRIVER ASSIGNMENTS FOR ORDERS:', orderIds);
-        const { data: orderAssignmentsData } = await supabase
-          .from('driver_assignments')
-          .select(`
-            customer_request_id,
-            driver_id,
-            drivers(id, full_name)
-          `)
-          .in('customer_request_id', orderIds)
-          .eq('is_active', true);
-        console.log('🔴 ORDER ASSIGNMENTS RESULT:', orderAssignmentsData);
+      // Transform unified data to match component expectations
+      const transformedOrders = ordersData?.map(order => ({
+        id: order.pickup_order_id || order.customer_request_id,
+        owner_name: order.owner_name,
+        contact_phone: order.contact_phone,
+        car_brand: order.car_brand,
+        car_model: order.car_model,
+        car_year: order.car_year,
+        car_registration_number: order.car_registration_number,
+        pickup_address: order.pickup_address,
+        status: order.current_status, // Using unified status from pickup_orders
+        quote_amount: order.quote_amount,
+        created_at: order.request_created_at,
+        driver_name: order.driver_name,
+        assigned_driver_id: order.assigned_driver_id
+      })) || [];
 
-        // Combine orders with driver info
-        const ordersWithDrivers = ordersData.map(order => {
-          const assignment = orderAssignmentsData?.find(a => a.customer_request_id === order.id);
-          return {
-            ...order,
-            driver_id: assignment?.driver_id || null,
-            driver_name: assignment?.drivers?.full_name || null,
-            tenant_id: user?.tenant_id
-          };
-        });
-        console.log('🔴 ORDERS WITH DRIVER DATA:', ordersWithDrivers);
-        setRecentOrders(ordersWithDrivers);
-      } else {
-        setRecentOrders([]);
-      }
+      setRecentOrders(transformedOrders);
 
       // Fetch today's scheduled pickup requests from customer_requests table
       const today_start = new Date();
@@ -410,8 +400,8 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(hasDriver && order.status === 'pending' ? 'assigned' : order.status)}>
-                            {order.status === 'pending' ? (hasDriver ? 'Tilldelad' : 'Ny') : 
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status === 'pending' ? 'Ny' : 
                              order.status === 'assigned' ? 'Tilldelad' :
                              order.status === 'in_progress' ? 'Pågående' :
                              order.status === 'completed' ? 'Klar' : 

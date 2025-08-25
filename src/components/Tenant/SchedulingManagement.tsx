@@ -174,79 +174,67 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   };
 
+  // Set up real-time subscription for status changes (unified approach)
+  useEffect(() => {
+    if (!user?.tenant_id) return;
+
+    const channel = supabase.channel('scheduling-status-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'pickup_orders',
+        filter: `tenant_id=eq.${user.tenant_id}`
+      }, () => {
+        console.log('🔄 Pickup order status changed, refreshing data...');
+        fetchCustomerRequests();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public', 
+        table: 'customer_requests',
+        filter: `tenant_id=eq.${user.tenant_id}`
+      }, () => {
+        console.log('🔄 Customer request changed, refreshing data...');
+        fetchCustomerRequests();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.tenant_id]);
+
   const fetchCustomerRequests = async () => {
     if (!user?.tenant_id) return;
     
     try {
       setRequestsLoading(true);
-      console.log('🔄 Fetching customer requests for tenant:', user.tenant_id);
-      
-      // Fetch all customer requests first
-      const { data: customerRequestsData, error: customerError } = await supabase
-        .from('customer_requests')
-        .select(`
-          id,
-          owner_name,
-          contact_phone,
-          pickup_address,
-          car_brand,
-          car_model,
-          car_year,
-          car_registration_number,
-          status,
-          pickup_date,
-          created_at,
-          scrapyard_id
-        `)
-        .eq('tenant_id', user.tenant_id)
-        .order('created_at', { ascending: false });
+      console.log('🔄 Fetching unified pickup data for tenant:', user.tenant_id);
 
-      if (customerError) {
-        console.error('❌ Error fetching customer requests:', customerError);
+      // Fetch unified pickup data using new view
+      const { data: unifiedData, error: unifiedError } = await supabase
+        .from('v_unified_pickup_status')
+        .select('*')
+        .eq('tenant_id', user.tenant_id);
+
+      if (unifiedError) {
+        console.error('❌ Error fetching unified pickup data:', unifiedError);
         toast({
           title: "Fel",
-          description: "Kunde inte ladda kundförfrågningar",
+          description: "Kunde inte ladda upphämtningsdata",
           variant: "destructive"
         });
         return;
       }
 
-      // Fetch pickup orders to merge with customer requests (use pickup_orders as source of truth for status)
-      const { data: pickupData, error: pickupError } = await supabase
-        .from('pickup_orders')
-        .select(`
-          id,
-          customer_request_id,
-          status,
-          scheduled_pickup_date,
-          assigned_driver_id,
-          driver_name,
-          final_price
-        `)
-        .eq('tenant_id', user.tenant_id);
-
-      if (pickupError) {
-        console.warn('⚠️ Warning fetching pickup orders:', pickupError);
-      }
-
-      console.log('✅ Customer requests fetched:', customerRequestsData?.length || 0);
-      console.log('✅ Pickup orders fetched:', pickupData?.length || 0);
+      console.log('✅ Unified pickup data fetched:', unifiedData?.length || 0);
       
-      // Create a map of pickup orders by customer_request_id for faster lookup
-      const pickupOrderMap = new Map();
-      (pickupData || []).forEach((pickup: any) => {
-        if (pickup.customer_request_id) {
-          pickupOrderMap.set(pickup.customer_request_id, pickup);
-        }
-      });
-      
-      // Convert all customer requests to component format, merging with pickup data when available
-      const formattedRequests: Request[] = (customerRequestsData || []).map((customerRequest: any) => {
-        const pickupOrder = pickupOrderMap.get(customerRequest.id);
+      // Convert unified data to component format
+      const formattedRequests: Request[] = (unifiedData || []).map((unified: any) => {
         
-        // Get the most current status from pickup_orders table (primary source of truth)
+        // Get the most current status from pickup_orders table (single source of truth)
         let status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
-        const actualStatus = pickupOrder?.status || customerRequest.status;
+        const actualStatus = unified.current_status;
         
         switch (actualStatus) {
           case 'pending':
@@ -270,28 +258,26 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             status = 'Förfrågan';
         }
 
-        // Use pickup order's scheduled date if available, otherwise use customer request pickup_date or created_at
-        const requestDate = pickupOrder?.scheduled_pickup_date 
-          ? new Date(pickupOrder.scheduled_pickup_date + 'T09:00:00')
-          : customerRequest.pickup_date
-          ? new Date(customerRequest.pickup_date + 'T09:00:00')
-          : new Date(customerRequest.created_at);
+        // Use pickup order's scheduled date if available, otherwise use request created date
+        const requestDate = unified.scheduled_pickup_date 
+          ? new Date(unified.scheduled_pickup_date + 'T09:00:00')
+          : new Date(unified.request_created_at);
 
         return {
-          id: pickupOrder?.id || customerRequest.id,
-          pickupOrderId: pickupOrder?.id || null,
-          customerRequestId: customerRequest.id,
+          id: unified.pickup_order_id,
+          pickupOrderId: unified.pickup_order_id,
+          customerRequestId: unified.customer_request_id,
           date: requestDate,
           time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
-          customerName: pickupOrder?.owner_name || customerRequest.owner_name || 'Okänd kund',
-          address: pickupOrder?.pickup_address || customerRequest.pickup_address || 'Ingen adress angiven',
-          phone: pickupOrder?.contact_phone || customerRequest.contact_phone || 'Inget telefonnummer',
-          carBrand: pickupOrder?.car_brand || customerRequest.car_brand || 'Okänt märke',
-          carModel: pickupOrder?.car_model || customerRequest.car_model || 'Okänd modell',
-          registrationNumber: pickupOrder?.car_registration_number || customerRequest.car_registration_number || 'Okänt reg.nr',
+          customerName: unified.owner_name || 'Okänd kund',
+          address: unified.pickup_address || 'Ingen adress angiven',
+          phone: unified.contact_phone || 'Inget telefonnummer',
+          carBrand: unified.car_brand || 'Okänt märke',
+          carModel: unified.car_model || 'Okänd modell',
+          registrationNumber: unified.car_registration_number || 'Okänt reg.nr',
           status,
-          notes: pickupOrder?.driver_notes || null,
-          assignedDriver: pickupOrder?.driver_name || null,
+          notes: unified.driver_notes || null,
+          assignedDriver: unified.driver_name || null,
           rawPickupStatus: actualStatus
         };
       });
