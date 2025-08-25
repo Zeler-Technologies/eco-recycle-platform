@@ -147,6 +147,17 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       }
       console.log('✅ CUSTOMER REQUEST UPDATED');
 
+      // Resolve actual pickup_order_id for status updates
+      const { data: pickupOrderRow, error: pickupOrderLookupError } = await supabase
+        .from('pickup_orders')
+        .select('id')
+        .eq('customer_request_id', pickup.id)
+        .maybeSingle();
+      if (pickupOrderLookupError) {
+        console.warn('⚠️ Could not lookup pickup_order_id:', pickupOrderLookupError);
+      }
+      const pickupOrderId = pickupOrderRow?.id as string | undefined;
+
       // Handle driver assignment/unassignment
       console.log('🔴 HANDLING DRIVER ASSIGNMENT, selectedDriverId:', selectedDriverId);
       
@@ -170,12 +181,18 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         // Skip status update for cancelled pickups
         if (pickup.status !== 'cancelled') {
           console.log('🔴 UPDATING STATUS TO SCHEDULED...');
-          const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
-            p_pickup_order_id: pickup.id,
-            p_new_status: 'scheduled',
-            p_driver_notes: 'Driver unassigned - available for self-assignment',
-            p_completion_photos: null
-          });
+          let statusError: any = null;
+          if (pickupOrderId) {
+            const { error } = await supabase.rpc('update_pickup_status_unified', {
+              p_pickup_order_id: pickupOrderId,
+              p_new_status: 'scheduled',
+              p_driver_notes: 'Driver unassigned - available for self-assignment',
+              p_completion_photos: null
+            });
+            statusError = error;
+          } else {
+            console.warn('⚠️ Skipping status update: pickup_order_id not found');
+          }
 
           if (statusError) {
             console.error('🔴 ERROR UPDATING STATUS TO SCHEDULED:', statusError);
@@ -223,12 +240,18 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         // Skip status update for cancelled pickups
         if (pickup.status !== 'cancelled') {
           console.log('🔴 UPDATING STATUS TO ASSIGNED...');
-          const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
-            p_pickup_order_id: pickup.id,
-            p_new_status: 'assigned',
-            p_driver_notes: 'Driver assigned via admin modal',
-            p_completion_photos: null
-          });
+          let statusError: any = null;
+          if (pickupOrderId) {
+            const { error } = await supabase.rpc('update_pickup_status_unified', {
+              p_pickup_order_id: pickupOrderId,
+              p_new_status: 'assigned',
+              p_driver_notes: 'Driver assigned via admin modal',
+              p_completion_photos: null
+            });
+            statusError = error;
+          } else {
+            console.warn('⚠️ Skipping status update: pickup_order_id not found');
+          }
 
           if (statusError) {
             console.error('🔴 ERROR UPDATING STATUS TO ASSIGNED:', statusError);
