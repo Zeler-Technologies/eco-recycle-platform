@@ -494,18 +494,6 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                         size="sm"
                         onClick={() => {
                           setSelectedDriver(driver);
-                          setShowPickupAssignment(true);
-                        }}
-                        disabled={!driver.tenant_id}
-                      >
-                        Assign
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedDriver(driver);
                           setShowDriverForm(true);
                         }}
                       >
