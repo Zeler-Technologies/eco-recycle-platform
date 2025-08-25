@@ -1275,14 +1275,28 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 </Button>
                 
                 {selectedRequest.status === 'Förfrågan' && (
-                  <Button
-                    onClick={() => handleConfirmRequest(selectedRequest.id)}
-                    className="flex items-center gap-2"
-                    disabled={!selectedRequest.assignedDriver}
-                  >
-                    <Check className="h-4 w-4" />
-                    Bekräfta hämtning
-                  </Button>
+                  <>
+                    {/* Check if pickup date is today or in the future */}
+                    {selectedRequest.date >= new Date(new Date().setHours(0,0,0,0)) ? (
+                      <Button
+                        onClick={() => handleConfirmRequest(selectedRequest.id)}
+                        className="flex items-center gap-2"
+                        disabled={!selectedRequest.assignedDriver}
+                      >
+                        <Check className="h-4 w-4" />
+                        Bekräfta hämtning
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleRescheduleRequest(selectedRequest)}
+                        className="flex items-center gap-2"
+                      >
+                        <Clock className="h-4 w-4" />
+                        Omschemalägg (försenad)
+                      </Button>
+                    )}
+                  </>
                 )}
 
                 {(selectedRequest.status === 'Bekräftad' || selectedRequest.status === 'Avbokad') && (
