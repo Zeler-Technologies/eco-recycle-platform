@@ -175,7 +175,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
             customer_request_id: pickup.customer_request_id,
             tenant_id: existingRequest.tenant_id || user?.tenant_id || 1,
             status: pickupStatus,
-            scheduled_pickup_date: scheduleDate
+            scheduled_pickup_date: scheduleDate,
+            final_price: reimbursement ? parseFloat(reimbursement) : null
           })
           .select('id')
           .single();
@@ -188,13 +189,14 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         pickupOrderId = newPickupOrder.id;
         console.log('✅ PICKUP ORDER CREATED:', pickupOrderId);
       } else {
-        // Update existing pickup_order status
+      // Update existing pickup_order status and reimbursement
         console.log('🔴 UPDATING EXISTING PICKUP ORDER STATUS to:', pickupStatus);
         const { error: statusUpdateError } = await supabase
           .from('pickup_orders')
           .update({ 
             status: pickupStatus,
-            scheduled_pickup_date: scheduleDate
+            scheduled_pickup_date: scheduleDate,
+            final_price: reimbursement ? parseFloat(reimbursement) : null
           })
           .eq('id', pickupOrderId);
 
