@@ -160,12 +160,14 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
         throw assignmentError;
       }
 
-      // Step 2: Update pickup status using unified function
-      const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
-        p_pickup_order_id: pickupOrderId,
-        p_new_status: 'assigned',
-        p_driver_notes: `Assigned to driver ${driver.full_name} via admin interface`,
-        p_completion_photos: null
+      // Step 2: Update pickup status via edge function (avoids enum casting issues)
+      const { data: statusResp, error: statusError } = await supabase.functions.invoke('update-pickup-status', {
+        body: {
+          p_pickup_order_id: pickupOrderId,
+          p_new_status: 'assigned',
+          p_driver_notes: `Assigned to driver ${driver.full_name} via admin interface`,
+          p_completion_photos: null
+        }
       });
       
       if (statusError) {

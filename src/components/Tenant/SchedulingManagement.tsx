@@ -359,13 +359,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           return;
         }
 
-        // Update pickup status
-        const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
-          p_pickup_order_id: pickupOrderId,
-          p_new_status: 'assigned',
-          p_driver_notes: `Assigned to ${selectedDriverName} via admin interface`,
-          p_completion_photos: null,
-          p_test_driver_id: null
+        // Update pickup status via edge function (avoids enum casting issues)
+        const { data: statusResp, error: statusError } = await supabase.functions.invoke('update-pickup-status', {
+          body: {
+            p_pickup_order_id: pickupOrderId,
+            p_new_status: 'assigned',
+            p_driver_notes: `Assigned to ${selectedDriverName} via admin interface`,
+            p_completion_photos: null
+          }
         });
 
         if (statusError) {
