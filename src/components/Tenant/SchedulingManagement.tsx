@@ -407,25 +407,77 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const handleCancelRequest = async (requestId: string) => {
     try {
       const currentRequest = requests.find(req => req.id === requestId);
-      const pickupOrderId = currentRequest?.pickupOrderId || requestId;
+      const pickupOrderId = currentRequest?.pickupOrderId;
+      const customerRequestId = currentRequest?.customerRequestId || requestId;
 
-      // Use CORRECTED unified function to cancel pickup
-      const { error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
-        p_pickup_order_id: pickupOrderId,
-        p_new_status: 'cancelled',
-        p_driver_notes: 'Cancelled by admin',
-        p_completion_photos: null,
-        p_test_driver_id: null
+      console.log('🚫 CANCEL REQUEST DEBUG:', {
+        requestId,
+        pickupOrderId,
+        customerRequestId,
+        currentRequest
       });
 
-      if (error) {
-        console.error('Error cancelling request:', error);
-        toast({
-          title: "Fel",
-          description: "Kunde inte avboka förfrågan",
-          variant: "destructive"
+      // For unassigned requests, update customer_requests directly
+      if (!pickupOrderId || !currentRequest?.assignedDriver) {
+        console.log('🚫 Cancelling unassigned request directly...');
+        
+        // Update customer request status to cancelled
+        const { error: customerError } = await supabase
+          .from('customer_requests')
+          .update({ 
+            status: 'cancelled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', customerRequestId);
+
+        if (customerError) {
+          console.error('Error cancelling customer request:', customerError);
+          toast({
+            title: "Fel",
+            description: "Kunde inte avboka förfrågan",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // If pickup order exists, update it too
+        if (pickupOrderId) {
+          const { error: pickupError } = await supabase
+            .from('pickup_orders')
+            .update({
+              status: 'cancelled',
+              driver_notes: 'Cancelled by admin',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', pickupOrderId);
+
+          if (pickupError) {
+            console.warn('Warning updating pickup order:', pickupError);
+            // Don't fail the whole operation for this
+          }
+        }
+
+      } else {
+        // For assigned requests, use the RPC function
+        console.log('🚫 Cancelling assigned request via RPC...');
+        
+        const { error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+          p_pickup_order_id: pickupOrderId,
+          p_new_status: 'cancelled',
+          p_driver_notes: 'Cancelled by admin',
+          p_completion_photos: null,
+          p_test_driver_id: null
         });
-        return;
+
+        if (error) {
+          console.error('Error cancelling assigned request:', error);
+          toast({
+            title: "Fel",
+            description: "Kunde inte avboka förfrågan",
+            variant: "destructive"
+          });
+          return;
+        }
       }
 
       toast({
