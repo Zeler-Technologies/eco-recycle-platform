@@ -656,13 +656,24 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         });
         return;
       } else {
-        // Update existing pickup order
+        // Update existing pickup order - clear driver assignments if rejected
+        const updateData: any = {
+          scheduled_pickup_date: pickupDateTime,
+          updated_at: new Date().toISOString()
+        };
+
+        // If this was a rejected pickup, clear driver assignments and reset to scheduled
+        if (wasRejected) {
+          updateData.status = 'scheduled';
+          updateData.driver_id = null;
+          updateData.assigned_driver_id = null;
+          updateData.driver_notes = 'Omschemalagd efter avvisning - ny tilldelning krävs';
+          console.log('🔧 Clearing driver assignment from pickup order for rejected reschedule');
+        }
+
         const { error: dateError } = await supabase
           .from('pickup_orders')
-          .update({
-            scheduled_pickup_date: pickupDateTime,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', pickupOrderId);
 
         if (dateError) {
