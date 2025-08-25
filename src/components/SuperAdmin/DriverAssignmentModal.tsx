@@ -143,22 +143,10 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
     setAssignmentLoading(pickupOrderId);
     console.info('Assigning driver using unified approach', { driverId: driver.id, pickupOrderId });
     try {
-      // Step 1: Create driver assignment record
-      const { error: assignmentError } = await supabase
-        .from('driver_assignments')
-        .insert({
-          driver_id: driver.id,
-          pickup_order_id: pickupOrderId,
-          status: 'scheduled',
-          assigned_at: new Date().toISOString(),
-          is_active: true,
-          notes: `Assigned via admin interface (role: ${assignmentRole})`
-        });
-      
-      if (assignmentError) {
-        console.error('🔴 ASSIGNMENT ERROR:', assignmentError);
-        throw assignmentError;
-      }
+      // Step 1: Assign using shared utility (prevents duplicate active rows)
+      const { assignDriverToPickup } = await import('@/utils/driverAssignment');
+      const result = await assignDriverToPickup(pickupOrderId, driver.id, supabase);
+      if (!result.success) throw new Error(result.error || 'Okänt fel');
 
       // Step 2: Update pickup status via edge function (avoids enum casting issues)
       const { data: statusResp, error: statusError } = await supabase.functions.invoke('update-pickup-status', {

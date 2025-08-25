@@ -146,13 +146,10 @@ export function PickupAssignmentModal({ tenantId, specificDriverId, onClose, onS
 
     try {
       setAssigningDriver(driverId);
-      
-      const { error } = await supabase.rpc('assign_driver_to_pickup', {
-        p_driver_id: driverId,
-        p_pickup_order_id: selectedPickup.pickup_order_id
-      });
-
-      if (error) throw error;
+      // Use shared utility to safely assign driver
+      const { assignDriverToPickup } = await import('@/utils/driverAssignment');
+      const result = await assignDriverToPickup(selectedPickup.pickup_order_id, driverId, supabase);
+      if (!result.success) throw new Error(result.error || 'Okänt fel');
 
       toast({
         title: "Förare tilldelad framgångsrikt!",

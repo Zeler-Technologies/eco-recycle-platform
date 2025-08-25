@@ -347,40 +347,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       });
 
       if (pickupOrderId) {
-        // CASE 1: Pickup order exists - use driver_assignments table
-        console.log('🔧 Using driver_assignments for existing pickup order');
-        
-        // First, deactivate any existing assignments for this pickup
-        const { error: deactivateError } = await supabase
-          .from('driver_assignments')
-          .update({ is_active: false })
-          .eq('pickup_order_id', pickupOrderId)
-          .eq('is_active', true);
-
-        if (deactivateError) {
-          console.error('Error deactivating existing assignments:', deactivateError);
-        }
-
-        // Create driver assignment
-        const { error: assignmentError } = await supabase
-          .from('driver_assignments')
-          .insert({
-            pickup_order_id: pickupOrderId,
-            driver_id: driverId,
-            status: 'scheduled',
-            assigned_at: new Date().toISOString(),
-            is_active: true,
-            assignment_type: 'pickup',
-            role: 'primary'
-          });
-
-        if (assignmentError) {
-          console.error('Error creating assignment:', assignmentError);
-          toast({
-            title: "Fel",
-            description: `Kunde inte tilldela föraren: ${assignmentError.message}`,
-            variant: "destructive"
-          });
+        // Use shared utility to assign driver safely
+        const { assignDriverToPickup } = await import('@/utils/driverAssignment');
+        const result = await assignDriverToPickup(pickupOrderId, driverId, supabase);
+        if (!result.success) {
+          toast({ title: 'Fel', description: `Kunde inte tilldela föraren: ${result.error}`, variant: 'destructive' });
           return;
         }
 
@@ -432,27 +403,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           return;
         }
 
-        // Create driver assignment for the new pickup order
-        const { error: assignmentError } = await supabase
-          .from('driver_assignments')
-          .insert({
-            pickup_order_id: newPickupOrder.id,
-            customer_request_id: customerRequestId,
-            driver_id: driverId,
-            status: 'scheduled',
-            assigned_at: new Date().toISOString(),
-            is_active: true,
-            assignment_type: 'pickup',
-            role: 'primary'
-          });
-
-        if (assignmentError) {
-          console.error('Error creating assignment for new pickup:', assignmentError);
-          toast({
-            title: "Fel",
-            description: `Kunde inte tilldela föraren: ${assignmentError.message}`,
-            variant: "destructive"
-          });
+        // Create driver assignment for the new pickup order via utility
+        const { assignDriverToPickup } = await import('@/utils/driverAssignment');
+        const result2 = await assignDriverToPickup(newPickupOrder.id, driverId, supabase);
+        if (!result2.success) {
+          toast({ title: 'Fel', description: `Kunde inte tilldela föraren: ${result2.error}`, variant: 'destructive' });
           return;
         }
       }
