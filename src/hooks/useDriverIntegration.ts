@@ -670,6 +670,7 @@ export const useDriverIntegration = () => {
     setLoadingAssigned(true);
     try {
       console.log('🔄 Loading assigned pickups for driver:', driver.driver_id);
+      console.log('🔄 Driver tenant ID:', driver.tenant_id);
       
       const { data, error } = await (supabase as any)
         .from('v_pickup_status_unified')
@@ -679,6 +680,8 @@ export const useDriverIntegration = () => {
         .in('pickup_status', ['assigned', 'in_progress'])
         .order('scheduled_pickup_date', { ascending: true })
         .order('created_at', { ascending: true });
+      
+      console.log('🔄 ASSIGNED PICKUPS QUERY RESULT:', { data, error, driverId: driver.driver_id });
       
       if (error) throw error;
       
