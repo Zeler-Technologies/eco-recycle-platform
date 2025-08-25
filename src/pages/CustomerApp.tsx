@@ -168,7 +168,8 @@ const saveCarRegistrationData = async (carDetails: CarDetails) => {
         car_model: carDetails.carModel,
         car_year: carDetails.carYear,
         pnr_num: carDetails.pnr,
-        tenant_id: null // Explicitly set to null for anonymous users
+        tenant_id: null, // Explicitly set to null for anonymous users
+        scrapyard_id: 1 // Default scrapyard for anonymous users
       })
       .select()
       .single();

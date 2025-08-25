@@ -348,6 +348,7 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
           car_model: formData.carModel,
           car_year: parseInt(formData.carYear) || null,
           control_number: formData.controlNumber,
+          scrapyard_id: 1, // Default scrapyard for anonymous users
           owner_address: formData.address,
           owner_postal_code: formData.postalCode,
           pickup_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
@@ -431,6 +432,7 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
           car_model: formData.carModel,
           car_year: parseInt(formData.carYear) || null,
           control_number: formData.controlNumber,
+          scrapyard_id: 1, // Default scrapyard for anonymous users
           owner_address: formData.address,
           owner_postal_code: formData.postalCode,
           pickup_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,

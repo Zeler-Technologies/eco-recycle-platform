@@ -94,6 +94,7 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
         .from('customer_requests')
         .insert({
           tenant_id: user.tenant_id,
+          scrapyard_id: 1, // Default scrapyard - should be configurable per tenant
           owner_name: formData.owner_name,
           contact_phone: formData.contact_phone,
           pickup_address: formData.pickup_address || null,

@@ -5577,19 +5577,13 @@ export type Database = {
         Returns: boolean
       }
       update_pickup_status_unified: {
-        Args:
-          | {
-              driver_notes_param?: string
-              new_status: string
-              pickup_id: string
-            }
-          | {
-              p_completion_photos?: string[]
-              p_driver_notes?: string
-              p_new_status: string
-              p_pickup_order_id: string
-            }
-        Returns: boolean
+        Args: {
+          p_completion_photos?: string[]
+          p_driver_notes?: string
+          p_new_status: string
+          p_pickup_order_id: string
+        }
+        Returns: Json
       }
       update_pickup_status_yesterday_workflow: {
         Args: {

@@ -541,12 +541,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         // For assigned requests, use the RPC function
         console.log('🚫 Cancelling assigned request via RPC...');
         
-        const { error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        const { error } = await supabase.rpc('update_pickup_status_unified', {
           p_pickup_order_id: pickupOrderId,
           p_new_status: 'cancelled',
           p_driver_notes: 'Cancelled by admin',
-          p_completion_photos: null,
-          p_test_driver_id: null
+          p_completion_photos: null
         });
 
         if (error) {
@@ -612,12 +611,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       console.log('✅ Pickup date updated successfully');
 
       // Use CORRECTED unified function to update status
-      const { error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+      const { error } = await supabase.rpc('update_pickup_status_unified', {
         p_pickup_order_id: pickupOrderId,
         p_new_status: 'scheduled',
         p_driver_notes: `Scheduled by admin for ${pickupDateTime}`,
-        p_completion_photos: null,
-        p_test_driver_id: null
+        p_completion_photos: null
       });
 
       if (error) {
