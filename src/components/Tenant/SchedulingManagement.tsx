@@ -923,11 +923,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           const dayRequests = getRequestsForDate(day);
           const dayNumber = format(day, 'd');
           const isCurrentDay = isToday(day);
+          const isSelectedDay = isSameDay(day, selectedDate);
           
           return (
             <div 
               key={day.toString()}
               className={`min-h-[80px] p-2 border rounded-lg cursor-pointer transition-colors ${
+                isSelectedDay ? 'bg-gray-100 border-gray-400' : 
                 isCurrentDay ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200 hover:bg-gray-50'
               }`}
               onClick={() => setSelectedDate(day)}
