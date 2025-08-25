@@ -105,6 +105,34 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.tenant_id]);
 
+  // Set up real-time subscription for status changes
+  useEffect(() => {
+    if (!user?.tenant_id) return;
+
+    const channel = supabase.channel('scheduling-status-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'pickup_orders',
+        filter: `tenant_id=eq.${user.tenant_id}`
+      }, () => {
+        fetchCustomerRequests();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public', 
+        table: 'customer_requests',
+        filter: `tenant_id=eq.${user.tenant_id}`
+      }, () => {
+        fetchCustomerRequests();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.tenant_id]);
+
   const fetchDrivers = async () => {
     if (!user?.tenant_id) return;
     
@@ -183,10 +211,18 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Fetch pickup orders to merge with customer requests
-      const { data: pickupData, error: pickupError } = await (supabase as any)
-        .from('v_pickup_status_unified')
-        .select('*')
+      // Fetch pickup orders to merge with customer requests (use pickup_orders as source of truth for status)
+      const { data: pickupData, error: pickupError } = await supabase
+        .from('pickup_orders')
+        .select(`
+          id,
+          customer_request_id,
+          status,
+          scheduled_pickup_date,
+          assigned_driver_id,
+          driver_name,
+          final_price
+        `)
         .eq('tenant_id', user.tenant_id);
 
       if (pickupError) {
@@ -208,19 +244,19 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       const formattedRequests: Request[] = (customerRequestsData || []).map((customerRequest: any) => {
         const pickupOrder = pickupOrderMap.get(customerRequest.id);
         
-        // Convert status to Swedish based on pickup order status or customer request status
+        // Get the most current status from pickup_orders table (primary source of truth)
         let status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
-        const sourceStatus = pickupOrder?.pickup_status || customerRequest.status;
+        const actualStatus = pickupOrder?.status || customerRequest.status;
         
-        switch (sourceStatus) {
+        switch (actualStatus) {
           case 'pending':
-          case 'customer_request':
             status = 'Förfrågan';
             break;
-          case 'assigned':
-          case 'pickup_accepted':
-          case 'in_progress':
           case 'scheduled':
+          case 'assigned':
+            status = 'Bekräftad';
+            break;
+          case 'in_progress':
             status = 'Bekräftad';
             break;
           case 'completed':
@@ -242,8 +278,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           : new Date(customerRequest.created_at);
 
         return {
-          id: pickupOrder?.pickup_order_id || customerRequest.id,
-          pickupOrderId: pickupOrder?.pickup_order_id || null,
+          id: pickupOrder?.id || customerRequest.id,
+          pickupOrderId: pickupOrder?.id || null,
           customerRequestId: customerRequest.id,
           date: requestDate,
           time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
@@ -256,7 +292,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           status,
           notes: pickupOrder?.driver_notes || null,
           assignedDriver: pickupOrder?.driver_name || null,
-          rawPickupStatus: sourceStatus
+          rawPickupStatus: actualStatus
         };
       });
 
