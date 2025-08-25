@@ -402,7 +402,7 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                            {hasDriver && (
+                            {hasDriver && !['rejected', 'cancelled'].includes(order.status) && (
                               <p className="text-sm font-medium text-red-700 mt-1">
                                 <strong>Förare: {order.driver_name}</strong>
                               </p>
