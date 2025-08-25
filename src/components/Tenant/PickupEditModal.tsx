@@ -123,6 +123,26 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       setLoading(true);
       console.log('🔴 SAVE STARTED for pickup:', pickup.id);
 
+      // First verify the customer request exists
+      console.log('🔴 VERIFYING CUSTOMER REQUEST EXISTS...');
+      const { data: existingRequest, error: verifyError } = await supabase
+        .from('customer_requests')
+        .select('id, tenant_id')
+        .eq('id', pickup.id)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.error('🔴 ERROR VERIFYING CUSTOMER REQUEST:', verifyError);
+        throw verifyError;
+      }
+
+      if (!existingRequest) {
+        console.error('🔴 CUSTOMER REQUEST NOT FOUND:', pickup.id);
+        throw new Error(`Customer request ${pickup.id} not found`);
+      }
+
+      console.log('✅ CUSTOMER REQUEST EXISTS:', existingRequest);
+
       // Update pickup date in pickup_orders table
       const pickupDateTime = scheduleDate;
       console.log('🔴 UPDATING PICKUP DATE...');
@@ -151,7 +171,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           car_registration_number: carRegistration,
           quote_amount: reimbursement ? parseFloat(reimbursement) : null
         })
-        .eq('id', pickup.customer_request_id || pickup.id);
+        .eq('id', pickup.id);
 
       if (customerRequestError) {
         console.error('🔴 ERROR UPDATING CUSTOMER REQUEST:', customerRequestError);
@@ -184,7 +204,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           .from('pickup_orders')
           .insert({
             customer_request_id: pickup.id,
-            tenant_id: user?.tenant_id || 1,
+            tenant_id: existingRequest.tenant_id || user?.tenant_id || 1,
             status: pickupStatus,
             scheduled_pickup_date: scheduleDate
           })
