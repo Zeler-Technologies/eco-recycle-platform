@@ -677,7 +677,7 @@ export const useDriverIntegration = () => {
         .select('*')
         .eq('driver_id', driver.driver_id)
         .eq('tenant_id', driver.tenant_id)
-        .in('pickup_status', ['assigned', 'in_progress'])
+        .in('pickup_status', ['assigned', 'in_progress', 'scheduled'])
         .order('scheduled_pickup_date', { ascending: true })
         .order('created_at', { ascending: true });
       
