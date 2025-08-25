@@ -181,10 +181,13 @@ const PantaBilenDriverAppNew = () => {
           <div>
             <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
             {pickup.contact_phone && (
-              <div className="flex items-center text-sm text-gray-600 mt-1">
+              <a 
+                href={`tel:${pickup.contact_phone}`}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1"
+              >
                 <Phone className="w-3 h-3 mr-1" />
                 {pickup.contact_phone}
-              </div>
+              </a>
             )}
           </div>
           <Badge className="bg-blue-100 text-blue-800">
