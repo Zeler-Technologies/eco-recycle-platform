@@ -190,83 +190,105 @@ const PantaBilenDriverAppNew = () => {
   );
 
   // Assigned Pickup Card Component
-  const AssignedPickupCard = ({ pickup }: { pickup: any }) => (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        {/* Header with assignment status */}
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
-            {pickup.contact_phone && (
-              <div className="flex items-center text-sm text-gray-600 mt-1">
-                <Phone className="w-3 h-3 mr-1" />
-                {pickup.contact_phone}
+  const AssignedPickupCard = ({ pickup }: { pickup: any }) => {
+    // Debug: Log the pickup data to see what's available
+    console.log('🔍 ASSIGNED PICKUP DATA:', pickup);
+    
+    return (
+      <Card className="mb-3">
+        <CardContent className="p-4">
+          {/* Header with customer info */}
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="font-semibold text-gray-900">
+                {pickup.owner_name || 'Namn saknas'}
+              </h3>
+              {pickup.contact_phone && (
+                <div className="flex items-center text-sm text-gray-600 mt-1">
+                  <Phone className="w-3 h-3 mr-1" />
+                  {pickup.contact_phone}
+                </div>
+              )}
+            </div>
+            <Badge className="bg-green-100 text-green-800">
+              Tilldelad till dig
+            </Badge>
+          </div>
+          
+          {/* Customer and pickup info */}
+          <div className="space-y-2 mb-4">
+            {/* Customer phone if missing from header */}
+            {!pickup.contact_phone && pickup.phone && (
+              <div className="flex items-center text-sm text-gray-600">
+                <Phone className="w-3 h-3 mr-2" />
+                <span>{pickup.phone}</span>
+              </div>
+            )}
+            
+            {/* Pickup address */}
+            <div className="flex items-center text-sm text-gray-600">
+              <MapPin className="w-3 h-3 mr-2" />
+              <span>{pickup.pickup_address || pickup.address || 'Adress saknas'}</span>
+            </div>
+            
+            {/* Car info */}
+            <div className="flex items-center text-sm text-gray-600">
+              <Car className="w-3 h-3 mr-2" />
+              <span>{pickup.car_brand} {pickup.car_model} ({pickup.car_registration_number})</span>
+            </div>
+            
+            {/* Scheduled date */}
+            {pickup.scheduled_pickup_date && (
+              <div className="flex items-center text-sm text-gray-600">
+                <Calendar className="w-3 h-3 mr-2" />
+                <span>{formatDate(pickup.scheduled_pickup_date)}</span>
+              </div>
+            )}
+            
+            {/* Price */}
+            {pickup.final_price && (
+              <div className="flex items-center text-sm text-green-600">
+                <Euro className="w-3 h-3 mr-2" />
+                <span>{pickup.final_price} SEK</span>
               </div>
             )}
           </div>
-          <Badge className="bg-green-100 text-green-800">
-            Tilldelad till dig
-          </Badge>
-        </div>
-        
-        {/* Car and location info */}
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <Car className="w-3 h-3 mr-2" />
-            <span>{pickup.car_brand} {pickup.car_model} ({pickup.car_registration_number})</span>
-          </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <MapPin className="w-3 h-3 mr-2" />
-            <span>{pickup.pickup_address}</span>
-          </div>
-          {pickup.scheduled_pickup_date && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Calendar className="w-3 h-3 mr-2" />
-              <span>{formatDate(pickup.scheduled_pickup_date)}</span>
-            </div>
-          )}
-          {pickup.final_price && (
-            <div className="flex items-center text-sm text-green-600">
-              <Euro className="w-3 h-3 mr-2" />
-              <span>{pickup.final_price} SEK</span>
-            </div>
-          )}
-        </div>
-        
-        {/* Status-based action buttons */}
-        <div className="flex gap-2">
-          {pickup.pickup_status === 'assigned' && (
-            <>
+          
+          {/* Status-based action buttons */}
+          <div className="flex gap-2">
+            {pickup.pickup_status === 'assigned' && (
+              <>
+                <Button
+                  onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'in_progress', 'Påbörjad av förare')}
+                  disabled={isUpdating}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                >
+                  {isUpdating ? 'Startar...' : '🚀 STARTA'}
+                </Button>
+                <Button
+                  onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Avbokad av förare - tillbaka till tillgängliga')}
+                  disabled={isUpdating}
+                  variant="outline"
+                  className="px-4 border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  ❌ AVBOKA
+                </Button>
+              </>
+            )}
+            {pickup.pickup_status === 'in_progress' && (
               <Button
-                onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'in_progress', 'Påbörjad av förare')}
+                onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'completed', 'Slutförd av förare')}
                 disabled={isUpdating}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
               >
-                {isUpdating ? 'Startar...' : '🚀 STARTA'}
+                {isUpdating ? 'Slutför...' : '✅ SLUTFÖR'}
               </Button>
-              <Button
-                onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Avbokad av förare - tillbaka till tillgängliga')}
-                disabled={isUpdating}
-                variant="outline"
-                className="px-4 border-red-300 text-red-600 hover:bg-red-50"
-              >
-                ❌ AVBOKA
-              </Button>
-            </>
-          )}
-          {pickup.pickup_status === 'in_progress' && (
-            <Button
-              onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'completed', 'Slutförd av förare')}
-              disabled={isUpdating}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
-            >
-              {isUpdating ? 'Slutför...' : '✅ SLUTFÖR'}
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Loading and error states
   if (loading) {
