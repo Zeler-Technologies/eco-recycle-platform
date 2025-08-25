@@ -443,15 +443,15 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(schedule.current_status)}>
-                            {schedule.current_status === 'pending' ? 'Ny' : 
-                             schedule.current_status === 'assigned' ? 'Tilldelad' :
-                             schedule.current_status === 'in_progress' ? 'Pågående' :
-                             schedule.current_status === 'completed' ? 'Klar' : 
-                             schedule.current_status === 'scheduled' ? 'Schemalagd' :
-                             schedule.current_status === 'confirmed' ? 'Bekräftad' :
-                             schedule.current_status}
-                          </Badge>
+                           <Badge className={getStatusColor(schedule.current_status)}>
+                             {schedule.current_status === 'pending' ? 'Ny' : 
+                              schedule.current_status === 'assigned' ? 'Tilldelad' :
+                              schedule.current_status === 'in_progress' ? 'Pågående' :
+                              schedule.current_status === 'completed' ? 'Klar' : 
+                              schedule.current_status === 'scheduled' ? 'Schemalagd' :
+                              schedule.current_status === 'confirmed' ? 'Bekräftad' :
+                              schedule.current_status}
+                           </Badge>
                            <div className="text-right">
                              {(schedule.current_status === 'assigned' || schedule.current_status === 'in_progress' || hasDriver) && schedule.scheduled_pickup_date ? (
                                <div className="text-sm text-muted-foreground">
