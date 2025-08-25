@@ -46,11 +46,12 @@ interface Driver {
 
 interface PickupAssignmentModalProps {
   tenantId: number;
+  specificDriverId?: string; // Optional: show only this specific driver
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function PickupAssignmentModal({ tenantId, onClose, onSuccess }: PickupAssignmentModalProps) {
+export function PickupAssignmentModal({ tenantId, specificDriverId, onClose, onSuccess }: PickupAssignmentModalProps) {
   const [pickups, setPickups] = useState<PickupOrder[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedPickup, setSelectedPickup] = useState<PickupOrder | null>(null);
@@ -90,13 +91,42 @@ export function PickupAssignmentModal({ tenantId, onClose, onSuccess }: PickupAs
     try {
       setLoadingDrivers(true);
       
-      const { data, error } = await supabase.rpc('get_available_drivers_for_tenant', {
-        p_tenant_id: tenantId
-      });
+      if (specificDriverId) {
+        // Load only the specific driver
+        const { data, error } = await supabase
+          .from('drivers')
+          .select('id, full_name, phone_number, email, driver_status, vehicle_type, is_active')
+          .eq('id', specificDriverId)
+          .eq('is_active', true)
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
+        
+        if (data) {
+          // Map the response to match Driver interface
+          const mappedDriver: Driver = {
+            driver_id: data.id,
+            full_name: data.full_name,
+            phone_number: data.phone_number,
+            email: data.email || '',
+            driver_status: data.driver_status,
+            vehicle_type: data.vehicle_type || '',
+            is_active: data.is_active,
+            current_assignments_count: 0
+          };
+          setDrivers([mappedDriver]);
+        } else {
+          setDrivers([]);
+        }
+      } else {
+        // Load all available drivers for tenant
+        const { data, error } = await supabase.rpc('get_available_drivers_for_tenant', {
+          p_tenant_id: tenantId
+        });
 
-      setDrivers(data || []);
+        if (error) throw error;
+        setDrivers(data || []);
+      }
     } catch (err) {
       console.error('Error loading drivers:', err);
       setError('Det gick inte att ladda förare');
@@ -268,7 +298,9 @@ export function PickupAssignmentModal({ tenantId, onClose, onSuccess }: PickupAs
             <div className="flex items-center gap-2 mb-4">
               <User className="h-5 w-5 text-green-600" />
               <h3 className="text-lg font-medium">
-                {selectedPickup ? 'Tillgängliga Förare' : 'Välj en hämtning först'}
+                {selectedPickup 
+                  ? (specificDriverId ? 'Vald Förare' : 'Tillgängliga Förare')
+                  : 'Välj en hämtning först'}
               </h3>
             </div>
 

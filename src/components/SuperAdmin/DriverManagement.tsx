@@ -492,7 +492,10 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setShowPickupAssignment(true)}
+                        onClick={() => {
+                          setSelectedDriver(driver);
+                          setShowPickupAssignment(true);
+                        }}
                         disabled={!driver.tenant_id}
                       >
                         Assign
@@ -554,9 +557,14 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
         {showPickupAssignment && (
           <PickupAssignmentModal
             tenantId={selectedTenant || user?.tenant_id || 1}
-            onClose={() => setShowPickupAssignment(false)}
+            specificDriverId={selectedDriver?.id}
+            onClose={() => {
+              setShowPickupAssignment(false);
+              setSelectedDriver(null);
+            }}
             onSuccess={() => {
               setShowPickupAssignment(false);
+              setSelectedDriver(null);
               fetchDrivers(); // Refresh data after assignment
             }}
           />
@@ -786,7 +794,10 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setShowPickupAssignment(true)}
+                        onClick={() => {
+                          setSelectedDriver(driver);
+                          setShowPickupAssignment(true);
+                        }}
                         disabled={!driver.tenant_id}
                       >
                         <Truck className="h-4 w-4 mr-1" />
@@ -849,9 +860,14 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
       {showPickupAssignment && (
         <PickupAssignmentModal
           tenantId={selectedTenant || user?.tenant_id || 1}
-          onClose={() => setShowPickupAssignment(false)}
+          specificDriverId={selectedDriver?.id}
+          onClose={() => {
+            setShowPickupAssignment(false);
+            setSelectedDriver(null);
+          }}
           onSuccess={() => {
             setShowPickupAssignment(false);
+            setSelectedDriver(null);
             fetchDrivers(); // Refresh data after assignment
           }}
         />
