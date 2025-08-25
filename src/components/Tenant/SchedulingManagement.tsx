@@ -228,6 +228,12 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       }
 
       console.log('✅ Unified pickup data fetched:', unifiedData?.length || 0);
+      console.log('🔍 Sample unified data with driver info:', unifiedData?.map(u => ({
+        id: u.customer_request_id,
+        driver_name: u.driver_name,
+        assigned_driver_id: u.assigned_driver_id,
+        status: u.current_status
+      })));
       
       // Convert unified data to component format
       const formattedRequests: Request[] = (unifiedData || []).map((unified: any) => {
@@ -281,6 +287,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           rawPickupStatus: actualStatus
         };
       });
+      
+      console.log('🔍 All mapped requests with driver info:', formattedRequests.map(r => ({
+        id: r.customerRequestId,
+        assignedDriver: r.assignedDriver,
+        status: r.status,
+        rawStatus: r.rawPickupStatus
+      })));
 
       setRequests(formattedRequests);
     } catch (error) {
