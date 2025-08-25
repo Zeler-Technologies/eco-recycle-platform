@@ -682,8 +682,8 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                         ? selectedPickup.contact_phone 
                         : 'Ej angivet'}
                   </span>
-                  {(selectedPickup.contact_phone?.value && selectedPickup.contact_phone.value !== 'undefined') || 
-                   (selectedPickup.contact_phone && typeof selectedPickup.contact_phone === 'string') ? (
+                  {((selectedPickup.contact_phone?.value && selectedPickup.contact_phone.value !== 'undefined') || 
+                   (selectedPickup.contact_phone && typeof selectedPickup.contact_phone === 'string')) && (
                     <button
                       onClick={() => {
                         window.open(`tel:${selectedPickup.contact_phone?.value || selectedPickup.contact_phone}`, '_self');
