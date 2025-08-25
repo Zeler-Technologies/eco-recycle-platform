@@ -590,7 +590,8 @@ export const useDriverIntegration = () => {
 
     setLoadingAvailable(true);
     try {
-      console.log('🔄 Loading available pickups for tenant:', driver.tenant_id);
+      const today = new Date().toISOString().split('T')[0];
+      console.log('🔄 Loading available pickups for tenant:', driver.tenant_id, 'date:', today);
       
       const { data, error } = await (supabase as any)
         .from('v_pickup_status_unified')
@@ -598,9 +599,11 @@ export const useDriverIntegration = () => {
         .eq('tenant_id', driver.tenant_id)
         .in('pickup_status', ['scheduled', 'pending'])
         .is('driver_id', null)
-        .gte('scheduled_pickup_date', new Date().toISOString().split('T')[0])
+        .gte('scheduled_pickup_date', today)
         .order('scheduled_pickup_date', { ascending: true })
         .order('created_at', { ascending: true });
+      
+      console.log('🔄 AVAILABLE PICKUPS QUERY RESULT:', { data, error, tenant_id: driver.tenant_id, today });
       
       if (error) throw error;
       
