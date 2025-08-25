@@ -53,6 +53,18 @@ const PantaBilenDriverApp = () => {
   // 🚨 ULTRA SIMPLE TEST - Emergency bypass
   const [simpleTest, setSimpleTest] = useState(false);
 
+  // Add debug function after useState declarations
+  const debugDriverAssignment = (pickup) => {
+    console.log('🔍 DRIVER ASSIGNMENT DEBUG:', pickup.car_registration_number, {
+      pickup_order_id: pickup.pickup_order_id,
+      pickup_status: pickup.pickup_status,
+      status_display_text: pickup.status_display_text,
+      driver_id: pickup.driver_id,
+      current_driver_id: currentDriver?.driver_id,
+      should_show_buttons: pickup.pickup_status === 'assigned' && pickup.driver_id === currentDriver?.driver_id
+    });
+  };
+
   // 🔴 CRITICAL DEBUG LOGGING (after state declarations)
   console.log('🔴 DRIVER APP RENDER:');
   console.log('🔴 User:', user);
@@ -90,7 +102,7 @@ const PantaBilenDriverApp = () => {
 
     // Filter by status
     if (currentFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === currentFilter);
+      filtered = filtered.filter(order => order.pickup_status === currentFilter);
     }
 
     // Sort by date
@@ -422,7 +434,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       <div className="bg-white rounded-xl mb-4 shadow-lg hover:shadow-xl transition-all overflow-hidden">
         <div 
           className={`p-5 border-l-4`} 
-          style={{ borderLeftColor: getStatusColor(pickup.status) }}
+          style={{ borderLeftColor: getStatusColor(pickup.pickup_status) }}
         >
           <div className="flex justify-between items-center mb-2">
             <div className="text-lg font-bold text-gray-900">
@@ -453,8 +465,10 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               >
                 Visa detaljer
               </button>
+              {/* Debug logging for assigned pickups */}
+              {pickup.pickup_status === 'assigned' && debugDriverAssignment(pickup)}
               {/* Action button for assigned status */}
-              {pickup.status === 'assigned' && isAssignedToCurrentDriver && (
+              {pickup.pickup_status === 'assigned' && isAssignedToCurrentDriver && (
                 <div className="relative">
                   <button
                     onClick={(e) => {
@@ -531,10 +545,10 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           <div className="flex justify-between items-center">
             <div className={`inline-block px-3 py-1 rounded-xl text-xs font-semibold`} 
                  style={{ 
-                   backgroundColor: getStatusColor(pickup.status) + '20',
-                   color: getStatusColor(pickup.status)
+                   backgroundColor: getStatusColor(pickup.pickup_status) + '20',
+                   color: getStatusColor(pickup.pickup_status)
                  }}>
-              {getStatusText(pickup.status)}
+              {getStatusText(pickup.pickup_status)}
             </div>
             
             {/* Action Button - Opens Modal */}
@@ -565,14 +579,14 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
       filteredPickups: filteredPickups.length,
       currentFilter,
       currentDriverId: currentDriver?.id,
-      pickupsData: pickups.map(p => ({
-        id: p.id,
-        status: p.status,
-        assigned_driver_id: p.assigned_driver_id,
-        car_registration: p.car_registration_number,
-        contact_phone: p.contact_phone,
-        owner_name: p.owner_name
-      }))
+       pickupsData: pickups.map(p => ({
+         id: p.id,
+         pickup_status: p.pickup_status,
+         assigned_driver_id: p.assigned_driver_id,
+         car_registration: p.car_registration_number,
+         contact_phone: p.contact_phone,
+         owner_name: p.owner_name
+       }))
     });
 
     return (
@@ -697,7 +711,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               </div>
               <div className="flex flex-col py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-600 font-medium mb-1">{UI_LABELS.status}</span>
-                <span className="text-sm text-gray-900 font-medium">{getStatusText(selectedPickup.status)}</span>
+                <span className="text-sm text-gray-900 font-medium">{getStatusText(selectedPickup.pickup_status)}</span>
               </div>
             </div>
           </div>
@@ -705,7 +719,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
           {/* Action Buttons */}
           <div className="space-y-3">
             {/* Assigned status - needs acceptance */}
-            {selectedPickup.status === 'assigned' && selectedPickup.assigned_driver_id === currentDriver?.id && (
+            {selectedPickup.pickup_status === 'assigned' && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
@@ -723,7 +737,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             )}
 
             {/* Accepted status - can start pickup */}
-            {selectedPickup.status === 'pickup_accepted' && selectedPickup.assigned_driver_id === currentDriver?.id && (
+            {selectedPickup.pickup_status === 'pickup_accepted' && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
@@ -741,7 +755,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             )}
 
             {/* Scheduled status - can start directly */}
-            {(selectedPickup.status === 'pending' || selectedPickup.status === 'scheduled') && selectedPickup.assigned_driver_id === currentDriver?.id && (
+            {(selectedPickup.pickup_status === 'pending' || selectedPickup.pickup_status === 'scheduled') && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
@@ -759,7 +773,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
             )}
             
             {/* In progress status - can complete */}
-            {selectedPickup.status === 'in_progress' && (
+            {selectedPickup.pickup_status === 'in_progress' && (
               <div className="flex flex-col gap-2 items-center">
                 <button 
                   className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
