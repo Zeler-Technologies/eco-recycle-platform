@@ -597,7 +597,8 @@ export const useDriverIntegration = () => {
         .from('v_pickup_status_unified')
         .select('*')
         .eq('tenant_id', driver.tenant_id)
-        .eq('pickup_status', 'scheduled')
+        .in('pickup_status', ['scheduled', 'pending'])
+        .or(`driver_id.is.null,driver_id.neq.${driver.id}`)
         .gte('scheduled_pickup_date', today)
         .order('scheduled_pickup_date', { ascending: true })
         .order('created_at', { ascending: true });
