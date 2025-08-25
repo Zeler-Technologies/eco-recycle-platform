@@ -589,7 +589,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         .from('pickup_orders')
         .select('id')
         .eq('id', pickupOrderId)
-        .single();
+        .maybeSingle();
       
       if (checkError && checkError.code === 'PGRST116') {
         // Pickup order doesn't exist, create it
@@ -683,7 +683,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       toast({
         title: wasAvbokad ? "Hämtning återaktiverad och omschemalagd" : "Hämtning omschemalagd",
-        description: `Ny tid: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}${wasAvbokad ? ' - Status ändrad till Förfrågan' : ''}`
+        description: `Ny tid: ${format(rescheduleData.newDate, 'dd/MM')} ${rescheduleData.newTime}${wasAvbokad ? ' - Status ändrad till Schemalagd' : ''}`
       });
 
       // Refresh data to show changes
