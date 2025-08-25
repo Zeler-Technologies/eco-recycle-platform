@@ -1301,8 +1301,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   </>
                 )}
                 
-                {/* Avboka button at far right */}
-                {selectedRequest.status !== 'Avbokad' && (
+                {/* Avboka button at far right - hidden for cancelled and completed pickups */}
+                {selectedRequest.status !== 'Avbokad' && selectedRequest.status !== 'Utförd' && (
                   <Button
                     variant="destructive"
                     onClick={() => handleCancelRequest(selectedRequest.id)}
