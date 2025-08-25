@@ -310,59 +310,125 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      const pickupOrderId = currentRequest?.pickupOrderId || requestId;
+      // Use pickupOrderId if it exists, otherwise use the customerRequestId
+      const pickupOrderId = currentRequest?.pickupOrderId;
+      const customerRequestId = currentRequest?.customerRequestId || requestId;
 
-      // First, deactivate any existing assignments for this pickup
-      const { error: deactivateError } = await supabase
-        .from('driver_assignments')
-        .update({ is_active: false })
-        .eq('pickup_order_id', pickupOrderId)
-        .eq('is_active', true);
-
-      if (deactivateError) {
-        console.error('Error deactivating existing assignments:', deactivateError);
-      }
-
-      // Create driver assignment using pickup_order_id
-      const { error: assignmentError } = await supabase
-        .from('driver_assignments')
-        .insert({
-          pickup_order_id: pickupOrderId,
-          driver_id: driverId,
-          status: 'scheduled',
-          assigned_at: new Date().toISOString(),
-          is_active: true,
-          assignment_type: 'pickup',
-          role: 'primary'
-        });
-
-      if (assignmentError) {
-        console.error('Error creating assignment:', assignmentError);
-        toast({
-          title: "Fel",
-          description: `Kunde inte tilldela föraren: ${assignmentError.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Update pickup status using CORRECTED unified function
-      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
-        p_pickup_order_id: pickupOrderId,
-        p_new_status: 'assigned',
-        p_driver_notes: `Assigned to ${selectedDriverName} via admin interface`,
-        p_completion_photos: null,
-        p_test_driver_id: null
+      console.log('🔧 ASSIGN DEBUG:', {
+        requestId,
+        pickupOrderId,
+        customerRequestId,
+        hasPickupOrder: !!pickupOrderId
       });
 
-      if (statusError) {
-        console.error('Error updating status:', statusError);
-        toast({
-          title: "Fel",
-          description: `Kunde inte uppdatera status: ${statusError.message}`,
-          variant: "destructive"
+      if (pickupOrderId) {
+        // CASE 1: Pickup order exists - use driver_assignments table
+        console.log('🔧 Using driver_assignments for existing pickup order');
+        
+        // First, deactivate any existing assignments for this pickup
+        const { error: deactivateError } = await supabase
+          .from('driver_assignments')
+          .update({ is_active: false })
+          .eq('pickup_order_id', pickupOrderId)
+          .eq('is_active', true);
+
+        if (deactivateError) {
+          console.error('Error deactivating existing assignments:', deactivateError);
+        }
+
+        // Create driver assignment
+        const { error: assignmentError } = await supabase
+          .from('driver_assignments')
+          .insert({
+            pickup_order_id: pickupOrderId,
+            driver_id: driverId,
+            status: 'scheduled',
+            assigned_at: new Date().toISOString(),
+            is_active: true,
+            assignment_type: 'pickup',
+            role: 'primary'
+          });
+
+        if (assignmentError) {
+          console.error('Error creating assignment:', assignmentError);
+          toast({
+            title: "Fel",
+            description: `Kunde inte tilldela föraren: ${assignmentError.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Update pickup status
+        const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+          p_pickup_order_id: pickupOrderId,
+          p_new_status: 'assigned',
+          p_driver_notes: `Assigned to ${selectedDriverName} via admin interface`,
+          p_completion_photos: null,
+          p_test_driver_id: null
         });
-        return;
+
+        if (statusError) {
+          console.error('Error updating status:', statusError);
+          toast({
+            title: "Fel",
+            description: `Kunde inte uppdatera status: ${statusError.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+      } else {
+        // CASE 2: No pickup order - create one first, then assign
+        console.log('🔧 Creating pickup order for customer request');
+        
+        const { data: newPickupOrder, error: createError } = await supabase
+          .from('pickup_orders')
+          .insert({
+            customer_request_id: customerRequestId,
+            scheduled_pickup_date: format(new Date(), 'yyyy-MM-dd'),
+            status: 'assigned',
+            tenant_id: user?.tenant_id || 1,
+            driver_id: driverId,
+            assigned_driver_id: driverId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          console.error('Error creating pickup order:', createError);
+          toast({
+            title: "Fel",
+            description: `Kunde inte skapa hämtningsorder: ${createError.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Create driver assignment for the new pickup order
+        const { error: assignmentError } = await supabase
+          .from('driver_assignments')
+          .insert({
+            pickup_order_id: newPickupOrder.id,
+            customer_request_id: customerRequestId,
+            driver_id: driverId,
+            status: 'scheduled',
+            assigned_at: new Date().toISOString(),
+            is_active: true,
+            assignment_type: 'pickup',
+            role: 'primary'
+          });
+
+        if (assignmentError) {
+          console.error('Error creating assignment for new pickup:', assignmentError);
+          toast({
+            title: "Fel",
+            description: `Kunde inte tilldela föraren: ${assignmentError.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
       }
 
       // Refresh data to show changes
