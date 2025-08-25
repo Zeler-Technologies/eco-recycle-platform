@@ -217,10 +217,16 @@ const PantaBilenDriverApp = () => {
   };
   const handleSelfAssign = async (pickupId) => {
     try {
-      await selfAssignPickup(pickupId);
+      console.log('🔵 Erik attempting to self-assign pickup:', pickupId);
+      console.log('🔵 Current driver info:', currentDriver);
+      
+      const result = await selfAssignPickup(pickupId);
+      console.log('🔵 Self-assign result:', result);
+      
       // Success feedback will come from the hook's refresh
     } catch (error) {
-      console.error('Failed to self-assign pickup:', error);
+      console.error('🔴 Failed to self-assign pickup:', error);
+      alert(`Kunde inte tilldela uppdrag: ${error.message}`);
       // Could add toast notification here
     }
   };
