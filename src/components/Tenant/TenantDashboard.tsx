@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock, MessageSquare } from 'lucide-react';
+import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock, MessageSquare, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantCustomers } from '@/hooks/useTenantCustomers';
 import PricingManagement from './PricingManagement';
@@ -13,6 +13,7 @@ import { ServiceZoneManagement } from './ServiceZoneManagement';
 import { CustomerMessageManagement } from './CustomerMessageManagement';
 import { NewCustomerRequestModal } from './NewCustomerRequestModal';
 import { PickupEditModal } from './PickupEditModal';
+import { PickupAssignmentModal } from './PickupAssignmentModal';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
@@ -22,6 +23,7 @@ const TenantDashboard = () => {
   const [showServiceZoneManagement, setShowServiceZoneManagement] = useState(false);
   const [showCustomerMessages, setShowCustomerMessages] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [showPickupAssignment, setShowPickupAssignment] = useState(false);
   const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   
@@ -477,6 +479,13 @@ const TenantDashboard = () => {
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Meddelanden till kund
               </Button>
+              <Button
+                onClick={() => setShowPickupAssignment(true)}
+                className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Truck className="h-4 w-4 mr-2" />
+                Tilldela Förare till Hämtningar
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -588,6 +597,18 @@ const TenantDashboard = () => {
           fetchTenantData(); // Refresh the data
         }}
       />
+
+      {/* Pickup Assignment Modal */}
+      {showPickupAssignment && (
+        <PickupAssignmentModal
+          tenantId={user?.tenant_id!}
+          onClose={() => setShowPickupAssignment(false)}
+          onSuccess={() => {
+            setShowPickupAssignment(false);
+            fetchTenantData(); // Refresh dashboard data
+          }}
+        />
+      )}
     </div>
   );
 };

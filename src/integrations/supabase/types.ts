@@ -3649,6 +3649,7 @@ export type Database = {
           car_registration_number: string | null
           car_year: number | null
           completion_photos: string[] | null
+          contact_phone: string | null
           created_at: string | null
           customer_request_id: string | null
           driver_id: string | null
@@ -4630,6 +4631,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_available_drivers_for_tenant: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          current_assignments_count: number
+          driver_id: string
+          driver_status: string
+          email: string
+          full_name: string
+          is_active: boolean
+          phone_number: string
+          vehicle_type: string
+        }[]
+      }
       get_available_options: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -4913,6 +4927,25 @@ export type Database = {
           tenant_id: number
           tenant_name: string
           total_capacity_kg: number
+        }[]
+      }
+      get_unassigned_pickup_orders: {
+        Args: { p_limit?: number; p_tenant_id: number }
+        Returns: {
+          car_brand: string
+          car_model: string
+          car_registration_number: string
+          car_year: number
+          created_at: string
+          customer_request_id: string
+          final_price: number
+          owner_name: string
+          pickup_address: string
+          pickup_latitude: number
+          pickup_longitude: number
+          pickup_order_id: string
+          scheduled_pickup_date: string
+          status: string
         }[]
       }
       get_user_context: {
