@@ -277,9 +277,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           registrationNumber: unified.car_registration_number || 'Okänt reg.nr',
           status,
           notes: unified.driver_notes || null,
-          assignedDriver: unified.assigned_driver_id ? 
-            drivers.find(d => d.id === unified.assigned_driver_id)?.name || 'Tilldelad förare' : 
-            null,
+          assignedDriver: unified.driver_name || null,
           rawPickupStatus: actualStatus
         };
       });
@@ -1106,12 +1104,12 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                             <MapPin className="h-3 w-3" />
                             {request.address}
                           </p>
-                           {(request.assignedDriver || request.rawPickupStatus === 'assigned' || request.rawPickupStatus === 'in_progress') && (
-                              <p className="text-sm text-destructive flex items-center gap-1">
-                               <User className="h-3 w-3" />
-                               Förare: {request.assignedDriver || 'Tilldelad förare'}
-                             </p>
-                           )}
+           {(request.assignedDriver || request.rawPickupStatus === 'assigned' || request.rawPickupStatus === 'in_progress') && (
+              <p className="text-sm text-green-700 font-medium flex items-center gap-1">
+               <User className="h-3 w-3" />
+               Förare: {request.assignedDriver || `Tilldelad (${request.rawPickupStatus})`}
+             </p>
+           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1205,7 +1203,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   <Label className="text-sm font-medium">Förare</Label>
                   <p className="flex items-center gap-2 mt-1 text-green-700 font-medium">
                     <User className="h-4 w-4" />
-                    {selectedRequest.assignedDriver || 'Tilldelad förare (namn laddas...)'}
+                    {selectedRequest.assignedDriver || `Tilldelad (${selectedRequest.rawPickupStatus})`}
                   </p>
                 </div>
               )}
