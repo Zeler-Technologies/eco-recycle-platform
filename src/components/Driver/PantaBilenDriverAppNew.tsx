@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LogOut, RefreshCw, Calendar, MapPin, Car, Phone, Euro } from 'lucide-react';
 import { toast } from 'sonner';
+import { RescheduleModal } from './RescheduleModal';
 
 const PantaBilenDriverAppNew = () => {
   const { user, logout } = useAuth();
@@ -28,6 +29,8 @@ const PantaBilenDriverAppNew = () => {
   const [activeTab, setActiveTab] = useState('available');
   const [isAssigning, setIsAssigning] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [selectedPickupForReschedule, setSelectedPickupForReschedule] = useState<any>(null);
 
   // Helper functions
   const getCurrentTime = () => new Date().toLocaleTimeString('sv-SE', { 
@@ -94,6 +97,27 @@ const PantaBilenDriverAppNew = () => {
       toast.error(errorMessage);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Reschedule handlers
+  const handleOpenReschedule = (pickup: any) => {
+    setSelectedPickupForReschedule(pickup);
+    setRescheduleModalOpen(true);
+  };
+
+  const handleRescheduleConfirm = async (newDate: string, notes: string) => {
+    if (!selectedPickupForReschedule) return;
+    
+    try {
+      // Update the pickup with new scheduled date and status
+      await updatePickupStatus(selectedPickupForReschedule.pickup_order_id, 'scheduled', notes);
+      toast.success('Upphämtning omschemalagd!');
+      setRescheduleModalOpen(false);
+      setSelectedPickupForReschedule(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Kunde inte omschemalägg upphämtning';
+      toast.error(errorMessage);
     }
   };
 
@@ -272,7 +296,7 @@ const PantaBilenDriverAppNew = () => {
                 )}
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Omschemalagd av förare - tillbaka till tillgängliga')}
+                    onClick={() => handleOpenReschedule(pickup)}
                     disabled={isUpdating}
                     variant="outline"
                     className="flex-1 border-orange-300 text-orange-600 hover:bg-orange-50"
@@ -440,6 +464,18 @@ const PantaBilenDriverAppNew = () => {
           </div>
         )}
       </div>
+
+      {/* Reschedule Modal */}
+      <RescheduleModal
+        isOpen={rescheduleModalOpen}
+        onClose={() => {
+          setRescheduleModalOpen(false);
+          setSelectedPickupForReschedule(null);
+        }}
+        onConfirm={handleRescheduleConfirm}
+        pickup={selectedPickupForReschedule}
+        isLoading={isUpdating}
+      />
     </div>
   );
 };
