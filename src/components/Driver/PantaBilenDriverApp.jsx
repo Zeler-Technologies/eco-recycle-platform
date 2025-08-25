@@ -96,13 +96,28 @@ const PantaBilenDriverApp = () => {
     console.log('🔴 STATE CHANGED - showPickupActions:', showPickupActions);
   }, [showPickupActions]);
 
-  // Memoized filtered and sorted pickups
+  // CRITICAL FIX: Memoized filtered and sorted pickups with proper Swedish scrapyard workflow
   const filteredPickups = useMemo(() => {
     let filtered = pickups;
 
-    // Filter by status
+    // Filter by status - FIXED to match Swedish scrapyard requirements
     if (currentFilter !== 'all') {
-      filtered = filtered.filter(order => order.pickup_status === currentFilter);
+      filtered = filtered.filter(order => {
+        switch (currentFilter) {
+          case 'awaiting_pickup': // "Väntar på upphämtning" - CRITICAL FIX
+            return order.pickup_status === 'scheduled' || 
+                   order.pickup_status === 'assigned';  // ✅ MUST INCLUDE BOTH
+          case 'in_progress':
+            return order.pickup_status === 'in_progress';
+          case 'completed':
+            return order.pickup_status === 'completed';
+          case 'cancelled':
+            return order.pickup_status === 'cancelled' || 
+                   order.pickup_status === 'rejected';
+          default:
+            return order.pickup_status === currentFilter;
+        }
+      });
     }
 
     // Sort by date
@@ -181,9 +196,10 @@ const PantaBilenDriverApp = () => {
   };
 
   // Debug: explicit handler for Start Pickup with detailed logs
+  // FIXED: Correct Swedish scrapyard workflow status progression
   const handleStartPickup = async (pickupId) => {
     try {
-      console.log('🔴 BUTTON CLICKED - Start Pickup');
+      console.log('🔴 BUTTON CLICKED - Start Pickup (assigned → in_progress)');
       console.log('🔴 Pickup ID:', pickupId);
       console.log('🔴 Selected pickup:', selectedPickup);
 
@@ -192,6 +208,7 @@ const PantaBilenDriverApp = () => {
       
       if (result?.success) {
         setShowDetailView(false);
+        setShowPickupActions(null);
         // Hook should automatically refresh the list
       }
     } catch (error) {
@@ -212,11 +229,11 @@ const PantaBilenDriverApp = () => {
     try {
       console.log('🔴 Driver accepting pickup:', pickupId);
       
-      // Use unified function to update status to accepted
-      const result = await updatePickupStatusHook(pickupId, 'pickup_accepted');
+      // FIXED: Use correct Swedish scrapyard workflow status progression
+      const result = await updatePickupStatusHook(pickupId, 'in_progress'); // assigned → in_progress
       
       if (result?.success) {
-        console.log('✅ Pickup accepted successfully');
+        console.log('✅ Pickup accepted and started successfully');
         setShowPickupActions(null);
         setShowDetailView(false);
       }

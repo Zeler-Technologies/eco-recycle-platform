@@ -270,7 +270,7 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status using unified database function with all parameters
+  // Update pickup status using CORRECTED unified database function
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
     console.log('📞 updatePickupStatus called with:', { pickupId, status, notes });
     
@@ -280,12 +280,13 @@ export const useDriverIntegration = () => {
     }
 
     try {
-      // Use unified function with all parameters to avoid overloading conflict
-      const { data, error } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: pickupId,
-        new_status: status,
-        driver_notes_param: notes || null,
-        completion_photos_param: null // Explicitly provide this parameter
+      // Use the corrected function name with proper parameters
+      const { data, error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        p_pickup_order_id: pickupId,
+        p_new_status: status,
+        p_driver_notes: notes || null,
+        p_completion_photos: null,
+        p_test_driver_id: null // Will use authenticated user
       });
       
       if (error) {

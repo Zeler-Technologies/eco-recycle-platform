@@ -331,12 +331,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      // Update pickup status using unified function
-      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: pickupOrderId,
-        new_status: 'assigned',
-        driver_notes_param: 'Assigned via admin interface',
-        completion_photos_param: null
+      // Update pickup status using CORRECTED unified function
+      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        p_pickup_order_id: pickupOrderId,
+        p_new_status: 'assigned',
+        p_driver_notes: 'Assigned via admin interface',
+        p_completion_photos: null,
+        p_test_driver_id: null
       });
 
       if (statusError) {
@@ -404,12 +405,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       const currentRequest = requests.find(req => req.id === requestId);
       const pickupOrderId = currentRequest?.pickupOrderId || requestId;
 
-      // Use unified function to cancel pickup
-      const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: pickupOrderId,
-        new_status: 'cancelled',
-        driver_notes_param: 'Cancelled by admin',
-        completion_photos_param: null
+      // Use CORRECTED unified function to cancel pickup
+      const { error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        p_pickup_order_id: pickupOrderId,
+        p_new_status: 'cancelled',
+        p_driver_notes: 'Cancelled by admin',
+        p_completion_photos: null,
+        p_test_driver_id: null
       });
 
       if (error) {
@@ -473,12 +475,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       console.log('✅ Pickup date updated successfully');
 
-      // Use unified function to update status
-      const { error } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: pickupOrderId,
-        new_status: 'scheduled',
-        driver_notes_param: `Scheduled by admin for ${pickupDateTime}`,
-        completion_photos_param: null
+      // Use CORRECTED unified function to update status
+      const { error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        p_pickup_order_id: pickupOrderId,
+        p_new_status: 'scheduled',
+        p_driver_notes: `Scheduled by admin for ${pickupDateTime}`,
+        p_completion_photos: null,
+        p_test_driver_id: null
       });
 
       if (error) {
@@ -597,13 +600,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       console.log('✅ Pickup date updated successfully');
 
-      // Update status using unified function
-      const newStatus = wasAvbokad ? 'pending' : 'scheduled';
-      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_unified', {
-        pickup_id: pickupOrderId,
-        new_status: newStatus,
-        driver_notes_param: `Rescheduled by admin to ${pickupDateTime}${wasAvbokad ? ' - Reactivated from cancelled' : ''}`,
-        completion_photos_param: null
+      // FIXED: Update status using CORRECTED unified function and proper Swedish workflow
+      const newStatus = wasAvbokad ? 'scheduled' : 'scheduled'; // "Avbokad" → "Schemalagd"
+      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        p_pickup_order_id: pickupOrderId,
+        p_new_status: newStatus,
+        p_driver_notes: `Rescheduled by admin to ${pickupDateTime}${wasAvbokad ? ' - Reactivated from cancelled' : ''}`,
+        p_completion_photos: null,
+        p_test_driver_id: null
       });
 
       if (statusError) {

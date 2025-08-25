@@ -1,24 +1,22 @@
 // Driver App Constants and Translations (TypeScript)
 export type DriverStatus = 'available' | 'busy' | 'break' | 'offline';
 
-// Task statuses (pickups) - corrected Swedish translations
+// Task statuses (pickups) - CORRECT Swedish Scrapyard Workflow
 export const STATUS_TEXTS = {
-  pending: 'Ny förfrågan',
-  scheduled: 'Väntar på upphämtning',
+  pending: 'Förfrågan',
+  scheduled: 'Schemalagd', 
   assigned: 'Tilldelad',
-  pickup_accepted: 'Accepterad',
   in_progress: 'Pågående',
   completed: 'Slutförd',
-  cancelled: 'Avbruten',
+  cancelled: 'Avbokad',
   rejected: 'Avvisad',
 } as const;
 
-// Note: left as hex for existing UI usage; pickup status colors are out of scope here
+// Status colors for Swedish scrapyard workflow
 export const STATUS_COLORS = {
   pending: '#f59e0b',
   scheduled: '#6366f1',
   assigned: '#8b5cf6',
-  pickup_accepted: '#059669',
   in_progress: '#f59e0b',
   completed: '#10b981',
   cancelled: '#ef4444',
@@ -34,12 +32,13 @@ export const DRIVER_STATUS_TEXTS: Record<DriverStatus, string> = {
 
 export const FILTER_OPTIONS = [
   { key: 'all', label: 'Alla' },
-  { key: 'pending', label: 'Ny förfrågan' },
+  { key: 'awaiting_pickup', label: 'Väntar på upphämtning' }, // CRITICAL: Shows both scheduled AND assigned
+  { key: 'pending', label: 'Förfrågan' },
   { key: 'scheduled', label: 'Schemalagd' },
   { key: 'assigned', label: 'Tilldelad' },
-  { key: 'pickup_accepted', label: 'Accepterad' },
   { key: 'in_progress', label: 'Pågående' },
   { key: 'completed', label: 'Slutförd' },
+  { key: 'cancelled', label: 'Avbokad/Avvisad' },
 ] as const;
 
 export const UI_LABELS = {
