@@ -159,35 +159,54 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       }
       console.log('✅ CUSTOMER REQUEST UPDATED');
 
-      // Update status in pickup_orders (single source of truth) - this will auto-sync to customer_requests  
-      console.log('🔴 UPDATING PICKUP ORDER STATUS to:', pickupStatus);
+      // Ensure pickup_order exists and update status
+      console.log('🔴 ENSURING PICKUP ORDER EXISTS...');
       console.log('🔴 PICKUP OBJECT:', pickup);
       
-      // Find pickup_order_id
-      let pickupOrderId = pickup.pickup_order_id;
-      
-      if (!pickupOrderId) {
-        // Look up pickup_order_id using customer_request_id
-        console.log('🔴 LOOKING UP PICKUP ORDER ID...');
-        const { data: pickupOrderRow, error: lookupError } = await supabase
-          .from('pickup_orders')
-          .select('id')
-          .eq('customer_request_id', pickup.id)
-          .maybeSingle();
-          
-        if (lookupError) {
-          console.error('🔴 ERROR LOOKING UP PICKUP ORDER:', lookupError);
-          throw lookupError;
-        }
+      // First, try to find existing pickup_order
+      let { data: pickupOrderRow, error: lookupError } = await supabase
+        .from('pickup_orders')
+        .select('id')
+        .eq('customer_request_id', pickup.id)
+        .maybeSingle();
         
-        pickupOrderId = pickupOrderRow?.id;
-        console.log('🔴 FOUND PICKUP ORDER ID:', pickupOrderId);
+      if (lookupError) {
+        console.error('🔴 ERROR LOOKING UP PICKUP ORDER:', lookupError);
+        throw lookupError;
       }
       
-      if (pickupOrderId) {
+      let pickupOrderId = pickupOrderRow?.id;
+      
+      // Create pickup_order if it doesn't exist
+      if (!pickupOrderId) {
+        console.log('🔴 CREATING NEW PICKUP ORDER...');
+        const { data: newPickupOrder, error: createError } = await supabase
+          .from('pickup_orders')
+          .insert({
+            customer_request_id: pickup.id,
+            tenant_id: user?.tenant_id || 1,
+            status: pickupStatus,
+            scheduled_pickup_date: scheduleDate
+          })
+          .select('id')
+          .single();
+          
+        if (createError) {
+          console.error('🔴 ERROR CREATING PICKUP ORDER:', createError);
+          throw createError;
+        }
+        
+        pickupOrderId = newPickupOrder.id;
+        console.log('✅ PICKUP ORDER CREATED:', pickupOrderId);
+      } else {
+        // Update existing pickup_order status
+        console.log('🔴 UPDATING EXISTING PICKUP ORDER STATUS to:', pickupStatus);
         const { error: statusUpdateError } = await supabase
           .from('pickup_orders')
-          .update({ status: pickupStatus })
+          .update({ 
+            status: pickupStatus,
+            scheduled_pickup_date: scheduleDate
+          })
           .eq('id', pickupOrderId);
 
         if (statusUpdateError) {
@@ -195,8 +214,6 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           throw statusUpdateError;
         }
         console.log('✅ PICKUP ORDER STATUS UPDATED');
-      } else {
-        console.warn('⚠️ NO PICKUP ORDER ID FOUND - STATUS NOT UPDATED');
       }
 
       // Handle driver assignment/unassignment
@@ -238,17 +255,24 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         }
         console.log('✅ EXISTING ASSIGNMENTS DEACTIVATED');
 
-        // Create new assignment
+        // Create new assignment using pickup_order_id
         console.log('🔴 CREATING NEW ASSIGNMENT...');
+        const assignmentData: any = {
+          customer_request_id: pickup.id,
+          driver_id: selectedDriverId,
+          role: 'primary',
+          assignment_type: 'pickup',
+          is_active: true
+        };
+        
+        // Add pickup_order_id if we have it
+        if (pickupOrderId) {
+          assignmentData.pickup_order_id = pickupOrderId;
+        }
+        
         const { error: assignmentError } = await supabase
           .from('driver_assignments')
-          .insert({
-            customer_request_id: pickup.id,
-            driver_id: selectedDriverId,
-            role: 'primary',
-            assignment_type: 'pickup',
-            is_active: true
-          });
+          .insert(assignmentData);
 
         if (assignmentError) {
           console.error('🔴 ERROR CREATING ASSIGNMENT:', assignmentError);
