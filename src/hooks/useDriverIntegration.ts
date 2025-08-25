@@ -36,6 +36,7 @@ interface PickupOrder {
   car_brand: string;
   car_model: string;
   owner_name: string;
+  contact_phone?: string; // ✅ ADD MISSING PHONE FIELD
   pickup_address: string;
   pickup_postal_code?: string;
   pickup_latitude?: number;
@@ -169,6 +170,7 @@ export const useDriverIntegration = () => {
         car_brand: pickup.car_brand || '',
         car_model: pickup.car_model || '',
         owner_name: pickup.owner_name || '',
+        contact_phone: pickup.contact_phone, // ✅ ADD MISSING PHONE FIELD
         pickup_address: pickup.pickup_address || '',
         pickup_postal_code: pickup.pickup_postal_code,
         pickup_latitude: pickup.pickup_latitude,
