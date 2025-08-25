@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock, MessageSquare, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantCustomers } from '@/hooks/useTenantCustomers';
+import { useUnifiedPickupStatus } from '@/hooks/useUnifiedPickupStatus';
 import PricingManagement from './PricingManagement';
 import UserManagement from '../SuperAdmin/UserManagement';
 import SchedulingManagement from './SchedulingManagement';
@@ -17,6 +18,7 @@ import { PickupAssignmentModal } from './PickupAssignmentModal';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
+  const { pickups, loading: pickupsLoading, fetchPickups } = useUnifiedPickupStatus();
   const [showPricingManagement, setShowPricingManagement] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showSchedulingManagement, setShowSchedulingManagement] = useState(false);
@@ -34,9 +36,15 @@ const TenantDashboard = () => {
     completed: 0,
     activeDrivers: 0
   });
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Derived data from unified pickups
+  const recentOrders = pickups.slice(0, 5); // Recent 5 orders
+  const todaySchedule = pickups.filter(pickup => {
+    const today = new Date().toISOString().split('T')[0];
+    const pickupDate = pickup.scheduled_pickup_date || pickup.request_created_at?.split('T')[0];
+    return pickupDate === today;
+  });
 
   // Fetch tenant-specific data
   useEffect(() => {
@@ -49,18 +57,10 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch unified pickup data for stats calculation
-      const { data: unifiedData, error: unifiedError } = await supabase
-        .from('v_unified_pickup_status')
-        .select('current_status, pickup_created_at')
-        .eq('tenant_id', user?.tenant_id);
-
-      if (unifiedError) throw unifiedError;
-
-      // Calculate stats from unified data (using pickup_orders.status as source of truth)
-      const newRequests = unifiedData?.filter(r => r.current_status === 'pending').length || 0;
-      const inProgress = unifiedData?.filter(r => ['assigned', 'in_progress'].includes(r.current_status)).length || 0;
-      const completed = unifiedData?.filter(r => r.current_status === 'completed').length || 0;
+      // Calculate stats from unified pickups data
+      const newRequests = pickups.filter(p => p.current_status === 'pending').length;
+      const inProgress = pickups.filter(p => ['assigned', 'in_progress'].includes(p.current_status)).length;
+      const completed = pickups.filter(p => p.current_status === 'completed').length;
 
       // Fetch active drivers count for this tenant
       const { data: driversData, error: driversError } = await supabase
@@ -78,113 +78,19 @@ const TenantDashboard = () => {
         activeDrivers: driversData?.length || 0
       });
 
-      // Fetch recent orders from unified view with driver info
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('v_unified_pickup_status')
-        .select(`
-          pickup_order_id,
-          customer_request_id,
-          current_status,
-          owner_name,
-          contact_phone,
-          car_brand,
-          car_model,
-          car_year,
-          car_registration_number,
-          pickup_address,
-          quote_amount,
-          request_created_at,
-          driver_name,
-          assigned_driver_id
-        `)
-        .eq('tenant_id', user?.tenant_id)
-        .order('request_created_at', { ascending: false })
-        .limit(5);
-
-      if (ordersError) throw ordersError;
-
-      // Transform unified data to match component expectations
-      const transformedOrders = ordersData?.map(order => ({
-        id: order.pickup_order_id || order.customer_request_id,
-        owner_name: order.owner_name,
-        contact_phone: order.contact_phone,
-        car_brand: order.car_brand,
-        car_model: order.car_model,
-        car_year: order.car_year,
-        car_registration_number: order.car_registration_number,
-        pickup_address: order.pickup_address,
-        status: order.current_status, // Using unified status from pickup_orders
-        quote_amount: order.quote_amount,
-        created_at: order.request_created_at,
-        driver_name: order.driver_name,
-        assigned_driver_id: order.assigned_driver_id
-      })) || [];
-
-      setRecentOrders(transformedOrders);
-
-      // Fetch today's scheduled pickup requests from customer_requests table
-      const today_start = new Date();
-      today_start.setHours(0, 0, 0, 0);
-      const today_end = new Date();
-      today_end.setHours(23, 59, 59, 999);
-
-      console.log('Today date range:', today_start.toISOString().split('T')[0], 'to', today_end.toISOString().split('T')[0]);
-
-      // First get customer requests for today
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from('customer_requests')
-        .select(`
-          id,
-          pickup_date,
-          status,
-          owner_name,
-          car_brand,
-          car_model,
-          pickup_address,
-          contact_phone,
-          created_at,
-          car_registration_number,
-          car_year
-        `)
-        .eq('tenant_id', user?.tenant_id)
-        .or(`pickup_date.gte.${today_start.toISOString().split('T')[0]},pickup_date.lte.${today_end.toISOString().split('T')[0]},created_at.gte.${today_start.toISOString()},created_at.lte.${today_end.toISOString()}`)
-        .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'confirmed'])
-        .order('created_at', { ascending: false });
-
-      console.log('Today schedule data:', scheduleData, 'Error:', scheduleError);
-
-      if (!scheduleError && scheduleData) {
-        // Get driver assignments for these requests
-        const requestIds = scheduleData.map(item => item.id);
-        const { data: assignmentsData } = await supabase
-          .from('driver_assignments')
-          .select(`
-            customer_request_id,
-            driver_id,
-            drivers(id, full_name)
-          `)
-          .in('customer_request_id', requestIds)
-          .eq('is_active', true);
-
-        // Combine the data
-        const transformedData = scheduleData.map(item => {
-          const assignment = assignmentsData?.find(a => a.customer_request_id === item.id);
-          return {
-            ...item,
-            driver_id: assignment?.driver_id || null,
-            driver_name: assignment?.drivers?.full_name || null,
-            tenant_id: user?.tenant_id
-          };
-        });
-        setTodaySchedule(transformedData);
-      }
-
     } catch (error) {
       console.error('Error fetching tenant data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Update stats when pickups change
+  useEffect(() => {
+    if (pickups.length > 0) {
+      fetchTenantData();
+    }
+  }, [pickups]);
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
@@ -369,14 +275,14 @@ const TenantDashboard = () => {
                   recentOrders.map((order, index) => {
                     const { vehicle, location } = formatOrderDisplay(order);
                     const hasDriver = order.driver_name && order.driver_name.trim() !== '';
-                    const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.status) || hasDriver;
+                    const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.current_status) || hasDriver;
                     return (
                       <div 
-                        key={order.id || index} 
+                        key={order.customer_request_id || index} 
                         className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors cursor-pointer ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
                         onClick={() => {
                           console.log('🔴 OPENING MODAL WITH ORDER:', order);
-                          console.log('🔴 HAS DRIVER_ID:', !!order?.driver_id);
+                          console.log('🔴 HAS DRIVER_ID:', !!order?.assigned_driver_id);
                           setSelectedPickup(order);
                           setShowEditModal(true);
                         }}
@@ -392,7 +298,7 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                            {hasDriver && !['rejected', 'cancelled'].includes(order.status) && (
+                            {hasDriver && !['rejected', 'cancelled'].includes(order.current_status) && (
                               <p className="text-sm font-medium text-red-700 mt-1">
                                 <strong>Förare: {order.driver_name}</strong>
                               </p>
@@ -400,14 +306,14 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(order.status)}>
-                            {order.status === 'pending' ? 'Ny' : 
-                             order.status === 'assigned' ? 'Tilldelad' :
-                             order.status === 'in_progress' ? 'Pågående' :
-                             order.status === 'completed' ? 'Klar' : 
-                             order.status === 'scheduled' ? 'Schemalagd' :
-                             order.status === 'confirmed' ? 'Bekräftad' :
-                             order.status}
+                          <Badge className={getStatusColor(order.current_status)}>
+                            {order.current_status === 'pending' ? 'Ny' : 
+                             order.current_status === 'assigned' ? 'Tilldelad' :
+                             order.current_status === 'in_progress' ? 'Pågående' :
+                             order.current_status === 'completed' ? 'Klar' : 
+                             order.current_status === 'scheduled' ? 'Schemalagd' :
+                             order.current_status === 'confirmed' ? 'Bekräftad' :
+                             order.current_status}
                           </Badge>
                           <div className="text-right">
                             <p className="font-semibold">{formatPrice(order.quote_amount)}</p>
@@ -517,7 +423,7 @@ const TenantDashboard = () => {
                     const hasDriver = schedule.driver_name && schedule.driver_name.trim() !== '';
                     
                     return (
-                      <div key={schedule.id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
+                      <div key={schedule.customer_request_id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-tenant-accent rounded-full">
                             <Car className="h-4 w-4 text-tenant-primary" />
@@ -537,24 +443,24 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(hasDriver && schedule.status === 'pending' ? 'assigned' : schedule.status)}>
-                            {schedule.status === 'pending' ? (hasDriver ? 'Tilldelad' : 'Ny') : 
-                             schedule.status === 'assigned' ? 'Tilldelad' :
-                             schedule.status === 'in_progress' ? 'Pågående' :
-                             schedule.status === 'completed' ? 'Klar' : 
-                             schedule.status === 'scheduled' ? 'Schemalagd' :
-                             schedule.status === 'confirmed' ? 'Bekräftad' :
-                             schedule.status}
+                          <Badge className={getStatusColor(schedule.current_status)}>
+                            {schedule.current_status === 'pending' ? 'Ny' : 
+                             schedule.current_status === 'assigned' ? 'Tilldelad' :
+                             schedule.current_status === 'in_progress' ? 'Pågående' :
+                             schedule.current_status === 'completed' ? 'Klar' : 
+                             schedule.current_status === 'scheduled' ? 'Schemalagd' :
+                             schedule.current_status === 'confirmed' ? 'Bekräftad' :
+                             schedule.current_status}
                           </Badge>
                            <div className="text-right">
-                             {(schedule.status === 'assigned' || schedule.status === 'in_progress' || hasDriver) && schedule.pickup_date ? (
+                             {(schedule.current_status === 'assigned' || schedule.current_status === 'in_progress' || hasDriver) && schedule.scheduled_pickup_date ? (
                                <div className="text-sm text-muted-foreground">
-                                 <p>Hämtning: {new Date(schedule.pickup_date).toLocaleDateString('sv-SE')}</p>
+                                 <p>Hämtning: {new Date(schedule.scheduled_pickup_date).toLocaleDateString('sv-SE')}</p>
                                  <p>Tid: 09:00</p>
                                </div>
-                             ) : schedule.pickup_date ? (
-                               <p className="text-sm text-muted-foreground">
-                                 {new Date(schedule.pickup_date).toLocaleDateString('sv-SE')}
+                              ) : schedule.scheduled_pickup_date ? (
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(schedule.scheduled_pickup_date).toLocaleDateString('sv-SE')}
                                </p>
                              ) : null}
                            </div>

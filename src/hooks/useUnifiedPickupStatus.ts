@@ -24,6 +24,7 @@ export interface UnifiedPickupData {
   estimated_value?: number;
   quote_amount?: number;
   scrapyard_id?: number;
+  request_created_at?: string;
 }
 
 export const useUnifiedPickupStatus = () => {
