@@ -1200,12 +1200,12 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
               </div>
 
               {/* Current Driver Assignment Display */}
-              {selectedRequest.assignedDriver && (
+              {(selectedRequest.assignedDriver || selectedRequest.rawPickupStatus === 'assigned' || selectedRequest.rawPickupStatus === 'in_progress') && (
                 <div>
                   <Label className="text-sm font-medium">Förare</Label>
                   <p className="flex items-center gap-2 mt-1 text-green-700 font-medium">
                     <User className="h-4 w-4" />
-                    {selectedRequest.assignedDriver}
+                    {selectedRequest.assignedDriver || 'Tilldelad förare (namn laddas...)'}
                   </p>
                 </div>
               )}
