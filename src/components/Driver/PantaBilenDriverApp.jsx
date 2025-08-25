@@ -487,7 +487,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                           e.stopPropagation();
                           handleAcceptPickup(pickupId);
                         }}
-                        className="w-full text-left px-4 py-3 text-sm text-green-700 hover:bg-green-50 first:rounded-t-lg flex items-center gap-2"
+                        className="w-full px-4 py-3 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 first:rounded-t-lg flex items-center justify-center gap-2"
                       >
                         ✓ Acceptera uppdrag
                       </button>
@@ -496,7 +496,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                           e.stopPropagation();
                           handleRejectPickup(pickupId);
                         }}
-                        className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 last:rounded-b-lg flex items-center gap-2"
+                        className="w-full px-4 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 last:rounded-b-lg flex items-center justify-center gap-2"
                       >
                         ✗ Avvisa uppdrag
                       </button>
