@@ -68,6 +68,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isAddPickupDialogOpen, setIsAddPickupDialogOpen] = useState(false);
+  const [isDayOverviewOpen, setIsDayOverviewOpen] = useState(false);
   const [selectedRequestForScheduling, setSelectedRequestForScheduling] = useState<Request | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [driversLoading, setDriversLoading] = useState(true);
@@ -949,8 +950,15 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   </div>
                 ))}
                 {dayRequests.length > 2 && (
-                  <div className="text-xs text-gray-500">
-                    +{dayRequests.length - 2} fler
+                  <div 
+                    className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDate(day);
+                      setIsDayOverviewOpen(true);
+                    }}
+                  >
+                    +{dayRequests.length - 2} fler - Klicka för att se alla
                   </div>
                 )}
               </div>
@@ -1650,6 +1658,126 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Day Overview Dialog - Shows all pickups and drivers for selected day */}
+      <Dialog open={isDayOverviewOpen} onOpenChange={setIsDayOverviewOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Översikt för {format(selectedDate, 'EEEE d MMMM yyyy')}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left side - All pickups for the day */}
+            <div>
+              <h3 className="text-lg font-medium mb-4">Upphämtningar denna dag ({getRequestsForDate(selectedDate).length})</h3>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {getRequestsForDate(selectedDate).length === 0 ? (
+                  <p className="text-gray-500 italic">Inga upphämtningar planerade för denna dag</p>
+                ) : (
+                  getRequestsForDate(selectedDate).map(request => (
+                    <Card key={request.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" 
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setIsDayOverviewOpen(false);
+                            setIsDetailDialogOpen(true);
+                          }}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium">{request.customerName}</h4>
+                            <Badge className={getStatusColor(request.status)}>
+                              {request.status}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              <span>{request.time}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Car className="h-3 w-3" />
+                              <span>{request.carBrand} {request.carModel} ({request.registrationNumber})</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-3 w-3" />
+                              <span>{request.address}</span>
+                            </div>
+                            {request.assignedDriver && (
+                              <div className="flex items-center gap-2">
+                                <User className="h-3 w-3" />
+                                <span>Tilldelad: {request.assignedDriver}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Right side - All available drivers */}
+            <div>
+              <h3 className="text-lg font-medium mb-4">Tillgängliga förare ({drivers.length})</h3>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {driversLoading ? (
+                  <p className="text-gray-500">Laddar förare...</p>
+                ) : drivers.length === 0 ? (
+                  <p className="text-gray-500 italic">Inga förare tillgängliga</p>
+                ) : (
+                  drivers.map(driver => (
+                    <Card key={driver.id} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium">{driver.name}</h4>
+                          <div className="text-sm text-gray-600 flex items-center gap-2">
+                            <Phone className="h-3 w-3" />
+                            <span>{driver.phone}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={
+                            driver.status === 'Tillgänglig' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }>
+                            {driver.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {/* Quick assign buttons for unassigned pickups */}
+                      <div className="mt-3 space-y-2">
+                        {getRequestsForDate(selectedDate)
+                          .filter(req => !req.assignedDriver && req.status === 'Förfrågan')
+                          .slice(0, 3)
+                          .map(request => (
+                            <Button
+                              key={request.id}
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-xs"
+                              onClick={() => handleAssignDriver(request.id, driver.id)}
+                            >
+                              Tilldela till {request.customerName} ({request.time})
+                            </Button>
+                          ))}
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={() => setIsDayOverviewOpen(false)}>
+              Stäng
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
