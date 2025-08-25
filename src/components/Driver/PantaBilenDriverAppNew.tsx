@@ -259,15 +259,17 @@ const PantaBilenDriverAppNew = () => {
           
           {/* Status-based action buttons */}
           <div className="flex flex-col gap-2">
-            {pickup.pickup_status === 'assigned' && (
+            {(pickup.pickup_status === 'assigned' || (pickup.pickup_status === 'scheduled' && pickup.driver_id)) && (
               <>
-                <Button
-                  onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'in_progress', 'Påbörjad av förare')}
-                  disabled={isUpdating}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                >
-                  {isUpdating ? 'Startar...' : '🚀 STARTA'}
-                </Button>
+                {pickup.pickup_status === 'assigned' && (
+                  <Button
+                    onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'in_progress', 'Påbörjad av förare')}
+                    disabled={isUpdating}
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {isUpdating ? 'Startar...' : '🚀 STARTA'}
+                  </Button>
+                )}
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Omschemalagd av förare - tillbaka till tillgängliga')}
