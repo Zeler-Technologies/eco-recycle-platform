@@ -32,6 +32,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [reimbursement, setReimbursement] = useState('');
+  const [pickupStatus, setPickupStatus] = useState('');
   
   // Editable customer and car information
   const [ownerName, setOwnerName] = useState('');
@@ -51,6 +52,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       
       setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
+      setPickupStatus(pickup.status || 'pending');
       
       // Initialize editable fields
       setOwnerName(pickup.owner_name || '');
@@ -76,6 +78,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       setSelectedDriverId('none');
       setScheduleDate('');
       setReimbursement('');
+      setPickupStatus('');
       setOwnerName('');
       setContactPhone('');
       setPickupAddress('');
@@ -137,7 +140,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           car_model: carModel,
           car_year: carYear ? parseInt(carYear) : null,
           car_registration_number: carRegistration,
-          quote_amount: reimbursement ? parseFloat(reimbursement) : null
+          quote_amount: reimbursement ? parseFloat(reimbursement) : null,
+          status: pickupStatus
         })
         .eq('id', pickup.id);
 
@@ -349,9 +353,21 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
               
               <div className="space-y-2">
                 <Label>Status</Label>
-                <div className="p-2 bg-muted/30 rounded-md">
-                  <p className="font-medium capitalize">{pickup.status}</p>
-                </div>
+                <Select value={pickupStatus} onValueChange={setPickupStatus}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Välj status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="pending">Väntande</SelectItem>
+                    <SelectItem value="confirmed">Bekräftad</SelectItem>
+                    <SelectItem value="scheduled">Schemalagd</SelectItem>
+                    <SelectItem value="assigned">Tilldelad</SelectItem>
+                    <SelectItem value="in_progress">Pågående</SelectItem>
+                    <SelectItem value="completed">Slutförd</SelectItem>
+                    <SelectItem value="cancelled">Avbruten</SelectItem>
+                    <SelectItem value="rejected">Avvisad</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
