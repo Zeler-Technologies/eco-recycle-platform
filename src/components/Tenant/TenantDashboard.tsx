@@ -28,6 +28,7 @@ const TenantDashboard = () => {
   const [showPickupAssignment, setShowPickupAssignment] = useState(false);
   const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [drivers, setDrivers] = useState<any[]>([]);
   
   // State for real tenant data
   const [stats, setStats] = useState({
@@ -50,6 +51,7 @@ const TenantDashboard = () => {
   useEffect(() => {
     if (user?.tenant_id) {
       fetchTenantData();
+      fetchDrivers();
     }
   }, [user?.tenant_id]);
 
@@ -82,6 +84,21 @@ const TenantDashboard = () => {
       console.error('Error fetching tenant data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, full_name')
+        .eq('tenant_id', user?.tenant_id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setDrivers(data || []);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
     }
   };
 
@@ -274,8 +291,9 @@ const TenantDashboard = () => {
                 ) : (
                   recentOrders.map((order, index) => {
                     const { vehicle, location } = formatOrderDisplay(order);
-                    const hasDriver = order.driver_name && order.driver_name.trim() !== '';
-                    const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.current_status) || hasDriver;
+                     const hasDriver = order.driver_name || (order.assigned_driver_id && drivers.find(d => d.id === order.assigned_driver_id));
+                     const driverName = order.driver_name || drivers.find(d => d.id === order.assigned_driver_id)?.full_name;
+                     const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.current_status) || hasDriver;
                     return (
                       <div 
                         key={order.customer_request_id || index} 
@@ -298,11 +316,11 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                            {hasDriver && !['rejected', 'cancelled'].includes(order.current_status) && (
-                              <p className="text-sm font-medium text-red-700 mt-1">
-                                <strong>Förare: {order.driver_name}</strong>
-                              </p>
-                            )}
+                             {hasDriver && !['rejected', 'cancelled'].includes(order.current_status) && (
+                               <p className="text-sm font-medium text-red-700 mt-1">
+                                 <strong>Förare: {driverName}</strong>
+                               </p>
+                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -419,8 +437,9 @@ const TenantDashboard = () => {
                     };
                     
                     const vehicle = `${schedule.car_brand} ${schedule.car_model}${schedule.car_year ? ` ${schedule.car_year}` : ''} (${formatRegistrationNumber(schedule.car_registration_number) || 'Ingen reg.nr'})`;
-                    const location = schedule.pickup_address || 'Ej angivet';
-                    const hasDriver = schedule.driver_name && schedule.driver_name.trim() !== '';
+                     const location = schedule.pickup_address || 'Ej angivet';
+                     const hasDriver = schedule.driver_name || (schedule.assigned_driver_id && drivers.find(d => d.id === schedule.assigned_driver_id));
+                     const driverName = schedule.driver_name || drivers.find(d => d.id === schedule.assigned_driver_id)?.full_name;
                     
                     return (
                       <div key={schedule.customer_request_id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
@@ -435,11 +454,11 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                            {hasDriver && (
-                              <p className="text-sm font-medium text-red-700 mt-1">
-                                <strong>Förare: {schedule.driver_name}</strong>
-                              </p>
-                            )}
+                             {hasDriver && (
+                               <p className="text-sm font-medium text-red-700 mt-1">
+                                 <strong>Förare: {driverName}</strong>
+                               </p>
+                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
