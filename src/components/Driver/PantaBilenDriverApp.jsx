@@ -574,6 +574,14 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                   {isUnassigned ? 'Hantera uppdrag' : 'Hantera tilldelat'}
                 </button>
               )}
+              
+              {/* Show assigned driver when pickup is assigned to someone else */}
+              {!isUnassigned && !isAssignedToCurrentDriver && pickup.driver_name && (
+                <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm">
+                  <div className="font-medium">Tilldelad:</div>
+                  <div className="text-xs">{pickup.driver_name}</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
