@@ -657,7 +657,9 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
         <div className="p-6">
           <div className="text-center mb-6">
             <div className="text-2xl font-bold text-indigo-600 mb-2">
-              {selectedPickup.car_registration_number}
+              {selectedPickup.car_registration_number ? 
+                selectedPickup.car_registration_number.slice(0, 3) + ' ' + selectedPickup.car_registration_number.slice(3) 
+                : ''}
             </div>
             <div className="text-gray-600">
               {selectedPickup.car_year} {selectedPickup.car_brand} {selectedPickup.car_model}
