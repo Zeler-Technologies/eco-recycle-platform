@@ -143,21 +143,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
 
       console.log('✅ CUSTOMER REQUEST EXISTS:', existingRequest);
 
-      // Update pickup date in pickup_orders table
-      const pickupDateTime = scheduleDate;
-      console.log('🔴 UPDATING PICKUP DATE...');
-      const { error: dateError } = await supabase
-        .from('pickup_orders')
-        .update({ scheduled_pickup_date: pickupDateTime })
-        .eq('customer_request_id', pickup.customer_request_id);
-
-      if (dateError) {
-        console.error('🔴 ERROR UPDATING PICKUP DATE:', dateError);
-        throw dateError;
-      }
-      console.log('✅ PICKUP DATE UPDATED');
-
-      // Update customer and car information in customer_requests
+      // Update pickup date and customer info in customer_requests (NO STATUS UPDATE HERE)
       console.log('🔴 UPDATING CUSTOMER REQUEST INFO...');
       const { error: customerRequestError } = await supabase
         .from('customer_requests')
