@@ -283,12 +283,12 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
 
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('🔴 SAVE ERROR:', error);
       toast({
-        title: "Fel",
-        description: "Kunde inte uppdatera hämtningen",
-        variant: "destructive"
+        title: 'Fel',
+        description: `Kunde inte uppdatera hämtningen: ${error?.message || error?.details || 'okänt fel'}`,
+        variant: 'destructive'
       });
     } finally {
       console.log('🔴 RESETTING LOADING STATE');
