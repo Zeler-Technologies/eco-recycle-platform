@@ -803,7 +803,7 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                   className="flex-1 px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
                   onClick={() => handleRejectPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
                 >
-                  Avvisa uppdrag
+                  ✗ Avvisa uppdrag
                 </button>
               </div>
             )}
