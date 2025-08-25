@@ -6,6 +6,7 @@ export const STATUS_TEXTS = {
   pending: 'Ny förfrågan',
   scheduled: 'Väntar på upphämtning',
   assigned: 'Tilldelad',
+  pickup_accepted: 'Accepterad',
   in_progress: 'Pågående',
   completed: 'Slutförd',
   cancelled: 'Avbruten',
@@ -17,6 +18,7 @@ export const STATUS_COLORS = {
   pending: '#f59e0b',
   scheduled: '#6366f1',
   assigned: '#8b5cf6',
+  pickup_accepted: '#059669',
   in_progress: '#f59e0b',
   completed: '#10b981',
   cancelled: '#ef4444',
@@ -35,6 +37,7 @@ export const FILTER_OPTIONS = [
   { key: 'pending', label: 'Ny förfrågan' },
   { key: 'scheduled', label: 'Schemalagd' },
   { key: 'assigned', label: 'Tilldelad' },
+  { key: 'pickup_accepted', label: 'Accepterad' },
   { key: 'in_progress', label: 'Pågående' },
   { key: 'completed', label: 'Slutförd' },
 ] as const;

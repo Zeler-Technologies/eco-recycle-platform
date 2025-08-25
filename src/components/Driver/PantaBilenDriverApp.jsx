@@ -196,6 +196,23 @@ const PantaBilenDriverApp = () => {
     }
   };
 
+  const handleAcceptPickup = async (pickupId) => {
+    try {
+      console.log('🔴 Driver accepting pickup:', pickupId);
+      
+      // Use unified function to update status to accepted
+      const result = await updatePickupStatusHook(pickupId, 'pickup_accepted');
+      
+      if (result?.success) {
+        console.log('✅ Pickup accepted successfully');
+        setShowPickupActions(null);
+        setShowDetailView(false);
+      }
+    } catch (error) {
+      console.error('❌ Failed to accept pickup:', error);
+    }
+  };
+
   const handleRejectPickup = async (pickupId, reason = 'Kan inte utföra detta uppdrag') => {
     console.log('🔴 BUTTON CLICKED - Avvisa uppdrag');
     console.log('🔴 Pickup ID:', pickupId);
@@ -205,6 +222,7 @@ const PantaBilenDriverApp = () => {
       const result = await rejectAssignedPickup(pickupId, reason);
       console.log('🟢 SUCCESS: rejectAssignedPickup resolved', result);
       setShowDetailView(false);
+      setShowPickupActions(null);
     } catch (error) {
       console.error('🔴 ERROR from rejectAssignedPickup:', error);
     }
@@ -435,6 +453,44 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               >
                 Visa detaljer
               </button>
+              {/* Action button for assigned status */}
+              {pickup.status === 'assigned' && isAssignedToCurrentDriver && (
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleActionToggle(pickupId);
+                    }}
+                    className="text-purple-600 text-sm hover:text-purple-800 font-medium px-2 py-1 rounded border border-purple-200 hover:bg-purple-50"
+                  >
+                    Acceptera/Avvisa
+                  </button>
+                  
+                  {showPickupActions === pickupId && (
+                    <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAcceptPickup(pickupId);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-green-700 hover:bg-green-50 first:rounded-t-lg flex items-center gap-2"
+                      >
+                        ✓ Acceptera uppdrag
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectPickup(pickupId);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 last:rounded-b-lg flex items-center gap-2"
+                      >
+                        ✗ Avvisa uppdrag
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="flex gap-1">
                 <span className="text-base" aria-label={ARIA_LABELS.scrapInfo}>💀</span>
                 <span className="text-base" aria-label={ARIA_LABELS.taskInfo}>📋</span>
@@ -648,45 +704,72 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
 
           {/* Action Buttons */}
           <div className="space-y-3">
+            {/* Assigned status - needs acceptance */}
+            {selectedPickup.status === 'assigned' && selectedPickup.assigned_driver_id === currentDriver?.id && (
+              <div className="flex gap-3 items-center">
+                <button 
+                  className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
+                  onClick={() => handleAcceptPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
+                >
+                  ✓ Acceptera uppdrag
+                </button>
+                <button 
+                  className="flex-1 px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
+                >
+                  ✗ Avvisa uppdrag
+                </button>
+              </div>
+            )}
+
+            {/* Accepted status - can start pickup */}
+            {selectedPickup.status === 'pickup_accepted' && selectedPickup.assigned_driver_id === currentDriver?.id && (
+              <div className="flex gap-3 items-center">
+                <button 
+                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  onClick={() => handleStartPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
+                >
+                  🚀 {UI_LABELS.startPickup}
+                </button>
+                <button 
+                  className="flex-1 px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
+                >
+                  Avvisa uppdrag
+                </button>
+              </div>
+            )}
+
+            {/* Scheduled status - can start directly */}
             {(selectedPickup.status === 'pending' || selectedPickup.status === 'scheduled') && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <div className="flex gap-3 items-center">
                 <button 
                   className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
-                  onClick={() => handleStartPickup(selectedPickup.id)}
+                  onClick={() => handleStartPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
                 >
                   {UI_LABELS.startPickup}
                 </button>
                 <button 
                   className="flex-1 px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
-                  onClick={() => handleRejectPickup(selectedPickup.id)}
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
                 >
                   Avvisa uppdrag
                 </button>
               </div>
             )}
             
+            {/* In progress status - can complete */}
             {selectedPickup.status === 'in_progress' && (
               <div className="flex flex-col gap-2 items-center">
                 <button 
                   className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
-                  onClick={() => handleCompletePickup(selectedPickup.id)}
+                  onClick={() => handleCompletePickup(selectedPickup.pickup_order_id || selectedPickup.id)}
                 >
                   {UI_LABELS.completePickup}
                 </button>
                 <button 
                   className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
-                  onClick={() => handleRejectPickup(selectedPickup.id)}
-                >
-                  Avvisa uppdrag
-                </button>
-              </div>
-            )}
-            
-            {selectedPickup.status === 'assigned' && selectedPickup.assigned_driver_id === currentDriver?.id && (
-              <div className="flex justify-center">
-                <button 
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
-                  onClick={() => handleRejectPickup(selectedPickup.id)}
+                  onClick={() => handleRejectPickup(selectedPickup.pickup_order_id || selectedPickup.id)}
                 >
                   Avvisa uppdrag
                 </button>
