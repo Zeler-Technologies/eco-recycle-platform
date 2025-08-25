@@ -211,17 +211,28 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       if (selectedDriverId === 'none') {
         console.log('🔴 UNASSIGNING DRIVER PATH');
         
-        // UNASSIGN DRIVER CASE - Deactivate existing assignments
+        // Deactivate any existing active assignments by pickup_order_id and customer_request_id
         console.log('🔴 DEACTIVATING DRIVER ASSIGNMENTS...');
-        const { error: unassignError } = await supabase
+        if (pickupOrderId) {
+          const { error: unassignByOrderError } = await supabase
+            .from('driver_assignments')
+            .update({ is_active: false })
+            .eq('pickup_order_id', pickupOrderId)
+            .eq('is_active', true);
+          if (unassignByOrderError) {
+            console.error('🔴 ERROR UNASSIGNING (by order):', unassignByOrderError);
+            throw unassignByOrderError;
+          }
+        }
+        const { error: unassignByReqError } = await supabase
           .from('driver_assignments')
           .update({ is_active: false })
           .eq('customer_request_id', pickup.customer_request_id)
           .eq('is_active', true);
-
-        if (unassignError) {
-          console.error('🔴 ERROR UNASSIGNING DRIVER:', unassignError);
-          throw unassignError;
+ 
+        if (unassignByReqError) {
+          console.error('🔴 ERROR UNASSIGNING (by request):', unassignByReqError);
+          throw unassignByReqError;
         }
         console.log('✅ DRIVER ASSIGNMENTS DEACTIVATED');
 
@@ -233,41 +244,96 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         
         // ASSIGN DRIVER CASE - First deactivate any existing assignments
         console.log('🔴 DEACTIVATING EXISTING ASSIGNMENTS...');
-        const { error: deactivateError } = await supabase
+        // Deactivate by pickup_order_id first (if exists), then by customer_request_id
+        if (pickupOrderId) {
+          const { error: deactivateByOrder } = await supabase
+            .from('driver_assignments')
+            .update({ is_active: false })
+            .eq('pickup_order_id', pickupOrderId)
+            .eq('is_active', true);
+          if (deactivateByOrder) {
+            console.error('🔴 ERROR DEACTIVATING (by order):', deactivateByOrder);
+            throw deactivateByOrder;
+          }
+        }
+        const { error: deactivateByRequest } = await supabase
           .from('driver_assignments')
           .update({ is_active: false })
-          .eq('customer_request_id', pickup.customer_request_id);
-
-        if (deactivateError) {
-          console.error('🔴 ERROR DEACTIVATING ASSIGNMENTS:', deactivateError);
-          throw deactivateError;
+          .eq('customer_request_id', pickup.customer_request_id)
+          .eq('is_active', true);
+        if (deactivateByRequest) {
+          console.error('🔴 ERROR DEACTIVATING (by request):', deactivateByRequest);
+          throw deactivateByRequest;
         }
         console.log('✅ EXISTING ASSIGNMENTS DEACTIVATED');
 
-        // Create new assignment using pickup_order_id
-        console.log('🔴 CREATING NEW ASSIGNMENT...');
-        const assignmentData: any = {
-          customer_request_id: pickup.customer_request_id,
-          driver_id: selectedDriverId,
-          role: 'primary',
-          assignment_type: 'pickup',
-          is_active: true
-        };
-        
-        // Add pickup_order_id if we have it
+        // Check if an active assignment still exists (race protection)
+        console.log('🔍 CHECKING EXISTING ACTIVE ASSIGNMENT...');
+        let existingActive: { id: string; driver_id: string } | null = null;
         if (pickupOrderId) {
-          assignmentData.pickup_order_id = pickupOrderId;
+          const { data: ex1, error: exErr1 } = await supabase
+            .from('driver_assignments')
+            .select('id, driver_id')
+            .eq('pickup_order_id', pickupOrderId)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (exErr1) {
+            console.error('🔴 ERROR FETCHING EXISTING ASSIGNMENT (by order):', exErr1);
+            throw exErr1;
+          }
+          existingActive = ex1 as any;
+        } else {
+          const { data: ex2, error: exErr2 } = await supabase
+            .from('driver_assignments')
+            .select('id, driver_id')
+            .eq('customer_request_id', pickup.customer_request_id)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (exErr2) {
+            console.error('🔴 ERROR FETCHING EXISTING ASSIGNMENT (by request):', exErr2);
+            throw exErr2;
+          }
+          existingActive = ex2 as any;
         }
-        
-        const { error: assignmentError } = await supabase
-          .from('driver_assignments')
-          .insert(assignmentData);
 
-        if (assignmentError) {
-          console.error('🔴 ERROR CREATING ASSIGNMENT:', assignmentError);
-          throw assignmentError;
+        if (existingActive) {
+          if (existingActive.driver_id !== selectedDriverId) {
+            const { error: updateAssignErr } = await supabase
+              .from('driver_assignments')
+              .update({ driver_id: selectedDriverId })
+              .eq('id', existingActive.id);
+            if (updateAssignErr) {
+              console.error('🔴 ERROR UPDATING EXISTING ASSIGNMENT:', updateAssignErr);
+              throw updateAssignErr;
+            }
+            console.log('✅ UPDATED EXISTING ASSIGNMENT DRIVER');
+          } else {
+            console.log('ℹ️ Assignment already up to date');
+          }
+        } else {
+          // Create new assignment using pickup_order_id
+          console.log('🔴 CREATING NEW ASSIGNMENT...');
+          const assignmentData: any = {
+            customer_request_id: pickup.customer_request_id,
+            driver_id: selectedDriverId,
+            role: 'primary',
+            assignment_type: 'pickup',
+            is_active: true,
+          };
+          if (pickupOrderId) assignmentData.pickup_order_id = pickupOrderId;
+
+          const { error: assignmentError } = await supabase
+            .from('driver_assignments')
+            .insert(assignmentData);
+          if (assignmentError) {
+            console.error('🔴 ERROR CREATING ASSIGNMENT:', assignmentError);
+            throw assignmentError;
+          }
+          console.log('✅ NEW ASSIGNMENT CREATED');
         }
-        console.log('✅ NEW ASSIGNMENT CREATED');
+
+        // Skip status update for now - focus on driver assignment
+        console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
 
         // Skip status update for now - focus on driver assignment
         console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
