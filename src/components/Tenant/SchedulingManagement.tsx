@@ -1256,6 +1256,14 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t">
+                {/* OK Button - Green color at far left */}
+                <Button
+                  onClick={() => setIsDetailDialogOpen(false)}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  OK
+                </Button>
+                
                 {selectedRequest.status === 'Förfrågan' && (
                   <Button
                     onClick={() => handleConfirmRequest(selectedRequest.id)}
@@ -1264,17 +1272,6 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   >
                     <Check className="h-4 w-4" />
                     Bekräfta hämtning
-                  </Button>
-                )}
-                
-                {selectedRequest.status !== 'Avbokad' && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleCancelRequest(selectedRequest.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Avboka
                   </Button>
                 )}
 
@@ -1304,13 +1301,17 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   </>
                 )}
                 
-                {/* OK Button - Green color to confirm and close */}
-                <Button
-                  onClick={() => setIsDetailDialogOpen(false)}
-                  className="ml-auto bg-green-600 hover:bg-green-700 text-white"
-                >
-                  OK
-                </Button>
+                {/* Avboka button at far right */}
+                {selectedRequest.status !== 'Avbokad' && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleCancelRequest(selectedRequest.id)}
+                    className="flex items-center gap-2 ml-auto"
+                  >
+                    <X className="h-4 w-4" />
+                    Avboka
+                  </Button>
+                )}
               </div>
             </div>
           )}
