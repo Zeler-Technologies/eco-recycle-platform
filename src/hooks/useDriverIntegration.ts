@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -267,7 +268,7 @@ export const useDriverIntegration = () => {
     }
   }, [loadStatusHistory]);
 
-  // Update pickup status using unified database function
+  // Update pickup status using unified database function with all parameters
   const updatePickupStatus = useCallback(async (pickupId: string, status: string, notes?: string) => {
     console.log('📞 updatePickupStatus called with:', { pickupId, status, notes });
     
@@ -277,11 +278,12 @@ export const useDriverIntegration = () => {
     }
 
     try {
-      // Use unified function (bypass TypeScript warnings)
+      // Use unified function with all parameters to avoid overloading conflict
       const { data, error } = await (supabase as any).rpc('update_pickup_status_unified', {
         pickup_id: pickupId,
         new_status: status,
-        driver_notes_param: notes
+        driver_notes_param: notes || null,
+        completion_photos_param: null // Explicitly provide this parameter
       });
       
       if (error) {
