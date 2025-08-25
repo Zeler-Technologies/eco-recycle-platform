@@ -87,8 +87,12 @@ interface StatusHistoryItem {
 export const useDriverIntegration = () => {
   const queryClient = useQueryClient();
   const [pickups, setPickups] = useState<PickupOrder[]>([]);
+  const [availablePickups, setAvailablePickups] = useState<PickupOrder[]>([]);
+  const [assignedPickups, setAssignedPickups] = useState<PickupOrder[]>([]);
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusHistory, setStatusHistory] = useState<StatusHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -577,6 +581,163 @@ export const useDriverIntegration = () => {
     }
   }, [driver?.id, refreshData]);
 
+  // Load available pickups (unassigned, scheduled pickups for self-assignment)
+  const loadAvailablePickups = useCallback(async () => {
+    if (!driver?.tenant_id) {
+      console.log('❌ No tenant ID available for available pickups');
+      return;
+    }
+
+    setLoadingAvailable(true);
+    try {
+      console.log('🔄 Loading available pickups for tenant:', driver.tenant_id);
+      
+      const { data, error } = await (supabase as any)
+        .from('v_pickup_status_unified')
+        .select('*')
+        .eq('tenant_id', driver.tenant_id)
+        .in('pickup_status', ['scheduled', 'pending'])
+        .is('driver_id', null)
+        .gte('scheduled_pickup_date', new Date().toISOString().split('T')[0])
+        .order('scheduled_pickup_date', { ascending: true })
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      const processedAvailable: PickupOrder[] = (data || []).map((pickup: any) => ({
+        id: pickup.pickup_order_id || pickup.id,
+        pickup_id: pickup.pickup_order_id || pickup.id,
+        pickup_order_id: pickup.pickup_order_id,
+        customer_request_id: pickup.customer_request_id,
+        car_registration_number: pickup.car_registration_number || '',
+        car_year: pickup.car_year,
+        car_brand: pickup.car_brand || '',
+        car_model: pickup.car_model || '',
+        owner_name: pickup.owner_name || '',
+        contact_phone: pickup.contact_phone,
+        pickup_address: pickup.pickup_address || '',
+        pickup_postal_code: pickup.pickup_postal_code,
+        pickup_latitude: pickup.pickup_latitude,
+        pickup_longitude: pickup.pickup_longitude,
+        pnr_num: pickup.pnr_num,
+        pickup_status: pickup.pickup_status,
+        scheduled_pickup_date: pickup.scheduled_pickup_date,
+        final_price: pickup.final_price,
+        driver_notes: pickup.driver_notes,
+        completion_photos: pickup.completion_photos,
+        status: pickup.pickup_status,
+        created_at: pickup.created_at,
+        updated_at: pickup.updated_at,
+        driver_id: pickup.driver_id,
+        driver_name: pickup.driver_name,
+        driver_phone: pickup.driver_phone,
+        assigned_at: pickup.assigned_at,
+        assignment_active: pickup.assignment_active,
+        assignment_notes: pickup.assignment_notes,
+        tenant_id: pickup.tenant_id,
+        scrapyard_id: pickup.scrapyard_id,
+        status_display_text: pickup.status_display_text,
+        vehicle_year: pickup.car_year,
+        vehicle_make: pickup.car_brand || '',
+        vehicle_model: pickup.car_model || '',
+        fuel_type: 'gasoline',
+        pickup_distance: 0,
+        customer_name: pickup.owner_name || '',
+        pickup_location: pickup.pickup_address || '',
+        estimated_arrival: pickup.estimated_arrival,
+        scheduled_at: pickup.scheduled_at,
+        completion_notes: pickup.completion_photos?.join(', ') || '',
+        assigned_driver_id: pickup.driver_id
+      }));
+      
+      console.log('✅ Available pickups loaded:', processedAvailable.length, processedAvailable);
+      setAvailablePickups(processedAvailable);
+    } catch (error) {
+      console.error('❌ Failed to load available pickups:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load available pickups');
+    } finally {
+      setLoadingAvailable(false);
+    }
+  }, [driver?.tenant_id]);
+
+  // Load assigned pickups (driver's assigned and in-progress pickups)
+  const loadAssignedPickups = useCallback(async () => {
+    if (!driver?.driver_id || !driver?.tenant_id) {
+      console.log('❌ No driver ID or tenant ID available for assigned pickups');
+      return;
+    }
+
+    setLoadingAssigned(true);
+    try {
+      console.log('🔄 Loading assigned pickups for driver:', driver.driver_id);
+      
+      const { data, error } = await (supabase as any)
+        .from('v_pickup_status_unified')
+        .select('*')
+        .eq('driver_id', driver.driver_id)
+        .eq('tenant_id', driver.tenant_id)
+        .in('pickup_status', ['assigned', 'in_progress'])
+        .order('scheduled_pickup_date', { ascending: true })
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      const processedAssigned: PickupOrder[] = (data || []).map((pickup: any) => ({
+        id: pickup.pickup_order_id || pickup.id,
+        pickup_id: pickup.pickup_order_id || pickup.id,
+        pickup_order_id: pickup.pickup_order_id,
+        customer_request_id: pickup.customer_request_id,
+        car_registration_number: pickup.car_registration_number || '',
+        car_year: pickup.car_year,
+        car_brand: pickup.car_brand || '',
+        car_model: pickup.car_model || '',
+        owner_name: pickup.owner_name || '',
+        contact_phone: pickup.contact_phone,
+        pickup_address: pickup.pickup_address || '',
+        pickup_postal_code: pickup.pickup_postal_code,
+        pickup_latitude: pickup.pickup_latitude,
+        pickup_longitude: pickup.pickup_longitude,
+        pnr_num: pickup.pnr_num,
+        pickup_status: pickup.pickup_status,
+        scheduled_pickup_date: pickup.scheduled_pickup_date,
+        final_price: pickup.final_price,
+        driver_notes: pickup.driver_notes,
+        completion_photos: pickup.completion_photos,
+        status: pickup.pickup_status,
+        created_at: pickup.created_at,
+        updated_at: pickup.updated_at,
+        driver_id: pickup.driver_id,
+        driver_name: pickup.driver_name,
+        driver_phone: pickup.driver_phone,
+        assigned_at: pickup.assigned_at,
+        assignment_active: pickup.assignment_active,
+        assignment_notes: pickup.assignment_notes,
+        tenant_id: pickup.tenant_id,
+        scrapyard_id: pickup.scrapyard_id,
+        status_display_text: pickup.status_display_text,
+        vehicle_year: pickup.car_year,
+        vehicle_make: pickup.car_brand || '',
+        vehicle_model: pickup.car_model || '',
+        fuel_type: 'gasoline',
+        pickup_distance: 0,
+        customer_name: pickup.owner_name || '',
+        pickup_location: pickup.pickup_address || '',
+        estimated_arrival: pickup.estimated_arrival,
+        scheduled_at: pickup.scheduled_at,
+        completion_notes: pickup.completion_photos?.join(', ') || '',
+        assigned_driver_id: pickup.driver_id
+      }));
+      
+      console.log('✅ Assigned pickups loaded:', processedAssigned.length, processedAssigned);
+      setAssignedPickups(processedAssigned);
+    } catch (error) {
+      console.error('❌ Failed to load assigned pickups:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load assigned pickups');
+    } finally {
+      setLoadingAssigned(false);
+    }
+  }, [driver?.driver_id, driver?.tenant_id]);
+
   // Initialize data on mount
   useEffect(() => {
     const initializeData = async () => {
@@ -600,8 +761,11 @@ export const useDriverIntegration = () => {
     if (driver?.driver_id) {
       loadPickups(driver.driver_id);
       loadStatusHistory(driver.driver_id);
+      // Load the new separated pickup lists
+      loadAvailablePickups();
+      loadAssignedPickups();
     }
-  }, [driver?.driver_id, loadPickups, loadStatusHistory]);
+  }, [driver?.driver_id, loadPickups, loadStatusHistory, loadAvailablePickups, loadAssignedPickups]);
 
   // Set up real-time subscriptions
   useEffect(() => {
@@ -682,37 +846,72 @@ export const useDriverIntegration = () => {
     };
   }, [driver?.driver_id, loadPickups]);
 
-  // Get available pickups for self-assignment
+
+  // Get available pickups for self-assignment (backward compatibility)
   const getAvailablePickups = useCallback(async () => {
-    if (!driver?.tenant_id) {
-      console.log('❌ No tenant ID available');
-      return [];
+    await loadAvailablePickups();
+    return availablePickups;
+  }, [loadAvailablePickups, availablePickups]);
+
+  // Enhanced self-assignment with proper error handling and UI feedback
+  const handleSelfAssignment = useCallback(async (pickupOrderId: string, customerName: string) => {
+    if (!driver?.driver_id) {
+      throw new Error('Driver ID not available');
     }
 
     try {
-      const { data, error } = await (supabase as any)
-        .from('v_pickup_status_unified')
-        .select('*')
-        .eq('pickup_status', 'scheduled')
-        .eq('tenant_id', driver.tenant_id)
-        .is('driver_id', null);
+      console.log(`🔄 Driver ${driver.driver_id} attempting self-assignment to pickup ${pickupOrderId}`);
       
-      if (error) throw error;
-      console.log('✅ Available pickups loaded:', data);
-      return data || [];
-    } catch (error) {
-      console.error('❌ Failed to load available pickups:', error);
-      return [];
-    }
-  }, [driver?.tenant_id]);
+      const { data, error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
+        p_pickup_order_id: pickupOrderId,
+        p_new_status: 'assigned',
+        p_driver_notes: `Självtilldelad av förare - ${new Date().toLocaleDateString('sv-SE')}`,
+        p_completion_photos: null
+      });
 
-  // Self-assign a pickup
+      if (error) {
+        console.error('❌ Self-assignment database error:', error);
+        
+        if (error.message.includes('already assigned')) {
+          throw new Error('Denna upphämtning har redan tilldelats en annan förare');
+        } else if (error.message.includes('not found')) {
+          throw new Error('Upphämtningen kunde inte hittas');
+        } else {
+          throw new Error('Kunde inte tilldela upphämtningen');
+        }
+      }
+
+      console.log('✅ Self-assignment successful:', data);
+      
+      // Refresh both available and assigned pickups
+      await Promise.all([
+        loadAvailablePickups(),
+        loadAssignedPickups()
+      ]);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Self-assignment failed:', error);
+      throw error;
+    }
+  }, [driver?.driver_id, loadAvailablePickups, loadAssignedPickups]);
+
+  // Self-assign a pickup (backward compatibility)
   const selfAssign = useCallback(async (pickupId: string) => {
     console.log('🔄 Self-assigning pickup:', pickupId);
     return updatePickupStatus(pickupId, 'assigned', 'Self-assigned by driver');
   }, [updatePickupStatus]);
 
+  // Refresh functions
+  const refreshAvailablePickups = useCallback(() => loadAvailablePickups(), [loadAvailablePickups]);
+  const refreshAssignedPickups = useCallback(() => loadAssignedPickups(), [loadAssignedPickups]);
+  const refreshAllPickupData = useCallback(() => Promise.all([
+    loadAvailablePickups(),
+    loadAssignedPickups()
+  ]), [loadAvailablePickups, loadAssignedPickups]);
+
   return {
+    // Legacy data (maintain backward compatibility)
     pickups,
     driver,
     loading,
@@ -721,6 +920,14 @@ export const useDriverIntegration = () => {
     historyLoading,
     isCalculatingPrice,
     pricingError,
+    
+    // New separated pickup data
+    availablePickups,
+    assignedPickups,
+    loadingAvailable,
+    loadingAssigned,
+    
+    // Functions
     updateDriverStatus,
     updatePickupStatus,
     assignDriver,
@@ -732,6 +939,14 @@ export const useDriverIntegration = () => {
     bulkCalculatePricing,
     refreshData,
     getAvailablePickups,
-    selfAssign
+    selfAssign,
+    
+    // New functions
+    handleSelfAssignment,
+    loadAvailablePickups,
+    loadAssignedPickups,
+    refreshAvailablePickups,
+    refreshAssignedPickups,
+    refreshAllPickupData
   };
 };

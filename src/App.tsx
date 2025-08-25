@@ -11,7 +11,7 @@ import NotFound from "./pages/NotFound";
 import CustomerApp from "./pages/CustomerApp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProtectedDriverRoute from "./components/ProtectedDriverRoute";
-import PantaBilenDriverApp from './components/Driver/PantaBilenDriverApp';
+import PantaBilenDriverAppNew from './components/Driver/PantaBilenDriverAppNew';
 
 const queryClient = new QueryClient();
 
@@ -38,7 +38,7 @@ const App = () => (
                 path="/driver-app" 
                 element={
                   <ProtectedDriverRoute>
-                    <PantaBilenDriverApp />
+                    <PantaBilenDriverAppNew />
                   </ProtectedDriverRoute>
                 } 
               />
