@@ -295,13 +295,14 @@ export const useDriverIntegration = () => {
     }
 
     try {
-      // Use the corrected function name with proper parameters
-      const { data, error } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
-        p_pickup_order_id: pickupId,
-        p_new_status: status,
-        p_driver_notes: notes || null,
-        p_completion_photos: null,
-        p_test_driver_id: null // Will use authenticated user
+      // Use the new edge function
+      const { data, error } = await supabase.functions.invoke('update-pickup-status', {
+        body: {
+          p_pickup_order_id: pickupId,
+          p_new_status: status,
+          p_driver_notes: notes || null,
+          p_completion_photos: null
+        }
       });
       
       if (error) {
