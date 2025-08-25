@@ -178,30 +178,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         }
         console.log('✅ DRIVER ASSIGNMENTS DEACTIVATED');
 
-        // Skip status update for cancelled pickups
-        if (pickup.status !== 'cancelled') {
-          console.log('🔴 UPDATING STATUS TO SCHEDULED...');
-          let statusError: any = null;
-          if (pickupOrderId) {
-            const { error } = await supabase.rpc('update_pickup_status_unified', {
-              p_pickup_order_id: pickupOrderId,
-              p_new_status: 'scheduled',
-              p_driver_notes: 'Driver unassigned - available for self-assignment',
-              p_completion_photos: null
-            });
-            statusError = error;
-          } else {
-            console.warn('⚠️ Skipping status update: pickup_order_id not found');
-          }
-
-          if (statusError) {
-            console.error('🔴 ERROR UPDATING STATUS TO SCHEDULED:', statusError);
-            throw statusError;
-          }
-          console.log('✅ STATUS UPDATED TO SCHEDULED');
-        } else {
-          console.log('⏭️ SKIPPING STATUS UPDATE - PICKUP IS CANCELLED');
-        }
+        // Skip status update for now - focus on driver assignment
+        console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
 
       } else if (selectedDriverId && selectedDriverId !== 'none') {
         console.log('🔴 ASSIGNING DRIVER PATH:', selectedDriverId);
@@ -237,30 +215,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         }
         console.log('✅ NEW ASSIGNMENT CREATED');
 
-        // Skip status update for cancelled pickups
-        if (pickup.status !== 'cancelled') {
-          console.log('🔴 UPDATING STATUS TO ASSIGNED...');
-          let statusError: any = null;
-          if (pickupOrderId) {
-            const { error } = await supabase.rpc('update_pickup_status_unified', {
-              p_pickup_order_id: pickupOrderId,
-              p_new_status: 'assigned',
-              p_driver_notes: 'Driver assigned via admin modal',
-              p_completion_photos: null
-            });
-            statusError = error;
-          } else {
-            console.warn('⚠️ Skipping status update: pickup_order_id not found');
-          }
-
-          if (statusError) {
-            console.error('🔴 ERROR UPDATING STATUS TO ASSIGNED:', statusError);
-            throw statusError;
-          }
-          console.log('✅ STATUS UPDATED TO ASSIGNED');
-        } else {
-          console.log('⏭️ SKIPPING STATUS UPDATE - PICKUP IS CANCELLED');
-        }
+        // Skip status update for now - focus on driver assignment
+        console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
       } else {
         console.log('⏭️ NO DRIVER CHANGES NEEDED');
       }
