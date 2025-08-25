@@ -82,6 +82,9 @@ const PantaBilenDriverAppNew = () => {
         case 'completed':
           await updatePickupStatus.completePickup(pickupOrderId, currentDriver?.full_name || 'Driver');
           break;
+        case 'assigned':
+          await updatePickupStatus.assignToDriver(pickupOrderId, currentDriver?.full_name || 'Driver');
+          break;
         case 'scheduled':
           await updatePickupStatus.schedulePickup(pickupOrderId, notes);
           break;
@@ -98,6 +101,9 @@ const PantaBilenDriverAppNew = () => {
           break;
         case 'completed':
           successMessage = 'Upphämtning slutförd!';
+          break;
+        case 'assigned':
+          successMessage = 'Upphämtning ångrad - status återställd till tilldelad';
           break;
         case 'scheduled':
           successMessage = 'Upphämtning avbokad och returnerad till tillgängliga';
@@ -340,13 +346,23 @@ const PantaBilenDriverAppNew = () => {
               </>
             )}
             {pickup.pickup_status === 'in_progress' && (
-              <Button
-                onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'completed', 'Slutförd av förare')}
-                disabled={isUpdating}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
-              >
-                {isUpdating ? 'Slutför...' : '✅ SLUTFÖR'}
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'completed', 'Slutförd av förare')}
+                  disabled={isUpdating}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                >
+                  {isUpdating ? 'Slutför...' : '✅ SLUTFÖR'}
+                </Button>
+                <Button
+                  onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'assigned', 'Upphämtning ångrad av förare')}
+                  disabled={isUpdating}
+                  variant="outline"
+                  className="w-full border-orange-300 text-orange-600 hover:bg-orange-50"
+                >
+                  {isUpdating ? 'Ångrar...' : '↩️ ÅNGRA UPPHÄMTNING'}
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>
