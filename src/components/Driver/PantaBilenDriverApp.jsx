@@ -764,6 +764,18 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
               </div>
             )}
 
+            {/* Unassigned pickup - can self-assign */}
+            {(selectedPickup.pickup_status === 'pending' || selectedPickup.pickup_status === 'scheduled') && !selectedPickup.assigned_driver_id && (
+              <div className="flex justify-center">
+                <button 
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors"
+                  onClick={() => handleSelfAssign(selectedPickup.pickup_order_id || selectedPickup.id)}
+                >
+                  ✓ Tilldela mig detta uppdrag
+                </button>
+              </div>
+            )}
+
             {/* Scheduled status - can start directly */}
             {(selectedPickup.pickup_status === 'pending' || selectedPickup.pickup_status === 'scheduled') && selectedPickup.assigned_driver_id === currentDriver?.id && (
               <div className="flex gap-3 items-center">
