@@ -9,6 +9,7 @@ import { Calendar, Clock, User, DollarSign, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PickupEditModalProps {
   pickup: any;
@@ -24,6 +25,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   onSuccess
 }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [drivers, setDrivers] = useState<any[]>([]);
   
@@ -94,11 +96,18 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
 
   const fetchDrivers = async () => {
     try {
-      console.log('🔴 FETCHING DRIVERS FOR TENANT:', pickup.tenant_id);
+      const tenantId = user?.tenant_id;
+      console.log('🔴 FETCHING DRIVERS FOR TENANT:', tenantId);
+      
+      if (!tenantId) {
+        console.error('🔴 NO TENANT ID FOUND');
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('drivers')
         .select('id, full_name, phone_number, driver_status')
-        .eq('tenant_id', pickup.tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('is_active', true);
 
       if (error) throw error;
@@ -151,30 +160,44 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       console.log('✅ CUSTOMER REQUEST UPDATED');
 
       // Update status in pickup_orders (single source of truth) - this will auto-sync to customer_requests  
-      if (pickup.pickup_order_id) {
-        console.log('🔴 UPDATING PICKUP ORDER STATUS to:', pickupStatus);
+      console.log('🔴 UPDATING PICKUP ORDER STATUS to:', pickupStatus);
+      console.log('🔴 PICKUP OBJECT:', pickup);
+      
+      // Find pickup_order_id
+      let pickupOrderId = pickup.pickup_order_id;
+      
+      if (!pickupOrderId) {
+        // Look up pickup_order_id using customer_request_id
+        console.log('🔴 LOOKING UP PICKUP ORDER ID...');
+        const { data: pickupOrderRow, error: lookupError } = await supabase
+          .from('pickup_orders')
+          .select('id')
+          .eq('customer_request_id', pickup.id)
+          .maybeSingle();
+          
+        if (lookupError) {
+          console.error('🔴 ERROR LOOKING UP PICKUP ORDER:', lookupError);
+          throw lookupError;
+        }
+        
+        pickupOrderId = pickupOrderRow?.id;
+        console.log('🔴 FOUND PICKUP ORDER ID:', pickupOrderId);
+      }
+      
+      if (pickupOrderId) {
         const { error: statusUpdateError } = await supabase
           .from('pickup_orders')
           .update({ status: pickupStatus })
-          .eq('id', pickup.pickup_order_id);
+          .eq('id', pickupOrderId);
 
         if (statusUpdateError) {
           console.error('🔴 ERROR UPDATING PICKUP STATUS:', statusUpdateError);
           throw statusUpdateError;
         }
         console.log('✅ PICKUP ORDER STATUS UPDATED');
+      } else {
+        console.warn('⚠️ NO PICKUP ORDER ID FOUND - STATUS NOT UPDATED');
       }
-
-      // Resolve actual pickup_order_id for status updates
-      const { data: pickupOrderRow, error: pickupOrderLookupError } = await supabase
-        .from('pickup_orders')
-        .select('id')
-        .eq('customer_request_id', pickup.id)
-        .maybeSingle();
-      if (pickupOrderLookupError) {
-        console.warn('⚠️ Could not lookup pickup_order_id:', pickupOrderLookupError);
-      }
-      const pickupOrderId = pickupOrderRow?.id as string | undefined;
 
       // Handle driver assignment/unassignment
       console.log('🔴 HANDLING DRIVER ASSIGNMENT, selectedDriverId:', selectedDriverId);
