@@ -107,6 +107,9 @@ const PantaBilenDriverAppNew = () => {
       }
       
       toast.success(successMessage);
+      
+      // Refresh pickup data to reflect status changes
+      await refreshAllPickupData();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Kunde inte uppdatera status';
       toast.error(errorMessage);
@@ -255,8 +258,12 @@ const PantaBilenDriverAppNew = () => {
                 </a>
               )}
             </div>
-            <Badge className="bg-green-100 text-green-800">
-              Tilldelad till dig
+            <Badge className={
+              pickup.pickup_status === 'in_progress' 
+                ? "bg-orange-100 text-orange-800" 
+                : "bg-green-100 text-green-800"
+            }>
+              {pickup.pickup_status === 'in_progress' ? 'Pågående upphämtning' : 'Tilldelad till dig'}
             </Badge>
           </div>
           
