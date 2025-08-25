@@ -1,22 +1,26 @@
 // Driver App Constants and Translations (TypeScript)
 export type DriverStatus = 'available' | 'busy' | 'break' | 'offline';
 
-// Task statuses (pickups) - keep existing for UI chips
+// Task statuses (pickups) - corrected Swedish translations
 export const STATUS_TEXTS = {
+  pending: 'Ny förfrågan',
   scheduled: 'Väntar på upphämtning',
+  assigned: 'Tilldelad',
   in_progress: 'Pågående',
-  completed: 'Klar',
+  completed: 'Slutförd',
   cancelled: 'Avbruten',
-  pending: 'Att hantera',
+  rejected: 'Avvisad',
 } as const;
 
 // Note: left as hex for existing UI usage; pickup status colors are out of scope here
 export const STATUS_COLORS = {
+  pending: '#f59e0b',
   scheduled: '#6366f1',
+  assigned: '#8b5cf6',
   in_progress: '#f59e0b',
   completed: '#10b981',
   cancelled: '#ef4444',
-  pending: '#f59e0b',
+  rejected: '#ef4444',
 } as const;
 
 export const DRIVER_STATUS_TEXTS: Record<DriverStatus, string> = {
@@ -28,10 +32,11 @@ export const DRIVER_STATUS_TEXTS: Record<DriverStatus, string> = {
 
 export const FILTER_OPTIONS = [
   { key: 'all', label: 'Alla' },
+  { key: 'pending', label: 'Ny förfrågan' },
   { key: 'scheduled', label: 'Schemalagd' },
+  { key: 'assigned', label: 'Tilldelad' },
   { key: 'in_progress', label: 'Pågående' },
-  { key: 'completed', label: 'Klar' },
-  { key: 'pending', label: 'Väntar' },
+  { key: 'completed', label: 'Slutförd' },
 ] as const;
 
 export const UI_LABELS = {
