@@ -162,10 +162,10 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({ driver, o
 
       // Step 2: Update pickup status using unified function
       const { error: statusError } = await supabase.rpc('update_pickup_status_unified', {
-        pickup_id: pickupOrderId,
-        new_status: 'assigned',
-        driver_notes_param: `Assigned to driver ${driver.full_name} via admin interface`,
-        completion_photos_param: null
+        p_pickup_order_id: pickupOrderId,
+        p_new_status: 'assigned',
+        p_driver_notes: `Assigned to driver ${driver.full_name} via admin interface`,
+        p_completion_photos: null
       });
       
       if (statusError) {

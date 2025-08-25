@@ -147,17 +147,30 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     
     try {
       setRequestsLoading(true);
-      console.log('🔄 Fetching pickups for tenant:', user.tenant_id);
+      console.log('🔄 Fetching customer requests for tenant:', user.tenant_id);
       
-      // Use unified view (bypass TypeScript warnings)
-      const { data, error } = await (supabase as any)
-        .from('v_pickup_status_unified')
-        .select('*')
+      // Fetch all customer requests first
+      const { data: customerRequestsData, error: customerError } = await supabase
+        .from('customer_requests')
+        .select(`
+          id,
+          owner_name,
+          contact_phone,
+          pickup_address,
+          car_brand,
+          car_model,
+          car_year,
+          car_registration_number,
+          status,
+          pickup_date,
+          created_at,
+          scrapyard_id
+        `)
         .eq('tenant_id', user.tenant_id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching pickups:', error);
+      if (customerError) {
+        console.error('❌ Error fetching customer requests:', customerError);
         toast({
           title: "Fel",
           description: "Kunde inte ladda kundförfrågningar",
@@ -166,13 +179,36 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         return;
       }
 
-      console.log('✅ Unified pickups fetched:', data);
+      // Fetch pickup orders to merge with customer requests
+      const { data: pickupData, error: pickupError } = await (supabase as any)
+        .from('v_pickup_status_unified')
+        .select('*')
+        .eq('tenant_id', user.tenant_id);
+
+      if (pickupError) {
+        console.warn('⚠️ Warning fetching pickup orders:', pickupError);
+      }
+
+      console.log('✅ Customer requests fetched:', customerRequestsData?.length || 0);
+      console.log('✅ Pickup orders fetched:', pickupData?.length || 0);
       
-      // Convert unified view data to component format
-      const formattedRequests: Request[] = (data || []).map((item: any) => {
-        // Convert status from pickup_status to Swedish
+      // Create a map of pickup orders by customer_request_id for faster lookup
+      const pickupOrderMap = new Map();
+      (pickupData || []).forEach((pickup: any) => {
+        if (pickup.customer_request_id) {
+          pickupOrderMap.set(pickup.customer_request_id, pickup);
+        }
+      });
+      
+      // Convert all customer requests to component format, merging with pickup data when available
+      const formattedRequests: Request[] = (customerRequestsData || []).map((customerRequest: any) => {
+        const pickupOrder = pickupOrderMap.get(customerRequest.id);
+        
+        // Convert status to Swedish based on pickup order status or customer request status
         let status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
-        switch (item.pickup_status) {
+        const sourceStatus = pickupOrder?.pickup_status || customerRequest.status;
+        
+        switch (sourceStatus) {
           case 'pending':
           case 'customer_request':
             status = 'Förfrågan';
@@ -180,6 +216,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           case 'assigned':
           case 'pickup_accepted':
           case 'in_progress':
+          case 'scheduled':
             status = 'Bekräftad';
             break;
           case 'completed':
@@ -193,26 +230,28 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             status = 'Förfrågan';
         }
 
-        // Use scheduled_pickup_date if available, otherwise use created_at
-        const requestDate = item.scheduled_pickup_date 
-          ? new Date(item.scheduled_pickup_date + 'T09:00:00')  // Add default time to prevent timezone issues
-          : new Date(item.created_at);
+        // Use pickup order's scheduled date if available, otherwise use customer request pickup_date or created_at
+        const requestDate = pickupOrder?.scheduled_pickup_date 
+          ? new Date(pickupOrder.scheduled_pickup_date + 'T09:00:00')
+          : customerRequest.pickup_date
+          ? new Date(customerRequest.pickup_date + 'T09:00:00')
+          : new Date(customerRequest.created_at);
 
         return {
-          id: item.pickup_order_id || item.customer_request_id, // Use pickup_order_id as primary
-          pickupOrderId: item.pickup_order_id,
-          customerRequestId: item.customer_request_id,
+          id: pickupOrder?.pickup_order_id || customerRequest.id,
+          pickupOrderId: pickupOrder?.pickup_order_id || null,
+          customerRequestId: customerRequest.id,
           date: requestDate,
           time: requestDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
-          customerName: item.owner_name || 'Okänd kund',
-          address: item.pickup_address || 'Ingen adress angiven',
-          phone: item.contact_phone || 'Inget telefonnummer',
-          carBrand: item.car_brand || 'Okänt märke',
-          carModel: item.car_model || 'Okänd modell',
-          registrationNumber: item.car_registration_number || 'Okänt reg.nr',
+          customerName: pickupOrder?.owner_name || customerRequest.owner_name || 'Okänd kund',
+          address: pickupOrder?.pickup_address || customerRequest.pickup_address || 'Ingen adress angiven',
+          phone: pickupOrder?.contact_phone || customerRequest.contact_phone || 'Inget telefonnummer',
+          carBrand: pickupOrder?.car_brand || customerRequest.car_brand || 'Okänt märke',
+          carModel: pickupOrder?.car_model || customerRequest.car_model || 'Okänd modell',
+          registrationNumber: pickupOrder?.car_registration_number || customerRequest.car_registration_number || 'Okänt reg.nr',
           status,
-          notes: item.driver_notes,
-          assignedDriver: item.driver_name || null
+          notes: pickupOrder?.driver_notes || null,
+          assignedDriver: pickupOrder?.driver_name || null
         };
       });
 
