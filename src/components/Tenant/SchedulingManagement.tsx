@@ -44,7 +44,7 @@ interface Request {
   carBrand: string;
   carModel: string;
   registrationNumber: string;
-  status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
+  status: 'Förfrågan' | 'Bekräftad' | 'Klar' | 'Avbokad';
   assignedDriver?: string;
   notes?: string;
   // Raw backend status for precise logic (e.g., rejected vs cancelled)
@@ -233,7 +233,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       const formattedRequests: Request[] = (unifiedData || []).map((unified: any) => {
         
         // Get the most current status from pickup_orders table (single source of truth)
-        let status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
+        let status: 'Förfrågan' | 'Bekräftad' | 'Klar' | 'Avbokad';
         const actualStatus = unified.current_status;
         
         switch (actualStatus) {
@@ -248,7 +248,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             status = 'Bekräftad';
             break;
           case 'completed':
-            status = 'Utförd';
+            status = 'Klar';
             break;
           case 'cancelled':
           case 'rejected':
@@ -299,7 +299,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     switch (status) {
       case 'Förfrågan': return 'bg-blue-500 text-white';
       case 'Bekräftad': return 'bg-green-500 text-white';
-      case 'Utförd': return 'bg-gray-500 text-white';
+      case 'Klar': return 'bg-gray-500 text-white';
       case 'Avbokad': return 'bg-red-500 text-white';
       default: return 'bg-gray-400 text-white';
     }
@@ -1072,7 +1072,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 <SelectItem value="all">Alla statusar</SelectItem>
                 <SelectItem value="Förfrågan">Förfrågan</SelectItem>
                 <SelectItem value="Bekräftad">Bekräftad</SelectItem>
-                <SelectItem value="Utförd">Utförd</SelectItem>
+                <SelectItem value="Klar">Klar</SelectItem>
                 <SelectItem value="Avbokad">Avbokad</SelectItem>
               </SelectContent>
             </Select>
@@ -1346,7 +1346,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 )}
                 
                 {/* Avboka button at far right - hidden for cancelled and completed pickups */}
-                {selectedRequest.status !== 'Avbokad' && selectedRequest.status !== 'Utförd' && (
+                {selectedRequest.status !== 'Avbokad' && selectedRequest.status !== 'Klar' && (
                   <Button
                     variant="destructive"
                     onClick={() => handleCancelRequest(selectedRequest.id)}
