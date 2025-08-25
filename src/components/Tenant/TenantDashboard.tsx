@@ -490,7 +490,8 @@ const TenantDashboard = () => {
           setSelectedPickup(null);
         }}
         onSuccess={() => {
-          fetchTenantData(); // Refresh the data
+          fetchPickups(); // Refresh pickup data from unified hook
+          fetchTenantData(); // Refresh the stats
         }}
       />
 
