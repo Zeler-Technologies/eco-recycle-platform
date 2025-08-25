@@ -293,15 +293,26 @@ export const useDriverIntegration = () => {
       
       console.log('✅ Status updated successfully:', data);
 
-      // Optimistic UI update
+      // Optimistic UI update - set both status and pickup_status for immediate feedback
       setPickups(prev => prev.map(pickup => 
         pickup.id === pickupId 
-          ? { ...pickup, status, driver_notes: notes }
+          ? { ...pickup, status, pickup_status: status, driver_notes: notes }
           : pickup
       ));
 
       // Refresh data after update
       await loadPickups(driver.driver_id);
+      
+      // Post-refresh console summary
+      const updatedPickup = pickups.find(p => p.id === pickupId);
+      if (updatedPickup) {
+        console.log('🔄 PICKUP STATUS UPDATE SUMMARY:', {
+          pickupId,
+          oldStatus: updatedPickup.status,
+          newStatus: status,
+          timestamp: new Date().toISOString()
+        });
+      }
       
       // Invalidate related queries to refresh other views
       await queryClient.invalidateQueries({ queryKey: ['pickup-orders'] });
