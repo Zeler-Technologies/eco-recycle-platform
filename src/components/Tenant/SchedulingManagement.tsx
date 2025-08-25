@@ -752,6 +752,22 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         })
         .eq('id', rescheduleData.requestId);
 
+      // Also update pickup order status to ensure consistency
+      if (actualPickupOrderId) {
+        const { error: pickupStatusError } = await supabase
+          .from('pickup_orders')
+          .update({
+            status: 'scheduled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', actualPickupOrderId);
+
+        if (pickupStatusError) {
+          console.warn('Warning updating pickup order status:', pickupStatusError);
+          // Don't fail the whole operation for this
+        }
+      }
+
       if (statusError) {
         console.error('❌ Error updating status:', statusError);
         toast({
