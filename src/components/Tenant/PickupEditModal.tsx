@@ -52,9 +52,10 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       console.log('🔴 PICKUP.DRIVER_ID:', pickup?.driver_id);
       console.log('🔴 TYPEOF DRIVER_ID:', typeof pickup?.driver_id);
       
-      setScheduleDate(pickup.pickup_date || format(new Date(), 'yyyy-MM-dd'));
+      setScheduleDate((pickup.scheduled_pickup_date || pickup.pickup_date || pickup.request_created_at?.split('T')[0]) || format(new Date(), 'yyyy-MM-dd'));
       setReimbursement(pickup.quote_amount?.toString() || '');
-      setPickupStatus(pickup.status || 'pending');
+      const initialStatus = pickup.current_status || pickup.status || 'pending';
+      setPickupStatus(initialStatus === 'confirmed' ? 'assigned' : initialStatus);
       
       // Initialize editable fields
       setOwnerName(pickup.owner_name || '');
@@ -65,10 +66,11 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       setCarYear(pickup.car_year?.toString() || '');
       setCarRegistration(pickup.car_registration_number || '');
       
-      // Set driver ID directly from pickup data
-      if (pickup.driver_id) {
-        console.log('🟢 SETTING DRIVER ID FROM PICKUP:', pickup.driver_id);
-        setSelectedDriverId(pickup.driver_id);
+      // Set driver ID directly from pickup data (prefer assigned_driver_id)
+      const driverId = pickup.assigned_driver_id || pickup.driver_id;
+      if (driverId) {
+        console.log('🟢 SETTING DRIVER ID FROM PICKUP:', driverId);
+        setSelectedDriverId(driverId);
       } else {
         console.log('🔴 NO DRIVER ID IN PICKUP, SETTING TO NONE');
         setSelectedDriverId('none');
@@ -426,7 +428,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
                     <SelectItem value="pending">Väntande</SelectItem>
-                    <SelectItem value="confirmed">Bekräftad</SelectItem>
+                    <SelectItem value="assigned">Bekräftad</SelectItem>
                     <SelectItem value="scheduled">Schemalagd</SelectItem>
                     <SelectItem value="assigned">Tilldelad</SelectItem>
                     <SelectItem value="in_progress">Pågående</SelectItem>
