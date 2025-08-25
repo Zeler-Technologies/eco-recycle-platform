@@ -277,7 +277,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           registrationNumber: unified.car_registration_number || 'Okänt reg.nr',
           status,
           notes: unified.driver_notes || null,
-          assignedDriver: unified.driver_name || null,
+          assignedDriver: unified.assigned_driver_id ? 
+            drivers.find(d => d.id === unified.assigned_driver_id)?.name || 'Tilldelad förare' : 
+            null,
           rawPickupStatus: actualStatus
         };
       });
