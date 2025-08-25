@@ -312,6 +312,17 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
       const pickupOrderId = currentRequest?.pickupOrderId || requestId;
 
+      // First, deactivate any existing assignments for this pickup
+      const { error: deactivateError } = await supabase
+        .from('driver_assignments')
+        .update({ is_active: false })
+        .eq('pickup_order_id', pickupOrderId)
+        .eq('is_active', true);
+
+      if (deactivateError) {
+        console.error('Error deactivating existing assignments:', deactivateError);
+      }
+
       // Create driver assignment using pickup_order_id
       const { error: assignmentError } = await supabase
         .from('driver_assignments')
@@ -329,7 +340,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         console.error('Error creating assignment:', assignmentError);
         toast({
           title: "Fel",
-          description: "Kunde inte tilldela föraren",
+          description: `Kunde inte tilldela föraren: ${assignmentError.message}`,
           variant: "destructive"
         });
         return;
@@ -339,7 +350,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
         p_pickup_order_id: pickupOrderId,
         p_new_status: 'assigned',
-        p_driver_notes: 'Assigned via admin interface',
+        p_driver_notes: `Assigned to ${selectedDriverName} via admin interface`,
         p_completion_photos: null,
         p_test_driver_id: null
       });
@@ -348,7 +359,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         console.error('Error updating status:', statusError);
         toast({
           title: "Fel",
-          description: "Kunde inte uppdatera status",
+          description: `Kunde inte uppdatera status: ${statusError.message}`,
           variant: "destructive"
         });
         return;
@@ -358,8 +369,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       await fetchCustomerRequests();
 
       toast({
-        title: "Förare tilldelad",
-        description: "Föraren har tilldelats uppdraget"
+        title: "Framgång",
+        description: `${selectedDriverName} har tilldelats förfrågan`,
+        variant: "default"
       });
     } catch (error) {
       console.error('Error assigning driver:', error);
