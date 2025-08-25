@@ -80,6 +80,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     newTime: string;
     sendSMS: boolean;
   } | null>(null);
+  const [isConfirmingReschedule, setIsConfirmingReschedule] = useState(false);
 
   // Fetch drivers and customer requests for the current tenant
   useEffect(() => {
@@ -553,13 +554,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   };
 
   const confirmReschedule = async () => {
-    console.log('🔥 CONFIRM RESCHEDULE FUNCTION CALLED');
-    console.log('🔥 RESCHEDULE DATA:', rescheduleData);
-    
-    if (!rescheduleData) {
-      console.log('❌ NO RESCHEDULE DATA - ABORTING');
+    if (isConfirmingReschedule || !rescheduleData) {
       return;
     }
+    
+    setIsConfirmingReschedule(true);
+    console.log('🔥 CONFIRM RESCHEDULE FUNCTION CALLED');
+    console.log('🔥 RESCHEDULE DATA:', rescheduleData);
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
     const wasAvbokad = originalRequest?.status === 'Avbokad';
@@ -696,6 +697,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         description: `Unexpected error: ${error.message}`,
         variant: "destructive"
       });
+    } finally {
+      setIsConfirmingReschedule(false);
     }
 
     console.log('🔄 CLEANING UP STATE...');
@@ -703,6 +706,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     setRescheduleData(null);
     setRescheduleRequest(null);
     setIsDetailDialogOpen(false);
+    setIsConfirmingReschedule(false);
     console.log('✅ RESCHEDULE FUNCTION COMPLETED');
   };
 
@@ -1424,9 +1428,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                     console.log('🔥 CONFIRM RESCHEDULE BUTTON CLICKED');
                     confirmReschedule();
                   }}
+                  disabled={isConfirmingReschedule}
                   className="flex-1"
                 >
-                  Ja, bekräfta
+                  {isConfirmingReschedule ? 'Bekräftar...' : 'Ja, bekräfta'}
                 </Button>
                 <Button
                   variant="outline"
