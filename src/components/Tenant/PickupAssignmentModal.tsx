@@ -208,14 +208,9 @@ export function PickupAssignmentModal({ tenantId, specificDriverId, onClose, onS
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold">
-              Tilldela Förare till Hämtningar
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold">
+            Tilldela Förare till Hämtningar
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[70vh]">
