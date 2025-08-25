@@ -121,14 +121,14 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   const handleSave = async () => {
     try {
       setLoading(true);
-      console.log('🔴 SAVE STARTED for pickup:', pickup.id);
+      console.log('🔴 SAVE STARTED for pickup:', pickup.customer_request_id);
 
       // First verify the customer request exists
       console.log('🔴 VERIFYING CUSTOMER REQUEST EXISTS...');
       const { data: existingRequest, error: verifyError } = await supabase
         .from('customer_requests')
         .select('id, tenant_id')
-        .eq('id', pickup.id)
+        .eq('id', pickup.customer_request_id)
         .maybeSingle();
 
       if (verifyError) {
@@ -137,8 +137,8 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       }
 
       if (!existingRequest) {
-        console.error('🔴 CUSTOMER REQUEST NOT FOUND:', pickup.id);
-        throw new Error(`Customer request ${pickup.id} not found`);
+        console.error('🔴 CUSTOMER REQUEST NOT FOUND:', pickup.customer_request_id);
+        throw new Error(`Customer request ${pickup.customer_request_id} not found`);
       }
 
       console.log('✅ CUSTOMER REQUEST EXISTS:', existingRequest);
@@ -149,7 +149,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       const { error: dateError } = await supabase
         .from('pickup_orders')
         .update({ scheduled_pickup_date: pickupDateTime })
-        .eq('customer_request_id', pickup.id);
+        .eq('customer_request_id', pickup.customer_request_id);
 
       if (dateError) {
         console.error('🔴 ERROR UPDATING PICKUP DATE:', dateError);
@@ -171,7 +171,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           car_registration_number: carRegistration,
           quote_amount: reimbursement ? parseFloat(reimbursement) : null
         })
-        .eq('id', pickup.id);
+        .eq('id', pickup.customer_request_id);
 
       if (customerRequestError) {
         console.error('🔴 ERROR UPDATING CUSTOMER REQUEST:', customerRequestError);
@@ -187,7 +187,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       let { data: pickupOrderRow, error: lookupError } = await supabase
         .from('pickup_orders')
         .select('id')
-        .eq('customer_request_id', pickup.id)
+        .eq('customer_request_id', pickup.customer_request_id)
         .maybeSingle();
         
       if (lookupError) {
@@ -203,7 +203,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         const { data: newPickupOrder, error: createError } = await supabase
           .from('pickup_orders')
           .insert({
-            customer_request_id: pickup.id,
+            customer_request_id: pickup.customer_request_id,
             tenant_id: existingRequest.tenant_id || user?.tenant_id || 1,
             status: pickupStatus,
             scheduled_pickup_date: scheduleDate
@@ -247,7 +247,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         const { error: unassignError } = await supabase
           .from('driver_assignments')
           .update({ is_active: false })
-          .eq('customer_request_id', pickup.id)
+          .eq('customer_request_id', pickup.customer_request_id)
           .eq('is_active', true);
 
         if (unassignError) {
@@ -267,7 +267,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         const { error: deactivateError } = await supabase
           .from('driver_assignments')
           .update({ is_active: false })
-          .eq('customer_request_id', pickup.id);
+          .eq('customer_request_id', pickup.customer_request_id);
 
         if (deactivateError) {
           console.error('🔴 ERROR DEACTIVATING ASSIGNMENTS:', deactivateError);
@@ -278,7 +278,7 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         // Create new assignment using pickup_order_id
         console.log('🔴 CREATING NEW ASSIGNMENT...');
         const assignmentData: any = {
-          customer_request_id: pickup.id,
+          customer_request_id: pickup.customer_request_id,
           driver_id: selectedDriverId,
           role: 'primary',
           assignment_type: 'pickup',
