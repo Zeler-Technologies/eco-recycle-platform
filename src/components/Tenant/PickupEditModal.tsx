@@ -140,16 +140,30 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           car_model: carModel,
           car_year: carYear ? parseInt(carYear) : null,
           car_registration_number: carRegistration,
-          quote_amount: reimbursement ? parseFloat(reimbursement) : null,
-          status: pickupStatus
+          quote_amount: reimbursement ? parseFloat(reimbursement) : null
         })
-        .eq('id', pickup.id);
+        .eq('id', pickup.customer_request_id || pickup.id);
 
       if (customerRequestError) {
         console.error('🔴 ERROR UPDATING CUSTOMER REQUEST:', customerRequestError);
         throw customerRequestError;
       }
       console.log('✅ CUSTOMER REQUEST UPDATED');
+
+      // Update status in pickup_orders (single source of truth) - this will auto-sync to customer_requests  
+      if (pickup.pickup_order_id) {
+        console.log('🔴 UPDATING PICKUP ORDER STATUS to:', pickupStatus);
+        const { error: statusUpdateError } = await supabase
+          .from('pickup_orders')
+          .update({ status: pickupStatus })
+          .eq('id', pickup.pickup_order_id);
+
+        if (statusUpdateError) {
+          console.error('🔴 ERROR UPDATING PICKUP STATUS:', statusUpdateError);
+          throw statusUpdateError;
+        }
+        console.log('✅ PICKUP ORDER STATUS UPDATED');
+      }
 
       // Resolve actual pickup_order_id for status updates
       const { data: pickupOrderRow, error: pickupOrderLookupError } = await supabase
