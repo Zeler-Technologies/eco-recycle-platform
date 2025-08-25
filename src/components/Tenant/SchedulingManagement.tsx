@@ -579,36 +579,85 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       const pickupDateTime = format(rescheduleData.newDate, 'yyyy-MM-dd');
       
       console.log('🔄 UPDATING PICKUP DATE...');
-      // Update scheduled pickup date
-      const { error: dateError } = await supabase
+      
+      // First ensure pickup order exists - create if it doesn't exist
+      let actualPickupOrderId = pickupOrderId;
+      
+      // Check if pickup order exists
+      const { data: existingOrder, error: checkError } = await supabase
         .from('pickup_orders')
-        .update({
-          scheduled_pickup_date: pickupDateTime,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', pickupOrderId);
-
-      if (dateError) {
-        console.error('❌ Error updating pickup date:', dateError);
+        .select('id')
+        .eq('id', pickupOrderId)
+        .single();
+      
+      if (checkError && checkError.code === 'PGRST116') {
+        // Pickup order doesn't exist, create it
+        console.log('🔄 Creating pickup order...');
+        const { data: newOrder, error: createError } = await supabase
+          .from('pickup_orders')
+          .insert({
+            customer_request_id: rescheduleData.requestId,
+            scheduled_pickup_date: pickupDateTime,
+            tenant_id: user?.tenant_id || 1, // Use dynamic tenant_id
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+          
+        if (createError) {
+          console.error('❌ Error creating pickup order:', createError);
+          toast({
+            title: "Fel",
+            description: "Kunde inte skapa hämtningsorder",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        actualPickupOrderId = newOrder.id;
+        console.log('✅ Pickup order created successfully');
+      } else if (checkError) {
+        console.error('❌ Error checking pickup order:', checkError);
         toast({
           title: "Fel",
-          description: "Kunde inte uppdatera hämtningsdatum",
+          description: "Kunde inte kontrollera hämtningsorder",
           variant: "destructive"
         });
         return;
+      } else {
+        // Update existing pickup order
+        const { error: dateError } = await supabase
+          .from('pickup_orders')
+          .update({
+            scheduled_pickup_date: pickupDateTime,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pickupOrderId);
+
+        if (dateError) {
+          console.error('❌ Error updating pickup date:', dateError);
+          toast({
+            title: "Fel",
+            description: "Kunde inte uppdatera hämtningsdatum",
+            variant: "destructive"
+          });
+          return;
+        }
       }
 
       console.log('✅ Pickup date updated successfully');
 
-      // FIXED: Update status using CORRECTED unified function and proper Swedish workflow
-      const newStatus = wasAvbokad ? 'scheduled' : 'scheduled'; // "Avbokad" → "Schemalagd"
-      const { error: statusError } = await (supabase as any).rpc('update_pickup_status_yesterday_workflow', {
-        p_pickup_order_id: pickupOrderId,
-        p_new_status: newStatus,
-        p_driver_notes: `Rescheduled by admin to ${pickupDateTime}${wasAvbokad ? ' - Reactivated from cancelled' : ''}`,
-        p_completion_photos: null,
-        p_test_driver_id: null
-      });
+      // Update customer request status directly instead of using the problematic function
+      const newStatus = wasAvbokad ? 'scheduled' : 'scheduled';
+      const { error: statusError } = await supabase
+        .from('customer_requests')
+        .update({
+          status: newStatus,
+          pickup_date: pickupDateTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rescheduleData.requestId);
 
       if (statusError) {
         console.error('❌ Error updating status:', statusError);
