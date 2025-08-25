@@ -8,7 +8,7 @@ import { ArrowLeft, Users, Plus, Search, MapPin, Clock, Phone, Car, UserCheck, U
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import DriverFormModal from './DriverFormModal';
-import DriverAssignmentModal from './DriverAssignmentModal';
+import { PickupAssignmentModal } from '../Tenant/PickupAssignmentModal';
 import DriverLocationMap from './DriverLocationMap';
 
 interface Driver {
@@ -56,7 +56,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
   const [statusFilter, setStatusFilter] = useState('all');
   const [scrapyardFilter, setScrapyardFilter] = useState('all');
   const [showDriverForm, setShowDriverForm] = useState(false);
-  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [showPickupAssignment, setShowPickupAssignment] = useState(false);
   const [showLocationMap, setShowLocationMap] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
@@ -492,11 +492,8 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedDriver(driver);
-                          setShowAssignmentModal(true);
-                        }}
-                        disabled={!driver.is_active || driver.driver_status === 'offline'}
+                        onClick={() => setShowPickupAssignment(true)}
+                        disabled={!driver.tenant_id}
                       >
                         Assign
                       </Button>
@@ -554,16 +551,13 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
           />
         )}
 
-        {showAssignmentModal && selectedDriver && (
-          <DriverAssignmentModal
-            driver={selectedDriver}
-            onClose={() => {
-              setShowAssignmentModal(false);
-              setSelectedDriver(null);
-            }}
+        {showPickupAssignment && (
+          <PickupAssignmentModal
+            tenantId={selectedTenant || user?.tenant_id || 1}
+            onClose={() => setShowPickupAssignment(false)}
             onSuccess={() => {
-              setShowAssignmentModal(false);
-              setSelectedDriver(null);
+              setShowPickupAssignment(false);
+              fetchDrivers(); // Refresh data after assignment
             }}
           />
         )}
@@ -792,13 +786,11 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedDriver(driver);
-                          setShowAssignmentModal(true);
-                        }}
-                        disabled={!driver.is_active || driver.driver_status === 'offline'}
+                        onClick={() => setShowPickupAssignment(true)}
+                        disabled={!driver.tenant_id}
                       >
-                        Assign
+                        <Truck className="h-4 w-4 mr-1" />
+                        Tilldela
                       </Button>
                       
                       <Button
@@ -854,16 +846,13 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
         />
       )}
 
-      {showAssignmentModal && selectedDriver && (
-        <DriverAssignmentModal
-          driver={selectedDriver}
-          onClose={() => {
-            setShowAssignmentModal(false);
-            setSelectedDriver(null);
-          }}
+      {showPickupAssignment && (
+        <PickupAssignmentModal
+          tenantId={selectedTenant || user?.tenant_id || 1}
+          onClose={() => setShowPickupAssignment(false)}
           onSuccess={() => {
-            setShowAssignmentModal(false);
-            setSelectedDriver(null);
+            setShowPickupAssignment(false);
+            fetchDrivers(); // Refresh data after assignment
           }}
         />
       )}
