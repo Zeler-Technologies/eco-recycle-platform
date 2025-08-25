@@ -1151,12 +1151,12 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                             <MapPin className="h-3 w-3" />
                             {request.address}
                           </p>
-                          {request.assignedDriver && (
-                             <p className="text-sm text-destructive flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              Förare: {request.assignedDriver}
-                            </p>
-                          )}
+                           {(request.assignedDriver || request.rawPickupStatus === 'assigned' || request.rawPickupStatus === 'in_progress') && (
+                              <p className="text-sm text-destructive flex items-center gap-1">
+                               <User className="h-3 w-3" />
+                               Förare: {request.assignedDriver || 'Tilldelad förare'}
+                             </p>
+                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
