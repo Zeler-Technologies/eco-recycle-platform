@@ -258,24 +258,34 @@ const PantaBilenDriverAppNew = () => {
           </div>
           
           {/* Status-based action buttons */}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             {pickup.pickup_status === 'assigned' && (
               <>
                 <Button
                   onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'in_progress', 'Påbörjad av förare')}
                   disabled={isUpdating}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
                 >
                   {isUpdating ? 'Startar...' : '🚀 STARTA'}
                 </Button>
-                <Button
-                  onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Avbokad av förare - tillbaka till tillgängliga')}
-                  disabled={isUpdating}
-                  variant="outline"
-                  className="px-4 border-red-300 text-red-600 hover:bg-red-50"
-                >
-                  ❌ AVBOKA
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Omschemalagd av förare - tillbaka till tillgängliga')}
+                    disabled={isUpdating}
+                    variant="outline"
+                    className="flex-1 border-orange-300 text-orange-600 hover:bg-orange-50"
+                  >
+                    📅 OMSCHEMALÄGG
+                  </Button>
+                  <Button
+                    onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'scheduled', 'Avvisad av förare - tillbaka till tillgängliga')}
+                    disabled={isUpdating}
+                    variant="outline"
+                    className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    ❌ AVVISA
+                  </Button>
+                </div>
               </>
             )}
             {pickup.pickup_status === 'in_progress' && (
