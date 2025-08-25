@@ -47,6 +47,8 @@ interface Request {
   status: 'Förfrågan' | 'Bekräftad' | 'Utförd' | 'Avbokad';
   assignedDriver?: string;
   notes?: string;
+  // Raw backend status for precise logic (e.g., rejected vs cancelled)
+  rawPickupStatus?: string;
 }
 
 interface Driver {
@@ -252,7 +254,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           registrationNumber: pickupOrder?.car_registration_number || customerRequest.car_registration_number || 'Okänt reg.nr',
           status,
           notes: pickupOrder?.driver_notes || null,
-          assignedDriver: pickupOrder?.driver_name || null
+          assignedDriver: pickupOrder?.driver_name || null,
+          rawPickupStatus: sourceStatus
         };
       });
 
@@ -564,6 +567,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
     const wasAvbokad = originalRequest?.status === 'Avbokad';
+    const wasRejected = originalRequest?.rawPickupStatus === 'rejected';
     const pickupOrderId = originalRequest?.pickupOrderId || rescheduleData.requestId;
 
     console.log('🔄 RESCHEDULE DEBUG:', {
@@ -571,7 +575,9 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       pickupOrderId,
       originalRequest: originalRequest,
       originalStatus: originalRequest?.status,
+      rawPickupStatus: originalRequest?.rawPickupStatus,
       wasAvbokad,
+      wasRejected,
       newDate: rescheduleData.newDate,
       newTime: rescheduleData.newTime
     });
@@ -580,6 +586,26 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       const pickupDateTime = format(rescheduleData.newDate, 'yyyy-MM-dd');
       
       console.log('🔄 UPDATING PICKUP DATE...');
+
+      // If the original was explicitly rejected, deactivate any active driver assignments
+      if (wasRejected) {
+        console.log('🔧 Clearing driver assignments for rejected pickup before reschedule...');
+        const { error: deactivateError } = await supabase
+          .from('driver_assignments')
+          .update({
+            is_active: false,
+            completed_at: new Date().toISOString(),
+            notes: 'Assignment cleared due to reschedule after rejection'
+          })
+          .eq('customer_request_id', rescheduleData.requestId)
+          .eq('is_active', true);
+        
+        if (deactivateError) {
+          console.error('Error deactivating driver assignments:', deactivateError);
+        } else {
+          console.log('✅ Driver assignments deactivated for rejected pickup');
+        }
+      }
       
       // First ensure pickup order exists - create if it doesn't exist
       let actualPickupOrderId = pickupOrderId;
@@ -599,9 +625,12 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           .insert({
             customer_request_id: rescheduleData.requestId,
             scheduled_pickup_date: pickupDateTime,
+            status: 'scheduled',
             tenant_id: user?.tenant_id || 1, // Use dynamic tenant_id
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            driver_id: null,
+            assigned_driver_id: null
           })
           .select('id')
           .single();
