@@ -234,6 +234,20 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         assigned_driver_id: u.assigned_driver_id,
         status: u.current_status
       })));
+
+      // Fetch drivers to map names from IDs
+      const { data: driversData, error: driversError } = await supabase
+        .from('drivers')
+        .select('id, full_name')
+        .eq('tenant_id', user.tenant_id)
+        .eq('is_active', true);
+
+      if (driversError) {
+        console.error('❌ Error fetching drivers:', driversError);
+      }
+
+      console.log('🔍 Fetched drivers for mapping:', driversData);
+      const driverMap = new Map(driversData?.map(d => [d.id, d.full_name]) || []);
       
       // Convert unified data to component format
       const formattedRequests: Request[] = (unifiedData || []).map((unified: any) => {
@@ -283,7 +297,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           registrationNumber: unified.car_registration_number || 'Okänt reg.nr',
           status,
           notes: unified.driver_notes || null,
-          assignedDriver: unified.driver_name || null,
+          assignedDriver: unified.assigned_driver_id ? driverMap.get(unified.assigned_driver_id) || null : null,
           rawPickupStatus: actualStatus
         };
       });
