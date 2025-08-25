@@ -145,8 +145,27 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
 
       console.log('✅ CUSTOMER REQUEST EXISTS:', existingRequest);
 
-      // Skip updating customer_requests to avoid status constraint issues
-      console.log('ℹ️ Skipping customer_requests update (no status changes here)');
+      // Update customer_requests with quote_amount
+      console.log('🔴 UPDATING CUSTOMER REQUEST WITH QUOTE AMOUNT:', reimbursement);
+      const { error: updateRequestError } = await supabase
+        .from('customer_requests')
+        .update({
+          quote_amount: reimbursement ? parseFloat(reimbursement) : null,
+          owner_name: ownerName,
+          contact_phone: contactPhone,
+          pickup_address: pickupAddress,
+          car_brand: carBrand,
+          car_model: carModel,
+          car_year: carYear ? parseInt(carYear) : null,
+          car_registration_number: carRegistration
+        })
+        .eq('id', pickup.customer_request_id);
+
+      if (updateRequestError) {
+        console.error('🔴 ERROR UPDATING CUSTOMER REQUEST:', updateRequestError);
+        throw updateRequestError;
+      }
+      console.log('✅ CUSTOMER REQUEST UPDATED WITH QUOTE AMOUNT');
 
       // Ensure pickup_order exists and update status
       console.log('🔴 ENSURING PICKUP ORDER EXISTS...');
