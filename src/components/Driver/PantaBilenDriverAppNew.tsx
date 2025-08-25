@@ -70,11 +70,26 @@ const PantaBilenDriverAppNew = () => {
     }
   };
 
-  // Status update handler
+  // Status update handler  
   const handleStatusUpdate = async (pickupOrderId: string, newStatus: string, notes: string) => {
     setIsUpdating(true);
     try {
-      await updatePickupStatus(pickupOrderId, newStatus, notes);
+      // Use the specific method from handleStatusTransition object based on status
+      switch (newStatus) {
+        case 'in_progress':
+          await updatePickupStatus.startPickup(pickupOrderId, currentDriver?.full_name || 'Driver');
+          break;
+        case 'completed':
+          await updatePickupStatus.completePickup(pickupOrderId, currentDriver?.full_name || 'Driver');
+          break;
+        case 'scheduled':
+          await updatePickupStatus.schedulePickup(pickupOrderId, notes);
+          break;
+        default:
+          // For other statuses, use the base updatePickupStatus function
+          const { updatePickupStatus: baseUpdateFn } = await import('@/utils/pickupStatusUtils');
+          await baseUpdateFn(pickupOrderId, newStatus, notes);
+      }
       
       let successMessage = '';
       switch (newStatus) {
@@ -111,7 +126,7 @@ const PantaBilenDriverAppNew = () => {
     
     try {
       // Update the pickup with new scheduled date and status
-      await updatePickupStatus(selectedPickupForReschedule.pickup_order_id, 'scheduled', notes);
+      await updatePickupStatus.schedulePickup(selectedPickupForReschedule.pickup_order_id, `${notes} - Rescheduled to: ${newDate}`);
       toast.success('Upphämtning omschemalagd!');
       setRescheduleModalOpen(false);
       setSelectedPickupForReschedule(null);

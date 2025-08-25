@@ -21,7 +21,7 @@ export const DriverDebugComponent: React.FC = () => {
     if (!driver?.driver_id) return;
     
     try {
-      await updateDriverStatus(driver.driver_id, newStatus);
+      await updateDriverStatus();
     } catch (err) {
       console.error('Failed to update status:', err);
     }
