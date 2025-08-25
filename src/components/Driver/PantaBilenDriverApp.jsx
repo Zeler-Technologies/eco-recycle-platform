@@ -676,12 +676,17 @@ className={"flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font
                 <span className="text-sm text-gray-600 font-medium mb-1">Telefon</span>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-900 font-medium">
-                    {selectedPickup.contact_phone || 'Ej angivet'}
+                    {(selectedPickup.contact_phone?.value && selectedPickup.contact_phone.value !== 'undefined') 
+                      ? selectedPickup.contact_phone.value 
+                      : selectedPickup.contact_phone && typeof selectedPickup.contact_phone === 'string' 
+                        ? selectedPickup.contact_phone 
+                        : 'Ej angivet'}
                   </span>
-                  {selectedPickup.contact_phone && (
+                  {(selectedPickup.contact_phone?.value && selectedPickup.contact_phone.value !== 'undefined') || 
+                   (selectedPickup.contact_phone && typeof selectedPickup.contact_phone === 'string') ? (
                     <button
                       onClick={() => {
-                        window.open(`tel:${selectedPickup.contact_phone}`, '_self');
+                        window.open(`tel:${selectedPickup.contact_phone?.value || selectedPickup.contact_phone}`, '_self');
                       }}
                       className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                       aria-label="Ring kund"
