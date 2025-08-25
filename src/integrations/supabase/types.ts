@@ -630,7 +630,7 @@ export type Database = {
           pnr_num_norm: string | null
           preferred_contact_method: string | null
           quote_amount: number | null
-          scrapyard_id: number | null
+          scrapyard_id: number
           special_instructions: string | null
           status: string | null
           tenant_id: number | null
@@ -661,7 +661,7 @@ export type Database = {
           pnr_num_norm?: string | null
           preferred_contact_method?: string | null
           quote_amount?: number | null
-          scrapyard_id?: number | null
+          scrapyard_id: number
           special_instructions?: string | null
           status?: string | null
           tenant_id?: number | null
@@ -692,7 +692,7 @@ export type Database = {
           pnr_num_norm?: string | null
           preferred_contact_method?: string | null
           quote_amount?: number | null
-          scrapyard_id?: number | null
+          scrapyard_id?: number
           special_instructions?: string | null
           status?: string | null
           tenant_id?: number | null
@@ -937,6 +937,7 @@ export type Database = {
           scheduled_start: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["assignment_status"]
+          updated_at: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -956,6 +957,7 @@ export type Database = {
           scheduled_start?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["assignment_status"]
+          updated_at?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -975,6 +977,7 @@ export type Database = {
           scheduled_start?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["assignment_status"]
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -2649,6 +2652,30 @@ export type Database = {
           tenant_name: string | null
           total_amount: number | null
           updated_at: string | null
+        }
+        Relationships: []
+      }
+      v_data_quality_monitor: {
+        Row: {
+          data_quality_percentage: number | null
+          missing_scrapyard_id: number | null
+          potential_placeholders: number | null
+          report_generated_at: string | null
+          requests_last_24h: number | null
+          requests_last_7_days: number | null
+          total_requests: number | null
+        }
+        Relationships: []
+      }
+      v_data_quality_monitor_safe: {
+        Row: {
+          customer_placeholders: number | null
+          marked_for_review: number | null
+          missing_scrapyard_id: number | null
+          report_generated_at: string | null
+          requests_last_24h: number | null
+          test_phone_numbers: number | null
+          total_requests: number | null
         }
         Relationships: []
       }
@@ -5444,6 +5471,26 @@ export type Database = {
           would_change_to: string
         }[]
       }
+      test_update_pickup_status_committed: {
+        Args: {
+          p_completion_photos?: string[]
+          p_driver_notes?: string
+          p_new_status: string
+          p_pickup_order_id: string
+          p_test_driver_id?: string
+        }
+        Returns: boolean
+      }
+      test_update_pickup_status_unified: {
+        Args: {
+          p_completion_photos?: string[]
+          p_driver_notes?: string
+          p_new_status: string
+          p_pickup_order_id: string
+          p_test_driver_id?: string
+        }
+        Returns: boolean
+      }
       text: {
         Args: { "": unknown }
         Returns: string
@@ -5544,6 +5591,16 @@ export type Database = {
             }
         Returns: boolean
       }
+      update_pickup_status_yesterday_workflow: {
+        Args: {
+          p_completion_photos?: string[]
+          p_driver_notes?: string
+          p_new_status: string
+          p_pickup_order_id: string
+          p_test_driver_id?: string
+        }
+        Returns: boolean
+      }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
@@ -5582,6 +5639,9 @@ export type Database = {
         | "completed"
         | "canceled"
         | "failed"
+        | "in_progress"
+        | "pending"
+        | "assigned"
       car_status: "new" | "ongoing" | "done" | "error" | "archive" | "deleted"
       driver_status:
         | "off_duty"
@@ -5743,6 +5803,9 @@ export const Constants = {
         "completed",
         "canceled",
         "failed",
+        "in_progress",
+        "pending",
+        "assigned",
       ],
       car_status: ["new", "ongoing", "done", "error", "archive", "deleted"],
       driver_status: [
