@@ -84,9 +84,24 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔥 Form submitted!', { formData, user });
     
-    if (!validateForm() || !user?.tenant_id) return;
+    if (!validateForm()) {
+      console.log('❌ Form validation failed');
+      return;
+    }
+    
+    if (!user?.tenant_id) {
+      console.log('❌ No tenant_id found', user);
+      toast({
+        title: "Fel",
+        description: "Kunde inte hitta tenant information",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    console.log('✅ Starting form submission...');
     setLoading(true);
     try {
       // First create the customer request
