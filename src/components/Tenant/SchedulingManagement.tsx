@@ -25,6 +25,7 @@ import {
   Plus
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
+import StatusBadge from '@/components/Common/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -44,7 +45,7 @@ interface Request {
   carBrand: string;
   carModel: string;
   registrationNumber: string;
-  status: 'Förfrågan' | 'Bekräftad' | 'Klar' | 'Avbokad';
+  status: 'pending' | 'scheduled' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
   assignedDriver?: string;
   notes?: string;
   // Raw backend status for precise logic (e.g., rejected vs cancelled)
@@ -252,31 +253,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
       // Convert unified data to component format
       const formattedRequests: Request[] = (unifiedData || []).map((unified: any) => {
         
-        // Get the most current status from pickup_orders table (single source of truth)
-        let status: 'Förfrågan' | 'Bekräftad' | 'Klar' | 'Avbokad';
-        const actualStatus = unified.current_status;
-        
-        switch (actualStatus) {
-          case 'pending':
-            status = 'Förfrågan';
-            break;
-          case 'scheduled':
-          case 'assigned':
-            status = 'Bekräftad';
-            break;
-          case 'in_progress':
-            status = 'Bekräftad';
-            break;
-          case 'completed':
-            status = 'Klar';
-            break;
-          case 'cancelled':
-          case 'rejected':
-            status = 'Avbokad';
-            break;
-          default:
-            status = 'Förfrågan';
-        }
+        // Use raw status for consistency with other components
+        const status = unified.current_status;
 
         // Use pickup order's scheduled date if available, otherwise use request created date
         const requestDate = unified.scheduled_pickup_date 
@@ -298,7 +276,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
           status,
           notes: unified.driver_notes || null,
           assignedDriver: unified.assigned_driver_id ? driverMap.get(unified.assigned_driver_id) || null : null,
-          rawPickupStatus: actualStatus
+          rawPickupStatus: unified.current_status
         };
       });
       
@@ -322,15 +300,6 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Förfrågan': return 'bg-blue-500 text-white';
-      case 'Bekräftad': return 'bg-green-500 text-white';
-      case 'Klar': return 'bg-gray-500 text-white';
-      case 'Avbokad': return 'bg-red-500 text-white';
-      default: return 'bg-gray-400 text-white';
-    }
-  };
 
   const filteredRequests = requests.filter(request => {
     const matchesLocation = !filterLocation || 
@@ -468,7 +437,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
     // Update status
     setRequests(prev => prev.map(req => 
-      req.id === requestId ? { ...req, status: 'Bekräftad' as const } : req
+      req.id === requestId ? { ...req, status: 'scheduled' as const } : req
     ));
 
     // Simulate SMS sending
@@ -583,7 +552,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   };
 
   // Get available requests that can be added to schedule (status 'Förfrågan')
-  const availableRequests = requests.filter(request => request.status === 'Förfrågan');
+  const availableRequests = requests.filter(request => request.status === 'pending');
 
   const handleAddRequestToSchedule = async (requestId: string, newDate: Date, newTime: string) => {
     try {
@@ -700,7 +669,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     console.log('🔥 RESCHEDULE DATA:', rescheduleData);
 
     const originalRequest = requests.find(r => r.id === rescheduleData.requestId);
-    const wasAvbokad = originalRequest?.status === 'Avbokad';
+    const wasAvbokad = originalRequest?.status === 'cancelled';
     const wasRejected = originalRequest?.rawPickupStatus === 'rejected';
     const pickupOrderId = originalRequest?.pickupOrderId || rescheduleData.requestId;
 
@@ -943,7 +912,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 {dayRequests.slice(0, 2).map(request => (
                   <div 
                     key={request.id}
-                    className={`text-xs p-1 rounded cursor-pointer ${getStatusColor(request.status)}`}
+                    className="text-xs p-1 rounded cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedRequest(request);
@@ -1052,10 +1021,12 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alla statusar</SelectItem>
-                <SelectItem value="Förfrågan">Förfrågan</SelectItem>
-                <SelectItem value="Bekräftad">Bekräftad</SelectItem>
-                <SelectItem value="Klar">Klar</SelectItem>
-                <SelectItem value="Avbokad">Avbokad</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1140,10 +1111,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(request.status)}>
-                          {request.status}
-                        </Badge>
-                        {request.status === 'Förfrågan' && (
+                        <StatusBadge status={request.status} />
+                        {request.status === 'pending' && (
                           <Button
                             onClick={() => handleScheduleRequest(request)}
                             size="sm"
@@ -1174,9 +1143,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             <div className="space-y-6">
               {/* Status and Basic Info */}
               <div className="flex items-center justify-between">
-                <Badge className={getStatusColor(selectedRequest.status)}>
-                  {selectedRequest.status}
-                </Badge>
+                <StatusBadge status={selectedRequest.status} />
                 <div className="text-sm text-muted-foreground">
                   {(() => {
                     const monthNames = [
@@ -1276,7 +1243,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   OK
                 </Button>
                 
-                {selectedRequest.status === 'Förfrågan' && (
+                {selectedRequest.status === 'pending' && (
                   <>
                     {/* Check if pickup date is today or in the future */}
                     {selectedRequest.date >= new Date(new Date().setHours(0,0,0,0)) ? (
@@ -1301,7 +1268,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   </>
                 )}
 
-                {(selectedRequest.status === 'Bekräftad' || selectedRequest.status === 'Avbokad') && (
+                {(['scheduled', 'assigned', 'in_progress'].includes(selectedRequest.status) || selectedRequest.status === 'cancelled') && (
                   <>
                     <Button
                       variant="outline"
@@ -1309,7 +1276,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                       className="flex items-center gap-2"
                     >
                       <Clock className="h-4 w-4" />
-                      {selectedRequest.status === 'Avbokad' ? 'Återaktivera & Omschemalägg' : 'Omschemalägg'}
+                      {selectedRequest.status === 'cancelled' ? 'Återaktivera & Omschemalägg' : 'Omschemalägg'}
                     </Button>
                     <Button
                       variant="outline"
@@ -1328,7 +1295,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                 )}
                 
                 {/* Avboka button at far right - hidden for cancelled and completed pickups */}
-                {selectedRequest.status !== 'Avbokad' && selectedRequest.status !== 'Klar' && (
+                {selectedRequest.status !== 'cancelled' && selectedRequest.status !== 'completed' && (
                   <Button
                     variant="destructive"
                     onClick={() => handleCancelRequest(selectedRequest.id)}
@@ -1707,9 +1674,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <h4 className="font-medium">{request.customerName}</h4>
-                            <Badge className={getStatusColor(request.status)}>
-                              {request.status}
-                            </Badge>
+                            <StatusBadge status={request.status} />
                           </div>
                           <div className="text-sm text-gray-600 space-y-1">
                             <div className="flex items-center gap-2">
@@ -1770,7 +1735,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                       {/* Quick assign buttons for unassigned pickups */}
                       <div className="mt-3 space-y-2">
                         {getRequestsForDate(selectedDate)
-                          .filter(req => !req.assignedDriver && req.status === 'Förfrågan')
+                          .filter(req => !req.assignedDriver && req.status === 'pending')
                           .slice(0, 3)
                           .map(request => (
                             <Button
