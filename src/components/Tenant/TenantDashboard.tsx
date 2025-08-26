@@ -497,11 +497,6 @@ const TenantDashboard = () => {
           setSelectedPickup(null);
         }}
        onSuccess={fetchPickups}
-        
-        // onSuccess={() => {
-         // fetchPickups(); // Refresh pickup data from unified hook
-          //fetchTenantData(); // Refresh the stats
-        }}
       />
 
       {/* Pickup Assignment Modal */}
