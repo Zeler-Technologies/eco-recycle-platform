@@ -1103,22 +1103,22 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         {/* Today's Requests */}
         <Card className="mt-6 bg-white shadow-custom-sm">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <CardTitle>
                 {timePeriodFilter === 'today' && 'Dagens förfrågningar'}
                 {timePeriodFilter === 'week' && 'Veckans förfrågningar'}
                 {timePeriodFilter === 'month' && 'Månadens förfrågningar'}
               </CardTitle>
               <div className="flex items-center gap-2">
-                <Label htmlFor="timeperiod-filter" className="text-sm font-normal">Tidsperiod:</Label>
+                <Label htmlFor="timeperiod-filter" className="text-sm font-normal text-muted-foreground">Visa:</Label>
                 <Select value={timePeriodFilter} onValueChange={(value: 'today' | 'week' | 'month') => setTimePeriodFilter(value)}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="today">Dagens förfrågningar</SelectItem>
-                    <SelectItem value="week">Hela veckan</SelectItem>
-                    <SelectItem value="month">Hela månaden</SelectItem>
+                    <SelectItem value="today">Idag</SelectItem>
+                    <SelectItem value="week">Veckan</SelectItem>
+                    <SelectItem value="month">Månaden</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
