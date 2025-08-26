@@ -1064,19 +1064,6 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Label htmlFor="timeperiod-filter">Tidsperiod:</Label>
-            <Select value={timePeriodFilter} onValueChange={(value: 'today' | 'week' | 'month') => setTimePeriodFilter(value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Dagens förfrågningar</SelectItem>
-                <SelectItem value="week">Hela veckan</SelectItem>
-                <SelectItem value="month">Hela månaden</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         {/* Calendar */}
@@ -1116,11 +1103,26 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         {/* Today's Requests */}
         <Card className="mt-6 bg-white shadow-custom-sm">
           <CardHeader>
-            <CardTitle>
-              {timePeriodFilter === 'today' && 'Dagens förfrågningar'}
-              {timePeriodFilter === 'week' && 'Veckans förfrågningar'}
-              {timePeriodFilter === 'month' && 'Månadens förfrågningar'}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                {timePeriodFilter === 'today' && 'Dagens förfrågningar'}
+                {timePeriodFilter === 'week' && 'Veckans förfrågningar'}
+                {timePeriodFilter === 'month' && 'Månadens förfrågningar'}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="timeperiod-filter" className="text-sm font-normal">Tidsperiod:</Label>
+                <Select value={timePeriodFilter} onValueChange={(value: 'today' | 'week' | 'month') => setTimePeriodFilter(value)}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Dagens förfrågningar</SelectItem>
+                    <SelectItem value="week">Hela veckan</SelectItem>
+                    <SelectItem value="month">Hela månaden</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <CardDescription>
               {(() => {
                 const monthNames = [
