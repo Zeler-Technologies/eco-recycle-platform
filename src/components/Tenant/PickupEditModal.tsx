@@ -257,8 +257,21 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
         }
         console.log('✅ DRIVER ASSIGNMENTS DEACTIVATED');
 
-        // Skip status update for now - focus on driver assignment
-        console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
+        // Also clear assigned_driver_id on pickup_orders to reflect unassignment immediately
+        if (pickupOrderId) {
+          const { error: clearAssignedErr } = await supabase
+            .from('pickup_orders')
+            .update({ assigned_driver_id: null })
+            .eq('id', pickupOrderId);
+          if (clearAssignedErr) {
+            console.error('🔴 ERROR CLEARING assigned_driver_id:', clearAssignedErr);
+            throw clearAssignedErr;
+          }
+          console.log('✅ Cleared assigned_driver_id on pickup_orders');
+        }
+
+        // Status already handled above via pickupStatus; no extra update here
+        console.log('⏭️ SKIPPING EXTRA STATUS UPDATE - DRIVER UNASSIGNED');
 
       } else if (selectedDriverId && selectedDriverId !== 'none') {
         console.log('🔴 ASSIGNING DRIVER PATH:', selectedDriverId);
@@ -353,11 +366,20 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           console.log('✅ NEW ASSIGNMENT CREATED');
         }
 
-        // Skip status update for now - focus on driver assignment
-        console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
+        // Reflect assignment on pickup_orders for immediate UI consistency
+        if (pickupOrderId) {
+          const { error: setAssignedErr } = await supabase
+            .from('pickup_orders')
+            .update({ assigned_driver_id: selectedDriverId })
+            .eq('id', pickupOrderId);
+          if (setAssignedErr) {
+            console.error('🔴 ERROR SETTING assigned_driver_id:', setAssignedErr);
+            throw setAssignedErr;
+          }
+          console.log('✅ Updated pickup_orders.assigned_driver_id');
+        }
 
-        // Skip status update for now - focus on driver assignment
-        console.log('⏭️ SKIPPING STATUS UPDATE - DRIVER ASSIGNMENTS HANDLED DIRECTLY');
+        console.log('⏭️ STATUS already set via pickupStatus; no extra update here');
       } else {
         console.log('⏭️ NO DRIVER CHANGES NEEDED');
       }
