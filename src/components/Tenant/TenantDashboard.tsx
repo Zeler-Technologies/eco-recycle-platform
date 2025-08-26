@@ -40,7 +40,7 @@ const TenantDashboard = () => {
       activeDrivers: drivers.length
     };
   }, [pickups, pickupsLoading, drivers]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Derived data from unified pickups
   const recentOrders = pickups.slice(0, 5); // Recent 5 orders
@@ -83,7 +83,14 @@ const TenantDashboard = () => {
       console.error('Error fetching drivers:', error);
     }
   };
-
+  const formatDriverName = (order) => {
+  if (order.driver_name) return order.driver_name;
+  if (order.assigned_driver_id && drivers.length > 0) {
+    const driver = drivers.find(d => d.id === order.assigned_driver_id);
+    return driver?.full_name || 'Okänd förare';
+  }
+  return null;
+};
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
@@ -267,8 +274,10 @@ const TenantDashboard = () => {
                 ) : (
                   recentOrders.map((order, index) => {
                     const { vehicle, location } = formatOrderDisplay(order);
-                     const hasDriver = order.driver_name || (order.assigned_driver_id && drivers.find(d => d.id === order.assigned_driver_id));
-                     const driverName = order.driver_name || drivers.find(d => d.id === order.assigned_driver_id)?.full_name;
+                    const driverName = formatDriverName(order);
+                    const hasDriver = driverName !== null;
+                    //const hasDriver = order.driver_name || (order.assigned_driver_id && drivers.find(d => d.id === order.assigned_driver_id));
+                     //const driverName = order.driver_name || drivers.find(d => d.id === order.assigned_driver_id)?.full_name;
                      const isAssigned = ['assigned', 'in_progress', 'scheduled', 'confirmed'].includes(order.current_status) || hasDriver;
                     return (
                       <div 
@@ -414,8 +423,10 @@ const TenantDashboard = () => {
                     
                     const vehicle = `${schedule.car_brand} ${schedule.car_model}${schedule.car_year ? ` ${schedule.car_year}` : ''} (${formatRegistrationNumber(schedule.car_registration_number) || 'Ingen reg.nr'})`;
                      const location = schedule.pickup_address || 'Ej angivet';
-                     const hasDriver = schedule.driver_name || (schedule.assigned_driver_id && drivers.find(d => d.id === schedule.assigned_driver_id));
-                     const driverName = schedule.driver_name || drivers.find(d => d.id === schedule.assigned_driver_id)?.full_name;
+                    const driverName = formatDriverName(schedule);
+                    const hasDriver = driverName !== null;
+                    // const hasDriver = schedule.driver_name || (schedule.assigned_driver_id && drivers.find(d => d.id === schedule.assigned_driver_id));
+                     //const driverName = schedule.driver_name || drivers.find(d => d.id === schedule.assigned_driver_id)?.full_name;
                     
                     return (
                       <div key={schedule.customer_request_id || index} className={`flex items-center justify-between p-4 border rounded-lg hover:bg-tenant-accent/30 transition-colors ${hasDriver ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}>
@@ -473,8 +484,9 @@ const TenantDashboard = () => {
       <NewCustomerRequestModal
         open={showNewCustomerModal}
         onOpenChange={setShowNewCustomerModal}
-        onSuccess={fetchTenantData}
-      />
+        //onSuccess={fetchTenantData}
+          onSuccess={fetchPickups}
+        />
 
       {/* Pickup Edit Modal */}
       <PickupEditModal
@@ -484,9 +496,11 @@ const TenantDashboard = () => {
           setShowEditModal(false);
           setSelectedPickup(null);
         }}
-        onSuccess={() => {
-          fetchPickups(); // Refresh pickup data from unified hook
-          fetchTenantData(); // Refresh the stats
+       onSuccess={fetchPickups}
+        
+        // onSuccess={() => {
+         // fetchPickups(); // Refresh pickup data from unified hook
+          //fetchTenantData(); // Refresh the stats
         }}
       />
 
@@ -497,7 +511,8 @@ const TenantDashboard = () => {
           onClose={() => setShowPickupAssignment(false)}
           onSuccess={() => {
             setShowPickupAssignment(false);
-            fetchTenantData(); // Refresh dashboard data
+            fetchPickups();
+           // fetchTenantData(); // Refresh dashboard data
           }}
         />
       )}
