@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { logDriverActivity } from '@/hooks/useDriverActivity';
+import { DriverStatusManager } from '@/services/DriverStatusManager';
 
 interface PickupEditModalProps {
   pickup: any;
