@@ -5,13 +5,14 @@ interface DriverStatusIndicatorProps {
   driver: {
     id: string;
     current_status?: string;
+    driver_status?: string;
     last_activity_update?: string;
   };
   showLabel?: boolean;
 }
 
 const DriverStatusIndicator: React.FC<DriverStatusIndicatorProps> = ({ driver, showLabel = true }) => {
-  const [status, setStatus] = useState(driver.current_status || 'offline');
+  const [status, setStatus] = useState(driver.driver_status || driver.current_status || 'offline');
   const [lastSeen, setLastSeen] = useState(driver.last_activity_update);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ const DriverStatusIndicator: React.FC<DriverStatusIndicatorProps> = ({ driver, s
         table: 'drivers',
         filter: `id=eq.${driver.id}`
       }, (payload) => {
-        setStatus(payload.new.current_status);
+        setStatus(payload.new.driver_status || payload.new.current_status);
         setLastSeen(payload.new.last_activity_update);
       })
       .subscribe();
@@ -48,10 +49,11 @@ const DriverStatusIndicator: React.FC<DriverStatusIndicatorProps> = ({ driver, s
     }
 
     const statusMap: Record<string, { label: string; color: string }> = {
-      'active': { label: 'Aktiv', color: 'bg-green-500' },
+      'available': { label: 'Tillgänglig', color: 'bg-green-500' },
       'busy': { label: 'Upptagen', color: 'bg-orange-500' },
-      'on_break': { label: 'Paus', color: 'bg-blue-500' },
-      'offline': { label: 'Offline', color: 'bg-gray-500' }
+      'offline': { label: 'Offline', color: 'bg-gray-500' },
+      'active': { label: 'Aktiv', color: 'bg-green-500' },
+      'on_break': { label: 'Paus', color: 'bg-blue-500' }
     };
 
     return {

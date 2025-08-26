@@ -486,6 +486,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           <DriverStatusIndicator driver={{
                             id: driver.id,
                             current_status: driver.current_status,
+                            driver_status: driver.driver_status,
                             last_activity_update: driver.last_activity_update
                           }} />
                         </div>
@@ -750,6 +751,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                           <DriverStatusIndicator driver={{
                             id: driver.id,
                             current_status: driver.current_status,
+                            driver_status: driver.driver_status,
                             last_activity_update: driver.last_activity_update
                           }} />
                         </div>
