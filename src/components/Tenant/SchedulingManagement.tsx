@@ -1116,7 +1116,11 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         {/* Today's Requests */}
         <Card className="mt-6 bg-white shadow-custom-sm">
           <CardHeader>
-            <CardTitle>Dagens förfrågningar</CardTitle>
+            <CardTitle>
+              {timePeriodFilter === 'today' && 'Dagens förfrågningar'}
+              {timePeriodFilter === 'week' && 'Veckans förfrågningar'}
+              {timePeriodFilter === 'month' && 'Månadens förfrågningar'}
+            </CardTitle>
             <CardDescription>
               {(() => {
                 const monthNames = [
@@ -1124,18 +1128,27 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
                 ];
                 const dayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
-                return `${dayNames[selectedDate.getDay()]} ${selectedDate.getDate()} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                
+                if (timePeriodFilter === 'today') {
+                  return `${dayNames[selectedDate.getDay()]} ${selectedDate.getDate()} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                } else if (timePeriodFilter === 'week') {
+                  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+                  const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+                  return `${weekStart.getDate()} - ${weekEnd.getDate()} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                } else {
+                  return `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                }
               })()}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {filteredRequestsForList.filter(request => isSameDay(request.date, selectedDate)).length === 0 ? (
+            {filteredRequestsForList.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                Inga förfrågningar för denna dag
+                Inga förfrågningar för den valda perioden
               </p>
             ) : (
               <div className="space-y-4">
-                {filteredRequestsForList.filter(request => isSameDay(request.date, selectedDate)).map(request => (
+                {filteredRequestsForList.map(request => (
                   <div
                     key={request.id}
                     className="p-4 border rounded-lg transition-colors"
