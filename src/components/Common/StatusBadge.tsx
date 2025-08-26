@@ -44,6 +44,35 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, variant = 'default', 
   };
 
   const statusStyles = getStatusStyles(status);
+  
+  const getSwedishStatus = (status: string) => {
+    const normalizedStatus = status.toLowerCase();
+    
+    switch (normalizedStatus) {
+      case 'new':
+      case 'pending':
+        return 'Ny';
+      case 'assigned':
+        return 'Tilldelad';
+      case 'processing':
+      case 'in_progress':
+        return 'Pågående';
+      case 'completed':
+        return 'Klar';
+      case 'cancelled':
+        return 'Avbruten';
+      case 'scheduled':
+        return 'Schemalagd';
+      case 'confirmed':
+        return 'Bekräftad';
+      case 'active':
+        return 'Aktiv';
+      case 'inactive':
+        return 'Inaktiv';
+      default:
+        return status;
+    }
+  };
 
   return (
     <Badge 
@@ -53,7 +82,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, variant = 'default', 
         className
       )}
     >
-      {status}
+      {getSwedishStatus(status)}
     </Badge>
   );
 };
