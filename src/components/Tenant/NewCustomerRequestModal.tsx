@@ -126,6 +126,30 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
         .single();
 
       if (requestError) throw requestError;
+      console.log('✅ Customer request created:', requestData);
+
+      // CRITICAL: Immediately create corresponding pickup_order to ensure visibility in UI
+      const { data: pickupOrder, error: pickupError } = await supabase
+        .from('pickup_orders')
+        .insert({
+          customer_request_id: requestData.id,
+          tenant_id: user.tenant_id,
+          status: 'scheduled',
+          scheduled_pickup_date: new Date().toISOString().split('T')[0], // Today as default
+          final_price: formData.quote_amount ? parseFloat(formData.quote_amount) : null,
+          driver_id: formData.assigned_driver || null
+        })
+        .select()
+        .single();
+
+      if (pickupError) {
+        console.error('❌ Failed to create pickup_order:', pickupError);
+        // ROLLBACK: Delete the customer_request if pickup_order creation fails
+        await supabase.from('customer_requests').delete().eq('id', requestData.id);
+        throw new Error('Failed to create pickup order: ' + pickupError.message);
+      }
+      
+      console.log('✅ Pickup order created:', pickupOrder);
 
       // If a driver was assigned, create the driver assignment
       if (formData.assigned_driver && requestData) {
@@ -133,6 +157,7 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
           .from('driver_assignments')
           .insert({
             customer_request_id: requestData.id,
+            pickup_order_id: pickupOrder.id,
             driver_id: formData.assigned_driver,
             is_active: true,
             assigned_at: new Date().toISOString(),
