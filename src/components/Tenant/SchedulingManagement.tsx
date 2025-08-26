@@ -24,7 +24,7 @@ import {
   MessageSquare,
   Plus
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import StatusBadge from '@/components/Common/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,6 +66,7 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [timePeriodFilter, setTimePeriodFilter] = useState<'today' | 'week' | 'month'>('today');
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isAddPickupDialogOpen, setIsAddPickupDialogOpen] = useState(false);
@@ -300,13 +301,31 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   };
 
+  // Helper functions for time period filtering
+  const isWithinTimePeriod = (requestDate: Date, selectedDate: Date, period: 'today' | 'week' | 'month'): boolean => {
+    switch (period) {
+      case 'today':
+        return isSameDay(requestDate, selectedDate);
+      case 'week':
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday start
+        const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        return isWithinInterval(requestDate, { start: weekStart, end: weekEnd });
+      case 'month':
+        const monthStart = startOfMonth(selectedDate);
+        const monthEnd = endOfMonth(selectedDate);
+        return isWithinInterval(requestDate, { start: monthStart, end: monthEnd });
+      default:
+        return true;
+    }
+  };
 
   const filteredRequests = requests.filter(request => {
     const matchesLocation = !filterLocation || 
       request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
       request.address.match(/\d{5}/)?.[0] === filterLocation;
     const matchesStatus = filterStatus === 'all' || !filterStatus || request.status === filterStatus;
-    return matchesLocation && matchesStatus;
+    const matchesTimePeriod = isWithinTimePeriod(request.date, selectedDate, timePeriodFilter);
+    return matchesLocation && matchesStatus && matchesTimePeriod;
   });
 
   const getRequestsForDate = (date: Date) => {
@@ -1030,6 +1049,20 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="timeperiod-filter">Tidsperiod:</Label>
+            <Select value={timePeriodFilter} onValueChange={(value: 'today' | 'week' | 'month') => setTimePeriodFilter(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Dagens förfrågningar</SelectItem>
+                <SelectItem value="week">Hela veckan</SelectItem>
+                <SelectItem value="month">Hela månaden</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Calendar */}
@@ -1042,7 +1075,19 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
                   'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
                 ];
-                return `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                
+                switch (timePeriodFilter) {
+                  case 'today':
+                    return `Idag - ${format(selectedDate, 'dd')} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                  case 'week':
+                    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+                    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+                    return `Vecka ${format(weekStart, 'dd')}-${format(weekEnd, 'dd')} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                  case 'month':
+                    return `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                  default:
+                    return `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
+                }
               })()}
             </CardTitle>
             <CardDescription>
