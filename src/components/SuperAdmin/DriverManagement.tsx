@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import DriverStatusIndicator from '@/components/Common/DriverStatusIndicator';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Users, Plus, Search, MapPin, Clock, Phone, Car, UserCheck, UserX, Edit, Trash2, Building2, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,7 +20,9 @@ interface Driver {
   vehicle_registration?: string;
   vehicle_type?: string;
   driver_status: string;
+  current_status?: string;
   last_location_update?: string;
+  last_activity_update?: string;
   current_latitude?: number;
   current_longitude?: number;
   is_active: boolean;
@@ -480,10 +483,11 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                               {driver.vehicle_registration} ({driver.vehicle_type})
                             </span>
                           )}
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Last seen: {formatLastSeen(driver.last_location_update)}
-                          </span>
+                          <DriverStatusIndicator driver={{
+                            id: driver.id,
+                            current_status: driver.current_status,
+                            last_activity_update: driver.last_activity_update
+                          }} />
                         </div>
                       </div>
                     </div>
@@ -743,10 +747,11 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                               {driver.vehicle_registration} ({driver.vehicle_type})
                             </span>
                           )}
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Last seen: {formatLastSeen(driver.last_location_update)}
-                          </span>
+                          <DriverStatusIndicator driver={{
+                            id: driver.id,
+                            current_status: driver.current_status,
+                            last_activity_update: driver.last_activity_update
+                          }} />
                         </div>
                         
                         {/* Current Assignments - Make visible when driver has assignments */}
