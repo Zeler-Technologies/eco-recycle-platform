@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -319,14 +319,16 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   };
 
-  const filteredRequests = requests.filter(request => {
-    const matchesLocation = !filterLocation || 
-      request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
-      request.address.match(/\d{5}/)?.[0] === filterLocation;
-    const matchesStatus = filterStatus === 'all' || !filterStatus || request.status === filterStatus;
-    const matchesTimePeriod = isWithinTimePeriod(request.date, selectedDate, timePeriodFilter);
-    return matchesLocation && matchesStatus && matchesTimePeriod;
-  });
+  const filteredRequests = useMemo(() => {
+    return requests.filter(request => {
+      const matchesLocation = !filterLocation || 
+        request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
+        request.address.match(/\d{5}/)?.[0] === filterLocation;
+      const matchesStatus = filterStatus === 'all' || !filterStatus || request.status === filterStatus;
+      const matchesTimePeriod = isWithinTimePeriod(request.date, selectedDate, timePeriodFilter);
+      return matchesLocation && matchesStatus && matchesTimePeriod;
+    });
+  }, [requests, filterLocation, filterStatus, selectedDate, timePeriodFilter]);
 
   const getRequestsForDate = (date: Date) => {
     return filteredRequests.filter(request => isSameDay(request.date, date));
