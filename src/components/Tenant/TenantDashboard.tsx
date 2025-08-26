@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,15 @@ const TenantDashboard = () => {
   const [drivers, setDrivers] = useState<any[]>([]);
   
   // State for real tenant data
-  const [stats, setStats] = useState({
-    newRequests: 0,
-    inProgress: 0,
-    completed: 0,
-    activeDrivers: 0
-  });
+  const stats = useMemo(() => {
+    if (pickupsLoading) return { newRequests: 0, inProgress: 0, completed: 0, activeDrivers: drivers.length };
+    return {
+      newRequests: pickups.filter(p => p.current_status === 'pending').length,
+      inProgress: pickups.filter(p => ['assigned', 'in_progress'].includes(p.current_status)).length,
+      completed: pickups.filter(p => p.current_status === 'completed').length,
+      activeDrivers: drivers.length
+    };
+  }, [pickups, pickupsLoading, drivers]);
   const [loading, setLoading] = useState(true);
 
   // Derived data from unified pickups
@@ -58,28 +61,7 @@ const TenantDashboard = () => {
   const fetchTenantData = async () => {
     try {
       setLoading(true);
-      
-      // Calculate stats from unified pickups data
-      const newRequests = pickups.filter(p => p.current_status === 'pending').length;
-      const inProgress = pickups.filter(p => ['assigned', 'in_progress'].includes(p.current_status)).length;
-      const completed = pickups.filter(p => p.current_status === 'completed').length;
-
-      // Fetch active drivers count for this tenant
-      const { data: driversData, error: driversError } = await supabase
-        .from('drivers')
-        .select('id')
-        .eq('tenant_id', user?.tenant_id)
-        .eq('is_active', true);
-
-      if (driversError) throw driversError;
-
-      setStats({
-        newRequests,
-        inProgress,
-        completed,
-        activeDrivers: driversData?.length || 0
-      });
-
+      fetchDrivers();
     } catch (error) {
       console.error('Error fetching tenant data:', error);
     } finally {
@@ -102,12 +84,6 @@ const TenantDashboard = () => {
     }
   };
 
-  // Update stats when pickups change
-  useEffect(() => {
-    if (pickups.length > 0) {
-      fetchTenantData();
-    }
-  }, [pickups]);
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
