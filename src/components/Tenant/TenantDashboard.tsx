@@ -151,25 +151,28 @@ const TenantDashboard = () => {
     switch (status?.toLowerCase()) {
       case 'pending':
       case 'ny': 
-        return 'bg-blue-500 text-white';
+        return 'bg-status-new text-white border-status-new';
       case 'assigned':
       case 'tilldelad':
-        return 'bg-orange-500 text-white';
+        return 'bg-status-processing text-white border-status-processing';
       case 'in_progress':
       case 'pågående': 
-        return 'bg-green-500 text-white';
+        return 'bg-status-processing text-white border-status-processing';
       case 'scheduled':
       case 'schemalagd':
       case 'hämtas': 
-        return 'bg-purple-500 text-white';
+        return 'bg-status-pending text-white border-status-pending';
       case 'confirmed':
       case 'bekräftad':
-        return 'bg-teal-500 text-white';
+        return 'bg-status-pending text-white border-status-pending';
       case 'completed':
       case 'klar': 
-        return 'bg-gray-500 text-white';
+        return 'bg-status-completed text-white border-status-completed';
+      case 'cancelled':
+      case 'avbruten':
+        return 'bg-status-cancelled text-white border-status-cancelled';
       default: 
-        return 'bg-muted';
+        return 'bg-muted text-muted-foreground border-muted';
     }
   };
 
