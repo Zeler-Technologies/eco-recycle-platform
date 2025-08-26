@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/Common/StatusBadge';
 import { Recycle, Car, Users, Calendar, Settings, LogOut, Plus, MapPin, Clock, MessageSquare, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantCustomers } from '@/hooks/useTenantCustomers';
@@ -312,15 +312,7 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={getStatusColor(order.current_status)}>
-                            {order.current_status === 'pending' ? 'Ny' : 
-                             order.current_status === 'assigned' ? 'Tilldelad' :
-                             order.current_status === 'in_progress' ? 'Pågående' :
-                             order.current_status === 'completed' ? 'Klar' : 
-                             order.current_status === 'scheduled' ? 'Schemalagd' :
-                             order.current_status === 'confirmed' ? 'Bekräftad' :
-                             order.current_status}
-                          </Badge>
+                          <StatusBadge status={order.current_status} />
                           <div className="text-right">
                             <p className="font-semibold">{formatPrice(order.quote_amount)}</p>
                             <p className="text-sm text-muted-foreground">Uppskattad</p>
@@ -452,15 +444,7 @@ const TenantDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                           <Badge className={getStatusColor(schedule.current_status)}>
-                             {schedule.current_status === 'pending' ? 'Ny' : 
-                              schedule.current_status === 'assigned' ? 'Tilldelad' :
-                              schedule.current_status === 'in_progress' ? 'Pågående' :
-                              schedule.current_status === 'completed' ? 'Klar' : 
-                              schedule.current_status === 'scheduled' ? 'Schemalagd' :
-                              schedule.current_status === 'confirmed' ? 'Bekräftad' :
-                              schedule.current_status}
-                           </Badge>
+                           <StatusBadge status={schedule.current_status} />
                            <div className="text-right">
                              {(schedule.current_status === 'assigned' || schedule.current_status === 'in_progress' || hasDriver) && schedule.scheduled_pickup_date ? (
                                <div className="text-sm text-muted-foreground">
