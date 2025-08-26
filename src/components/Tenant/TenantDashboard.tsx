@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import DriverStatusIndicator from '@/components/Common/DriverStatusIndicator';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,27 +71,27 @@ const TenantDashboard = () => {
   };
 
   const fetchDrivers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('id, full_name')
-        .eq('tenant_id', user?.tenant_id)
-        .eq('is_active', true);
+    if (!user?.tenant_id) return;
+    
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('id, full_name, driver_status, current_latitude, current_longitude, current_status, last_activity_update, status_updated_at')
+      .eq('tenant_id', user.tenant_id)
+      .eq('is_active', true);
 
-      if (error) throw error;
-      setDrivers(data || []);
-    } catch (error) {
-      console.error('Error fetching drivers:', error);
-    }
+    if (error) throw error;
+    setDrivers(data || []);
   };
   const formatDriverName = (order) => {
-  if (order.driver_name) return order.driver_name;
-  if (order.assigned_driver_id && drivers.length > 0) {
-    const driver = drivers.find(d => d.id === order.assigned_driver_id);
-    return driver?.full_name || 'Okänd förare';
-  }
-  return null;
-};
+    if (order.driver_name) {
+      const driver = drivers.find(d => d.id === order.assigned_driver_id);
+      return {
+        name: order.driver_name,
+        driver: driver
+      };
+    }
+    return null;
+  };
 
   if (showPricingManagement) {
     return <PricingManagement onBack={() => setShowPricingManagement(false)} />;
@@ -304,10 +305,13 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                             {hasDriver && !['rejected', 'cancelled'].includes(order.current_status) && (
-                               <p className="text-sm font-medium text-red-700 mt-1">
-                                 <strong>Förare: {driverName}</strong>
-                               </p>
+                             {driverName && !['rejected', 'cancelled'].includes(order.current_status) && (
+                               <div className="flex items-center gap-2 mt-1">
+                                 <p className="text-sm font-medium text-red-700">
+                                   <strong>Förare: {driverName.name}</strong>
+                                 </p>
+                                 {driverName.driver && <DriverStatusIndicator driver={driverName.driver} showLabel={false} />}
+                               </div>
                              )}
                           </div>
                         </div>
@@ -444,10 +448,13 @@ const TenantDashboard = () => {
                               <MapPin className="h-3 w-3" />
                               {location}
                             </p>
-                             {hasDriver && (
-                               <p className="text-sm font-medium text-red-700 mt-1">
-                                 <strong>Förare: {driverName}</strong>
-                               </p>
+                             {driverName && (
+                               <div className="flex items-center gap-2 mt-1">
+                                 <p className="text-sm font-medium text-red-700">
+                                   <strong>Förare: {driverName.name}</strong>
+                                 </p>
+                                 {driverName.driver && <DriverStatusIndicator driver={driverName.driver} showLabel={false} />}
+                               </div>
                              )}
                           </div>
                         </div>
