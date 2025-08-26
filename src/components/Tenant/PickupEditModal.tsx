@@ -551,7 +551,15 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
                 <User className="h-4 w-4" />
                 Förare
               </Label>
-              <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+              <Select value={selectedDriverId} onValueChange={(value) => {
+                setSelectedDriverId(value);
+                // Update status based on driver assignment
+                if (value === 'none') {
+                  setPickupStatus('pending');
+                } else {
+                  setPickupStatus('assigned');
+                }
+              }}>
                 <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Välj förare (valfritt)" />
                 </SelectTrigger>
