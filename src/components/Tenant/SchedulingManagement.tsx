@@ -319,7 +319,8 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     }
   };
 
-  const filteredRequests = useMemo(() => {
+  // Filter for the "Today's requests" list (includes time period filter)
+  const filteredRequestsForList = useMemo(() => {
     return requests.filter(request => {
       const matchesLocation = !filterLocation || 
         request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
@@ -330,8 +331,19 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
     });
   }, [requests, filterLocation, filterStatus, selectedDate, timePeriodFilter]);
 
+  // Filter for the calendar (excludes time period filter)
+  const filteredRequestsForCalendar = useMemo(() => {
+    return requests.filter(request => {
+      const matchesLocation = !filterLocation || 
+        request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
+        request.address.match(/\d{5}/)?.[0] === filterLocation;
+      const matchesStatus = filterStatus === 'all' || !filterStatus || request.status === filterStatus;
+      return matchesLocation && matchesStatus;
+    });
+  }, [requests, filterLocation, filterStatus]);
+
   const getRequestsForDate = (date: Date) => {
-    return filteredRequests.filter(request => isSameDay(request.date, date));
+    return filteredRequestsForCalendar.filter(request => isSameDay(request.date, date));
   };
 
   const handleAssignDriver = async (requestId: string, driverId: string) => {
@@ -1117,13 +1129,13 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {getRequestsForDate(selectedDate).length === 0 ? (
+            {filteredRequestsForList.filter(request => isSameDay(request.date, selectedDate)).length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
                 Inga förfrågningar för denna dag
               </p>
             ) : (
               <div className="space-y-4">
-                {getRequestsForDate(selectedDate).map(request => (
+                {filteredRequestsForList.filter(request => isSameDay(request.date, selectedDate)).map(request => (
                   <div
                     key={request.id}
                     className="p-4 border rounded-lg transition-colors"
