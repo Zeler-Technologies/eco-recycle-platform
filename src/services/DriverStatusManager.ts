@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export class DriverStatusManager {
   
@@ -39,16 +40,19 @@ export class DriverStatusManager {
   //  }
 // Log to history table
 if (!updateError) {
+  const historyEntry: Database['public']['Tables']['driver_status_history']['Insert'] = {
+    driver_id: driverId,
+    old_status: currentDriver?.driver_status as any,
+    new_status: newStatus as any,
+    status: newStatus as any,
+    source: source,
+    reason: reason || 'Status changed via DriverStatusManager',
+    changed_at: new Date().toISOString()
+  };
+
   const { error: historyError } = await supabase
     .from('driver_status_history')
-    .insert({
-      driver_id: driverId,
-      old_status: currentDriver?.driver_status,
-      new_status: newStatus,
-      status: newStatus,
-      source: source,  // ADD THIS LINE
-      reason: reason || 'Status changed via DriverStatusManager'
-    });
+    .insert(historyEntry);
 }
     return { error: updateError };
   }
