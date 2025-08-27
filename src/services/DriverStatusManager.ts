@@ -37,7 +37,7 @@ export class DriverStatusManager {
       //    reason: reason
     //    });
   //  }
-    // Log to history table
+// Log to history table
 if (!updateError) {
   const { error: historyError } = await supabase
     .from('driver_status_history')
@@ -45,6 +45,8 @@ if (!updateError) {
       driver_id: driverId,
       old_status: currentDriver?.driver_status,
       new_status: newStatus,
+      status: newStatus,
+      source: source,  // ADD THIS LINE
       reason: reason || 'Status changed via DriverStatusManager'
     });
 }
