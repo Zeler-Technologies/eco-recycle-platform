@@ -25,19 +25,29 @@ export class DriverStatusManager {
       .eq('id', driverId);
 
     // Log to history table
-    if (!updateError) {
-      await supabase
-        .from('driver_status_history')
-        .insert({
-          driver_id: driverId,
-          old_status: currentDriver?.driver_status,
-          new_status: newStatus,
-          status: newStatus,  // Add this required field
-          source: source,
-          reason: reason
-        });
-    }
-    
+//    if (!updateError) {
+ //     await supabase
+     //   .from('driver_status_history')
+   //     .insert({
+       //   driver_id: driverId,
+      //    old_status: currentDriver?.driver_status,
+      //    new_status: newStatus,
+    //      status: newStatus,  // Add this required field
+        //  source: source,
+      //    reason: reason
+    //    });
+  //  }
+    // Log to history table
+if (!updateError) {
+  const { error: historyError } = await supabase
+    .from('driver_status_history')
+    .insert({
+      driver_id: driverId,
+      old_status: currentDriver?.driver_status,
+      new_status: newStatus,
+      reason: reason || 'Status changed via DriverStatusManager'
+    });
+}
     return { error: updateError };
   }
 
