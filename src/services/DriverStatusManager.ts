@@ -32,6 +32,7 @@ export class DriverStatusManager {
           driver_id: driverId,
           old_status: currentDriver?.driver_status,
           new_status: newStatus,
+          status: newStatus,  // Add this required field
           source: source,
           reason: reason
         });
