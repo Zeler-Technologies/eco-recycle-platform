@@ -150,6 +150,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         .select('*')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: true })
+        .order('id', { ascending: true }) // Add deterministic secondary sort
         .limit(1)
         .maybeSingle();
       
