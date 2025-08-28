@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { AddressTestComponent } from "@/components/Common/AddressTestComponent";
+import { MapVerificationModal } from "./MapVerificationModal";
 
 interface ServiceZoneManagementProps {
   onBack: () => void;
@@ -77,6 +78,9 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   const [testDistance, setTestDistance] = useState('');
   const [calculatedDeduction, setCalculatedDeduction] = useState(0);
   const [applicableBonuses, setApplicableBonuses] = useState<any[]>([]);
+  
+  // Map verification modal
+  const [showMapModal, setShowMapModal] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -666,7 +670,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                     <Button onClick={saveBaseAddress} disabled={addressLoading || !baseAddress.trim()}>
                       {addressLoading ? 'Sparar...' : 'Spara adress'}
                     </Button>
-                    <Button variant="outline">Verifiera på karta</Button>
+                    <Button variant="outline" onClick={() => setShowMapModal(true)}>Verifiera på karta</Button>
                   </div>
                 </>
               )}
@@ -1101,6 +1105,13 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
           {tenantId && <AddressTestComponent tenantId={tenantId} />}
         </TabsContent>
       </Tabs>
+
+      {/* Map Verification Modal */}
+      <MapVerificationModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+        address={baseAddress}
+      />
     </div>
   );
 };
