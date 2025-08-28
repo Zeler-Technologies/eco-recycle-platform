@@ -145,64 +145,61 @@ const loadScrapyardAddress = async () => {
   
   try {
     setAddressLoading(true);
-    
-    // Simple query without complex chaining
-    const result = await supabase
+    const { data, error } = await supabase
       .from('scrapyards')
       .select('*')
       .eq('tenant_id', tenantId)
-      .eq('is_primary', true);
-    
-    const data = result.data?.[0] || null;
-    const error = result.error;
+      .eq('is_primary', true)
+      .maybeSingle();
     
     if (error && error.code !== 'PGRST116') {
       throw error;
     }
+    
+    if (data) {
+      setCurrentScrapyard(data);
+      const fullAddress = [data.address, data.postal_code, data.city]
+        .filter(Boolean)
+        .join(', ');
+      setBaseAddress(fullAddress || '');
+    } else {
+      // Create default scrapyard if none exists
+      const { data: tenantData } = await supabase
+        .from('tenants')
+        .select('name, base_address')
+        .eq('tenants_id', tenantId)
+        .maybeSingle();
       
-      if (data) {
-        setCurrentScrapyard(data);
-        const fullAddress = [data.address, data.postal_code, data.city]
-          .filter(Boolean)
-          .join(', ');
-        setBaseAddress(fullAddress || '');
-      } else {
-        // Create default scrapyard if none exists
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('name, base_address')
-          .eq('tenants_id', tenantId)
+      if (tenantData) {
+        const { data: newScrapyard, error: createError } = await supabase
+          .from('scrapyards')
+          .insert({
+            name: tenantData.name,
+            address: tenantData.base_address || '',
+            tenant_id: tenantId,
+            is_active: true,
+            is_primary: true
+          })
+          .select()
           .maybeSingle();
         
-        if (tenantData) {
-          const { data: newScrapyard, error: createError } = await supabase
-            .from('scrapyards')
-            .insert({
-              name: tenantData.name,
-              address: tenantData.base_address || '',
-              tenant_id: tenantId,
-              is_active: true
-            })
-            .select()
-            .maybeSingle();
-          
-          if (!createError && newScrapyard) {
-            setCurrentScrapyard(newScrapyard);
-            setBaseAddress(newScrapyard.address || '');
-          }
+        if (!createError && newScrapyard) {
+          setCurrentScrapyard(newScrapyard);
+          setBaseAddress(newScrapyard.address || '');
         }
       }
-    } catch (error) {
-      console.error('Error loading scrapyard address:', error);
-      toast({
-        title: "Fel",
-        description: "Kunde inte ladda basadress",
-        variant: "destructive"
-      });
-    } finally {
-      setAddressLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Error loading scrapyard address:', error);
+    toast({
+      title: "Fel",
+      description: "Kunde inte ladda basadress",
+      variant: "destructive"
+    });
+  } finally {
+    setAddressLoading(false);
+  }
+};
 
   const saveBaseAddress = async () => {
     if (!tenantId || !currentScrapyard) return;
