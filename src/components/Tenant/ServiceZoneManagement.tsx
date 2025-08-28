@@ -48,6 +48,8 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   const [baseAddress, setBaseAddress] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
   const [currentScrapyard, setCurrentScrapyard] = useState<any>(null);
+  const [allScrapyards, setAllScrapyards] = useState<any[]>([]);
+  const [selectedScrapyardId, setSelectedScrapyardId] = useState<string>('');
   const [isAddingPostal, setIsAddingPostal] = useState(false);
   const [newPostalCode, setNewPostalCode] = useState('');
   const [selectedTab, setSelectedTab] = useState('zones');
@@ -92,8 +94,22 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   useEffect(() => {
     loadDistanceRules();
     loadBonusOffers();
-    loadScrapyardAddress();
+    loadAllScrapyards();
   }, [tenantId]);
+
+  // Update base address when scrapyard selection changes
+  useEffect(() => {
+    if (selectedScrapyardId && allScrapyards.length > 0) {
+      const selectedScrapyard = allScrapyards.find(s => s.id.toString() === selectedScrapyardId);
+      if (selectedScrapyard) {
+        setCurrentScrapyard(selectedScrapyard);
+        const fullAddress = [selectedScrapyard.address, selectedScrapyard.postal_code, selectedScrapyard.city]
+          .filter(Boolean)
+          .join(', ');
+        setBaseAddress(fullAddress || '');
+      }
+    }
+  }, [selectedScrapyardId, allScrapyards]);
 
   const loadDistanceRules = async () => {
     if (!tenantId) return;
@@ -140,7 +156,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     }
   };
 
-  const loadScrapyardAddress = async () => {
+  const loadAllScrapyards = async () => {
     if (!tenantId) return;
     
     try {
@@ -149,18 +165,22 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         .from('scrapyards')
         .select('*')
         .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('is_primary', { ascending: false }) // Primary scrapyards first
         .order('created_at', { ascending: true })
-        .order('id', { ascending: true }) // Add deterministic secondary sort
-        .limit(1)
-        .maybeSingle();
+        .order('id', { ascending: true });
       
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      if (error) throw error;
       
-      if (data) {
-        setCurrentScrapyard(data);
-        const fullAddress = [data.address, data.postal_code, data.city]
+      if (data && data.length > 0) {
+        setAllScrapyards(data);
+        
+        // Find primary scrapyard or use first one
+        const primaryScrapyard = data.find((s: any) => s.is_primary) || data[0];
+        setSelectedScrapyardId(primaryScrapyard.id.toString());
+        setCurrentScrapyard(primaryScrapyard);
+        
+        const fullAddress = [primaryScrapyard.address, primaryScrapyard.postal_code, primaryScrapyard.city]
           .filter(Boolean)
           .join(', ');
         setBaseAddress(fullAddress || '');
@@ -179,22 +199,25 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
               name: tenantData.name,
               address: tenantData.base_address || '',
               tenant_id: tenantId,
-              is_active: true
+              is_active: true,
+              is_primary: true
             })
             .select()
             .maybeSingle();
           
           if (!createError && newScrapyard) {
+            setAllScrapyards([newScrapyard]);
+            setSelectedScrapyardId(newScrapyard.id.toString());
             setCurrentScrapyard(newScrapyard);
             setBaseAddress(newScrapyard.address || '');
           }
         }
       }
     } catch (error) {
-      console.error('Error loading scrapyard address:', error);
+      console.error('Error loading scrapyards:', error);
       toast({
         title: "Fel",
-        description: "Kunde inte ladda basadress",
+        description: "Kunde inte ladda skrotgårdar",
         variant: "destructive"
       });
     } finally {
@@ -253,7 +276,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       });
       
       // Reload to ensure consistency
-      await loadScrapyardAddress();
+      await loadAllScrapyards();
     } catch (error) {
       console.error('Error saving base address:', error);
       toast({
@@ -635,6 +658,35 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
               <CardDescription>Den fysiska adress varifrån alla hämtningar utgår</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Scrapyard Filter Dropdown */}
+              {allScrapyards.length > 1 && (
+                <div>
+                  <Label htmlFor="scrapyard-select">Välj skrotgård</Label>
+                  <Select 
+                    value={selectedScrapyardId} 
+                    onValueChange={setSelectedScrapyardId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Välj skrotgård" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allScrapyards.map((scrapyard: any) => (
+                        <SelectItem key={scrapyard.id} value={scrapyard.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <span>{scrapyard.name}</span>
+                            {scrapyard.is_primary && (
+                              <Badge variant="secondary" className="text-xs">Primär</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Välj vilken skrotgård som ska vara aktiv basadress för beräkningar
+                  </p>
+                </div>
+              )}
               {addressLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
