@@ -43,7 +43,9 @@ const distanceTiers = [
 
 export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [baseAddress, setBaseAddress] = useState('Industrivägen 12, 41234 Göteborg');
+  const [baseAddress, setBaseAddress] = useState('');
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [currentScrapyard, setCurrentScrapyard] = useState<any>(null);
   const [isAddingPostal, setIsAddingPostal] = useState(false);
   const [newPostalCode, setNewPostalCode] = useState('');
   const [selectedTab, setSelectedTab] = useState('zones');
@@ -85,7 +87,8 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   useEffect(() => {
     loadDistanceRules();
     loadBonusOffers();
-  }, []);
+    loadScrapyardAddress();
+  }, [tenantId]);
 
   const loadDistanceRules = async () => {
     if (!tenantId) return;
@@ -129,6 +132,117 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         description: "Kunde inte ladda bonuserbjudanden",
         variant: "destructive"
       });
+    }
+  };
+
+  const loadScrapyardAddress = async () => {
+    if (!tenantId) return;
+    
+    try {
+      setAddressLoading(true);
+      const { data, error } = await supabase
+        .from('scrapyards')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      if (data) {
+        setCurrentScrapyard(data);
+        const fullAddress = [data.address, data.postal_code, data.city]
+          .filter(Boolean)
+          .join(', ');
+        setBaseAddress(fullAddress || '');
+      } else {
+        // Create default scrapyard if none exists
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name, base_address')
+          .eq('tenants_id', tenantId)
+          .maybeSingle();
+        
+        if (tenantData) {
+          const { data: newScrapyard, error: createError } = await supabase
+            .from('scrapyards')
+            .insert({
+              name: tenantData.name,
+              address: tenantData.base_address || '',
+              tenant_id: tenantId,
+              is_active: true
+            })
+            .select()
+            .maybeSingle();
+          
+          if (!createError && newScrapyard) {
+            setCurrentScrapyard(newScrapyard);
+            setBaseAddress(newScrapyard.address || '');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading scrapyard address:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte ladda basadress",
+        variant: "destructive"
+      });
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const saveBaseAddress = async () => {
+    if (!tenantId || !currentScrapyard) return;
+    
+    try {
+      setAddressLoading(true);
+      
+      // Parse the address into components
+      const addressParts = baseAddress.split(',').map(part => part.trim());
+      const address = addressParts[0] || '';
+      const postalCode = addressParts[1] || '';
+      const city = addressParts[2] || '';
+      
+      const { error } = await supabase
+        .from('scrapyards')
+        .update({
+          address,
+          postal_code: postalCode,
+          city
+        })
+        .eq('id', currentScrapyard.id);
+      
+      if (error) throw error;
+      
+      // Also update tenant base_address for consistency
+      await supabase
+        .from('tenants')
+        .update({
+          base_address: baseAddress
+        })
+        .eq('tenants_id', tenantId);
+      
+      toast({
+        title: "Framgång",
+        description: "Basadress uppdaterad"
+      });
+      
+      // Reload to ensure consistency
+      await loadScrapyardAddress();
+    } catch (error) {
+      console.error('Error saving base address:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte spara basadress",
+        variant: "destructive"
+      });
+    } finally {
+      setAddressLoading(false);
     }
   };
 
@@ -500,32 +614,46 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
               <CardDescription>Den fysiska adress varifrån alla hämtningar utgår</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="base-address">Basadress</Label>
-                <Textarea 
-                  id="base-address"
-                  value={baseAddress}
-                  onChange={(e) => setBaseAddress(e.target.value)}
-                  className="mt-2"
-                  rows={3}
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  Denna adress används för att beräkna avstånd till hämtningsplatser
-                </p>
-              </div>
-              
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertTitle>Adress verifierad</AlertTitle>
-                <AlertDescription>
-                  Adressen har geokodats till koordinater: 57.7089, 11.9746
-                </AlertDescription>
-              </Alert>
+              {addressLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Laddar adressinformation...</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label htmlFor="base-address">Basadress</Label>
+                    <Textarea 
+                      id="base-address"
+                      value={baseAddress}
+                      onChange={(e) => setBaseAddress(e.target.value)}
+                      className="mt-2"
+                      rows={3}
+                      placeholder="Ange fullständig adress: Gatunavn 123, 12345 Stad"
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Denna adress används för att beräkna avstånd till hämtningsplatser. Format: Gata, Postnummer, Stad
+                    </p>
+                  </div>
+                  
+                  {currentScrapyard && (
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertTitle>Adress sparad i systemet</AlertTitle>
+                      <AlertDescription>
+                        Adressen är kopplad till skrotgård: {currentScrapyard.name}
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
-              <div className="flex gap-2">
-                <Button>Uppdatera adress</Button>
-                <Button variant="outline">Verifiera på karta</Button>
-              </div>
+                  <div className="flex gap-2">
+                    <Button onClick={saveBaseAddress} disabled={addressLoading || !baseAddress.trim()}>
+                      {addressLoading ? 'Sparar...' : 'Spara adress'}
+                    </Button>
+                    <Button variant="outline">Verifiera på karta</Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
