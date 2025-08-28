@@ -149,9 +149,9 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         .from('scrapyards')
         .select('*')
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .order('id', { ascending: true }) // Add deterministic secondary sort
-        .limit(1)
+        //.order('created_at', { ascending: true })
+        //.limit(1)
+        .eq('is_primary', true)
         .maybeSingle();
       
       if (error && error.code !== 'PGRST116') {
