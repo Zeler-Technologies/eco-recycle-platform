@@ -669,7 +669,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                     value={selectedScrapyardId} 
                     onValueChange={setSelectedScrapyardId}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-fit min-w-0">
                       <SelectValue placeholder="Välj skrotgård" />
                     </SelectTrigger>
                     <SelectContent>
