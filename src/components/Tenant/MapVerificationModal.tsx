@@ -21,34 +21,44 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   useEffect(() => {
+    console.log('DEBUG: MapVerificationModal useEffect triggered:', { isOpen, address });
+    
     if (!isOpen) {
+      console.log('DEBUG: Modal not open, cleaning up state');
       setMap(null);
       setIsLoading(true);
       setError(null);
       return;
     }
 
+    console.log('DEBUG: Modal is open, checking mapRef:', !!mapRef.current);
+
     if (!mapRef.current) return;
 
     const initializeMap = async () => {
       try {
+        console.log('DEBUG: Starting map initialization');
         setIsLoading(true);
         setError(null);
 
         // Wait a bit for the modal to fully open
         await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('DEBUG: After initial delay, checking Google Maps API');
 
         // Check if Google Maps is available
         if (!window.google?.maps) {
+          console.log('DEBUG: Google Maps not available, waiting...');
           // Try to wait a bit more for the API to load
           let attempts = 0;
           while (!window.google?.maps && attempts < 10) {
+            console.log('DEBUG: Attempt', attempts + 1, 'to find Google Maps API');
             await new Promise(resolve => setTimeout(resolve, 500));
             attempts++;
           }
         }
 
         if (window.google?.maps) {
+          console.log('DEBUG: Google Maps API found, initializing map');
           // Initialize the map
           const mapInstance = new google.maps.Map(mapRef.current!, {
             zoom: 15,
@@ -56,13 +66,16 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
             mapTypeId: google.maps.MapTypeId.ROADMAP,
           });
 
+          console.log('DEBUG: Map instance created:', mapInstance);
           setMap(mapInstance);
 
           // If we have an address, geocode it
           if (address.trim()) {
+            console.log('DEBUG: Starting geocoding for address:', address);
             const geocoder = new google.maps.Geocoder();
             
             geocoder.geocode({ address }, (results, status) => {
+              console.log('DEBUG: Geocoding result:', { status, results });
               if (status === 'OK' && results && results[0]) {
                 const location = results[0].geometry.location;
                 

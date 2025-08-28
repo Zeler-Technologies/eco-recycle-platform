@@ -670,7 +670,12 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                     <Button onClick={saveBaseAddress} disabled={addressLoading || !baseAddress.trim()}>
                       {addressLoading ? 'Sparar...' : 'Spara adress'}
                     </Button>
-                    <Button variant="outline" onClick={() => setShowMapModal(true)}>Verifiera på karta</Button>
+                    <Button variant="outline" onClick={() => {
+                      console.log('DEBUG: Verifiera på karta clicked, setting showMapModal to true');
+                      console.log('DEBUG: Current baseAddress:', baseAddress);
+                      console.log('DEBUG: Google Maps available:', !!window.google?.maps);
+                      setShowMapModal(true);
+                    }}>Verifiera på karta</Button>
                   </div>
                 </>
               )}
