@@ -172,8 +172,20 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           throw new Error(error.message || 'Failed to update tenant');
         }
 
-        // Also update the associated scrapyard address information
+        // Also update the primary scrapyard address information
         if (data.address || data.postalCode || data.city) {
+          const fullAddress = [data.address, data.postalCode, data.city]
+            .filter(Boolean)
+            .join(', ');
+          
+          console.log('Updating scrapyard addresses for tenant:', editTenant!.tenants_id, {
+            address: data.address,
+            postalCode: data.postalCode,
+            city: data.city,
+            fullAddress
+          });
+          
+          // Update the primary scrapyard (first created)
           const { error: scrapyardError } = await supabase
             .from('scrapyards')
             .update({
@@ -181,10 +193,12 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
               postal_code: data.postalCode || null,
               city: data.city || null,
             })
-            .eq('tenant_id', editTenant!.tenants_id);
+            .eq('tenant_id', editTenant!.tenants_id)
+            .order('created_at', { ascending: true })
+            .limit(1);
 
           if (scrapyardError) {
-            console.warn('Failed to update scrapyard address:', scrapyardError);
+            console.warn('Failed to update primary scrapyard address:', scrapyardError);
             // Don't fail the whole operation for scrapyard address update
           }
         }

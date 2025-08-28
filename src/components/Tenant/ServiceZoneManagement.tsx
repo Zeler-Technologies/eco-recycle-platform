@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { AddressTestComponent } from "@/components/Common/AddressTestComponent";
 
 interface ServiceZoneManagementProps {
   onBack: () => void;
@@ -208,7 +209,17 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       const postalCode = addressParts[1] || '';
       const city = addressParts[2] || '';
       
-      const { error } = await supabase
+      console.log('Saving address:', { 
+        scrapyardId: currentScrapyard.id, 
+        tenantId, 
+        address, 
+        postalCode, 
+        city, 
+        fullAddress: baseAddress 
+      });
+      
+      // Update the primary scrapyard (first created)
+      const { error: scrapyardError } = await supabase
         .from('scrapyards')
         .update({
           address,
@@ -217,19 +228,23 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         })
         .eq('id', currentScrapyard.id);
       
-      if (error) throw error;
+      if (scrapyardError) throw scrapyardError;
       
       // Also update tenant base_address for consistency
-      await supabase
+      const { error: tenantError } = await supabase
         .from('tenants')
         .update({
           base_address: baseAddress
         })
         .eq('tenants_id', tenantId);
       
+      if (tenantError) {
+        console.warn('Failed to update tenant base_address:', tenantError);
+      }
+      
       toast({
         title: "Framgång",
-        description: "Basadress uppdaterad"
+        description: "Basadress uppdaterad i både skrotgård och tenant"
       });
       
       // Reload to ensure consistency
@@ -455,11 +470,12 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="zones">Hämtningszoner</TabsTrigger>
           <TabsTrigger value="address">Basadress</TabsTrigger>
           <TabsTrigger value="pricing">Prislogik</TabsTrigger>
           <TabsTrigger value="statistics">Statistik</TabsTrigger>
+          <TabsTrigger value="test">Test</TabsTrigger>
         </TabsList>
 
         {/* Hämtningszoner Tab */}
@@ -1078,6 +1094,11 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
               </Alert>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Test Tab */}
+        <TabsContent value="test" className="space-y-6">
+          {tenantId && <AddressTestComponent tenantId={tenantId} />}
         </TabsContent>
       </Tabs>
     </div>
