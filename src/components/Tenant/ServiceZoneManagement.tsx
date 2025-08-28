@@ -157,13 +157,18 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   };
 
   const loadAllScrapyards = async () => {
+    console.log('🏗️ loadAllScrapyards called with tenantId:', tenantId);
+    
     if (!tenantId) {
+      console.log('❌ No tenantId, setting loading to false');
       setAddressLoading(false);
       return;
     }
     
     try {
+      console.log('🔄 Starting scrapyard loading...');
       setAddressLoading(true);
+      
       const { data, error } = await supabase
         .from('scrapyards')
         .select('*')
@@ -173,27 +178,40 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         .order('created_at', { ascending: true })
         .order('id', { ascending: true });
       
-      if (error) throw error;
+      console.log('📊 Scrapyard query result:', { data, error, dataLength: data?.length });
+      
+      if (error) {
+        console.error('❌ Scrapyard query error:', error);
+        throw error;
+      }
       
       if (data && data.length > 0) {
+        console.log('✅ Found scrapyards:', data);
         setAllScrapyards(data);
         
         // Find primary scrapyard or use first one
         const primaryScrapyard = data.find((s: any) => s.is_primary) || data[0];
+        console.log('🏆 Primary scrapyard selected:', primaryScrapyard);
+        
         setSelectedScrapyardId(primaryScrapyard.id.toString());
         setCurrentScrapyard(primaryScrapyard);
         
         const fullAddress = [primaryScrapyard.address, primaryScrapyard.postal_code, primaryScrapyard.city]
           .filter(Boolean)
           .join(', ');
+        
+        console.log('🏠 Setting base address:', fullAddress);
         setBaseAddress(fullAddress || '');
       } else {
         // Create default scrapyard if none exists
+        console.log('🏗️ No scrapyards found, creating default...');
         const { data: tenantData } = await supabase
           .from('tenants')
           .select('name, base_address')
           .eq('tenants_id', tenantId)
           .maybeSingle();
+        
+        console.log('👤 Tenant data for default scrapyard:', tenantData);
         
         if (tenantData) {
           const { data: newScrapyard, error: createError } = await supabase
@@ -208,6 +226,8 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
             .select()
             .maybeSingle();
           
+          console.log('🆕 Created new scrapyard:', { newScrapyard, createError });
+          
           if (!createError && newScrapyard) {
             setAllScrapyards([newScrapyard]);
             setSelectedScrapyardId(newScrapyard.id.toString());
@@ -217,13 +237,14 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         }
       }
     } catch (error) {
-      console.error('Error loading scrapyards:', error);
+      console.error('❌ Error loading scrapyards:', error);
       toast({
         title: "Fel",
         description: "Kunde inte ladda skrotgårdar",
         variant: "destructive"
       });
     } finally {
+      console.log('🏁 Setting addressLoading to false');
       setAddressLoading(false);
     }
   };
