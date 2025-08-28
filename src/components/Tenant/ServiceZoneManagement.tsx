@@ -157,7 +157,10 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   };
 
   const loadAllScrapyards = async () => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setAddressLoading(false);
+      return;
+    }
     
     try {
       setAddressLoading(true);
