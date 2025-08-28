@@ -21,87 +21,87 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !mapRef.current) return;
+    if (!isOpen) {
+      setMap(null);
+      setIsLoading(true);
+      setError(null);
+      return;
+    }
+
+    if (!mapRef.current) return;
 
     const initializeMap = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Check if Google Maps is already loaded
-        if (!window.google?.maps) {
-          // Load Google Maps API
-          const { Loader } = await import('@googlemaps/js-api-loader');
-          const loader = new Loader({
-            apiKey: 'AIzaSyAhKuSpLEPJ6aXaABokyk8uKlJTeLM9Sj8',
-            version: 'weekly',
-            libraries: ['places', 'geometry']
+        // Wait a bit for the modal to fully open
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Use the already loaded Google Maps API
+        if (window.google?.maps) {
+          // Initialize the map
+          const mapInstance = new google.maps.Map(mapRef.current!, {
+            zoom: 15,
+            center: { lat: 59.3293, lng: 18.0686 }, // Default to Stockholm
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
           });
 
-          await loader.load();
-        }
-        
-        // Initialize the map
-        const mapInstance = new google.maps.Map(mapRef.current!, {
-          zoom: 15,
-          center: { lat: 59.3293, lng: 18.0686 }, // Default to Stockholm
-          mapTypeId: google.maps.MapTypeId.ROADMAP,
-        });
+          setMap(mapInstance);
 
-        setMap(mapInstance);
-
-        // Geocode the address
-        if (address.trim()) {
-          const geocoder = new google.maps.Geocoder();
-          
-          geocoder.geocode({ address }, (results, status) => {
-            if (status === 'OK' && results && results[0]) {
-              const location = results[0].geometry.location;
-              
-              // Center map on the location
-              mapInstance.setCenter(location);
-              
-              // Add a marker
-              new google.maps.Marker({
-                position: location,
-                map: mapInstance,
-                title: address,
-                icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 10,
-                  fillColor: 'hsl(var(--primary))',
-                  fillOpacity: 1,
-                  strokeColor: 'white',
-                  strokeWeight: 2,
-                }
-              });
-
-              // Add info window
-              const infoWindow = new google.maps.InfoWindow({
-                content: `
-                  <div class="p-2">
-                    <div class="flex items-center gap-2 mb-1">
-                      <div class="w-3 h-3 rounded-full bg-primary"></div>
-                      <strong>Verifierad adress</strong>
-                    </div>
-                    <p class="text-sm text-muted-foreground">${address}</p>
-                  </div>
-                `
-              });
-
-              infoWindow.open(mapInstance, 
-                new google.maps.Marker({
+          // Geocode the address
+          if (address.trim()) {
+            const geocoder = new google.maps.Geocoder();
+            
+            geocoder.geocode({ address }, (results, status) => {
+              if (status === 'OK' && results && results[0]) {
+                const location = results[0].geometry.location;
+                
+                // Center map on the location
+                mapInstance.setCenter(location);
+                
+                // Add a marker
+                const marker = new google.maps.Marker({
                   position: location,
                   map: mapInstance,
-                })
-              );
-            } else {
-              setError('Kunde inte hitta adressen på kartan. Kontrollera att adressen är korrekt.');
-            }
-          });
-        }
+                  title: address,
+                  icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#3b82f6',
+                    fillOpacity: 1,
+                    strokeColor: 'white',
+                    strokeWeight: 2,
+                  }
+                });
 
-        setIsLoading(false);
+                // Add info window
+                const infoWindow = new google.maps.InfoWindow({
+                  content: `
+                    <div style="padding: 8px;">
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #3b82f6;"></div>
+                        <strong>Verifierad adress</strong>
+                      </div>
+                      <p style="font-size: 14px; color: #666; margin: 0;">${address}</p>
+                    </div>
+                  `
+                });
+
+                infoWindow.open(mapInstance, marker);
+                setIsLoading(false);
+              } else {
+                setError('Kunde inte hitta adressen på kartan. Kontrollera att adressen är korrekt.');
+                setIsLoading(false);
+              }
+            });
+          } else {
+            setIsLoading(false);
+          }
+        } else {
+          setError('Google Maps API är inte laddat ännu. Vänta ett ögonblick och försök igen.');
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('Error loading Google Maps:', error);
         setError('Kunde inte ladda kartan. Kontrollera din internetanslutning.');
@@ -109,7 +109,9 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
       }
     };
 
-    initializeMap();
+    // Add a small delay to ensure the modal is fully rendered
+    const timer = setTimeout(initializeMap, 200);
+    return () => clearTimeout(timer);
   }, [isOpen, address]);
 
   return (
