@@ -140,29 +140,33 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     }
   };
 
-  const loadScrapyardAddress = async () => {
+const loadScrapyardAddress = async () => {
   if (!tenantId) return;
   
   try {
     setAddressLoading(true);
-    const { data, error } = await (supabase
+    
+    // Simple raw query to avoid TypeScript issues
+    const result = await supabase
       .from('scrapyards')
-      .select('*')
+      .select('id, name, address, postal_code, city, tenant_id')
       .eq('tenant_id', tenantId)
-      .eq('is_primary', true)
-      .maybeSingle() as any);
+      .eq('is_primary', true);
+    
+    const data = result.data?.[0];
+    const error = result.error;
     
     if (error && error.code !== 'PGRST116') {
       throw error;
     }
-      
-      if (data) {
-        setCurrentScrapyard(data);
-        const fullAddress = [data.address, data.postal_code, data.city]
-          .filter(Boolean)
-          .join(', ');
-        setBaseAddress(fullAddress || '');
-      } else {
+    
+    if (data) {
+      setCurrentScrapyard(data);
+      const fullAddress = [data.address, data.postal_code, data.city]
+        .filter(Boolean)
+        .join(', ');
+      setBaseAddress(fullAddress || '');
+    } else {
         // Create default scrapyard if none exists
         const { data: tenantData } = await supabase
           .from('tenants')
