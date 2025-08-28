@@ -141,22 +141,21 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   };
 
   const loadScrapyardAddress = async () => {
-    if (!tenantId) return;
-    
-    try {
-      setAddressLoading(true);
-      const { data, error } = await supabase
-        .from('scrapyards')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        //.order('created_at', { ascending: true })
-        //.limit(1)
-        .eq('is_primary', true)
-        .maybeSingle();
+  if (!tenantId) return;
+  
+  try {
+    setAddressLoading(true);
+    const query = supabase
+      .from('scrapyards')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_primary', true);
       
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+    const { data, error } = await query.maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
       
       if (data) {
         setCurrentScrapyard(data);
