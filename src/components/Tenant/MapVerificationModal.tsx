@@ -36,9 +36,18 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
         setError(null);
 
         // Wait a bit for the modal to fully open
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Use the already loaded Google Maps API
+        // Check if Google Maps is available
+        if (!window.google?.maps) {
+          // Try to wait a bit more for the API to load
+          let attempts = 0;
+          while (!window.google?.maps && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
+          }
+        }
+
         if (window.google?.maps) {
           // Initialize the map
           const mapInstance = new google.maps.Map(mapRef.current!, {
@@ -49,7 +58,7 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
 
           setMap(mapInstance);
 
-          // Geocode the address
+          // If we have an address, geocode it
           if (address.trim()) {
             const geocoder = new google.maps.Geocoder();
             
@@ -89,17 +98,17 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
                 });
 
                 infoWindow.open(mapInstance, marker);
-                setIsLoading(false);
               } else {
                 setError('Kunde inte hitta adressen på kartan. Kontrollera att adressen är korrekt.');
-                setIsLoading(false);
               }
+              setIsLoading(false);
             });
           } else {
+            // No address to geocode, just show the map
             setIsLoading(false);
           }
         } else {
-          setError('Google Maps API är inte laddat ännu. Vänta ett ögonblick och försök igen.');
+          setError('Google Maps kunde inte laddas. Försök igen senare.');
           setIsLoading(false);
         }
       } catch (error) {
