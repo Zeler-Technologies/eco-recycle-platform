@@ -28,15 +28,18 @@ export const MapVerificationModal: React.FC<MapVerificationModalProps> = ({
         setIsLoading(true);
         setError(null);
 
-        // Load Google Maps API
-        const { Loader } = await import('@googlemaps/js-api-loader');
-        const loader = new Loader({
-          apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-          version: 'weekly',
-          libraries: ['places', 'geometry']
-        });
+        // Check if Google Maps is already loaded
+        if (!window.google?.maps) {
+          // Load Google Maps API
+          const { Loader } = await import('@googlemaps/js-api-loader');
+          const loader = new Loader({
+            apiKey: 'AIzaSyAhKuSpLEPJ6aXaABokyk8uKlJTeLM9Sj8',
+            version: 'weekly',
+            libraries: ['places', 'geometry']
+          });
 
-        const google = await loader.load();
+          await loader.load();
+        }
         
         // Initialize the map
         const mapInstance = new google.maps.Map(mapRef.current!, {
