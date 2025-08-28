@@ -140,33 +140,31 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     }
   };
 
-const loadScrapyardAddress = async () => {
-  if (!tenantId) return;
-  
-  try {
-    setAddressLoading(true);
+  const loadScrapyardAddress = async () => {
+    if (!tenantId) return;
     
-    // Simple raw query to avoid TypeScript issues
-    const result = await supabase
-      .from('scrapyards')
-      .select('id, name, address, postal_code, city, tenant_id')
-      .eq('tenant_id', tenantId)
-      .eq('is_primary', true);
-    
-    const data = result.data?.[0];
-    const error = result.error;
-    
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    
-    if (data) {
-      setCurrentScrapyard(data);
-      const fullAddress = [data.address, data.postal_code, data.city]
-        .filter(Boolean)
-        .join(', ');
-      setBaseAddress(fullAddress || '');
-    } else {
+    try {
+      setAddressLoading(true);
+      const { data, error } = await supabase
+        .from('scrapyards')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true }) // Add deterministic secondary sort
+        .limit(1)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      if (data) {
+        setCurrentScrapyard(data);
+        const fullAddress = [data.address, data.postal_code, data.city]
+          .filter(Boolean)
+          .join(', ');
+        setBaseAddress(fullAddress || '');
+      } else {
         // Create default scrapyard if none exists
         const { data: tenantData } = await supabase
           .from('tenants')
