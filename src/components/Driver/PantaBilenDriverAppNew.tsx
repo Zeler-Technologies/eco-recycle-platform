@@ -784,7 +784,7 @@ const PantaBilenDriverAppNew = () => {
             disabled={isAssigning}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >
-            {isAssigning ? 'Tilldelar...' : '✋ TA UPPHÄMTNING'}
+            {isAssigning ? 'Tilldelar...' : 'Tilldela mig'}
           </Button>
         </CardContent>
       </Card>
@@ -1154,10 +1154,9 @@ const PantaBilenDriverAppNew = () => {
             ) : (
               <div>
                 {assignedPickups.map((pickup) => (
-                  <ImprovedPickupCard
+                  <AssignedPickupCard
                     key={pickup.pickup_order_id}
                     pickup={pickup}
-                    isActive={pickup.status === 'in_progress'}
                   />
                 ))}
               </div>
