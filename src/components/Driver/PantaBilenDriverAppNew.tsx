@@ -263,11 +263,54 @@ const PantaBilenDriverAppNew = () => {
       // Refresh pickup data and stats to reflect status changes
       await refreshAllPickupData();
       loadDriverStats();
+      
+      // AUTO-MANAGE DRIVER STATUS
+      await handleAutoDriverStatusUpdate(newStatus, pickupOrderId);
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Kunde inte uppdatera status';
       toast.error(errorMessage);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Automatic driver status management based on pickup activity
+  const handleAutoDriverStatusUpdate = async (newPickupStatus: string, completedPickupId: string) => {
+    try {
+      // Don't auto-update if driver is manually on break or offline
+      const MANUAL_STATUSES = ['break', 'offline'];
+      if (currentDriver?.current_status && MANUAL_STATUSES.includes(currentDriver.current_status)) {
+        console.log('🚫 Skipping auto status update - driver manually set to:', currentDriver.current_status);
+        return;
+      }
+
+      // Auto-change to "busy" when starting a pickup
+      if (newPickupStatus === 'in_transit' || newPickupStatus === 'in_progress') {
+        if (currentDriver?.current_status !== 'busy') {
+          console.log('🔄 Auto-changing driver to Upptagen (busy)');
+          await updateDriverStatus('busy');
+          toast.success('📍 Status ändrad till Upptagen - kör säkert!');
+        }
+      } 
+      // Auto-change to "available" when completing/cancelling if no active pickups remain
+      else if (newPickupStatus === 'completed' || newPickupStatus === 'cancelled') {
+        // Check remaining active pickups (excluding the one just completed/cancelled)
+        const remainingActivePickups = [...assignedPickups, ...availablePickups].filter(pickup => 
+          pickup.pickup_order_id !== completedPickupId && 
+          ['assigned', 'scheduled', 'in_progress', 'in_transit', 'pickup_accepted'].includes(pickup.pickup_status || pickup.status)
+        );
+
+        if (remainingActivePickups.length === 0) {
+          console.log('✅ No active pickups remaining - returning to Tillgänglig (available)');
+          await updateDriverStatus('available');
+          toast.success('✅ Inga aktiva uppdrag - du är nu Tillgänglig');
+        } else {
+          console.log('📋 Still has active pickups:', remainingActivePickups.length);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error in auto driver status update:', error);
     }
   };
 
