@@ -730,11 +730,6 @@ const PantaBilenDriverAppNew = () => {
                 <MapPin className="w-3 h-3 mr-2" />
                 <span className="flex-1">{pickup.pickup_address}</span>
               </div>
-              {pickup.pickup_address && (
-                <div className="ml-2">
-                  <NavigationButton pickup={pickup} />
-                </div>
-              )}
             </div>
             
             {distance && (
