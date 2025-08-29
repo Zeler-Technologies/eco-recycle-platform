@@ -1115,23 +1115,22 @@ const PantaBilenDriverAppNew = () => {
               )}
             </div>
             
-            {availablePickups.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <div className="text-4xl mb-2">📭</div>
-                <p className="font-medium">Inga tillgängliga upphämtningar just nu</p>
-                <p className="text-sm">Nya upphämtningar dyker upp här automatiskt</p>
-              </div>
-            ) : (
-              <div>
-                {availablePickups.map((pickup) => (
-                  <ImprovedPickupCard
-                    key={pickup.pickup_order_id}
-                    pickup={pickup}
-                    isActive={false}
-                  />
-                ))}
-              </div>
-            )}
+        {availablePickups.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-4xl mb-2">📭</div>
+            <p className="font-medium">Inga tillgängliga upphämtningar just nu</p>
+            <p className="text-sm">Nya upphämtningar dyker upp här automatiskt</p>
+          </div>
+        ) : (
+          <div>
+            {availablePickups.map((pickup) => (
+              <AvailablePickupCard
+                key={pickup.pickup_order_id}
+                pickup={pickup}
+              />
+            ))}
+          </div>
+        )}
           </div>
         )}
 
