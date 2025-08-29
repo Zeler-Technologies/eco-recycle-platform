@@ -632,7 +632,7 @@ const PantaBilenDriverAppNew = () => {
           
           {/* Enhanced Status-based action buttons */}
           <div className="flex flex-col gap-2">
-            {pickup.pickup_status === 'assigned' && (
+            {(pickup.pickup_status === 'assigned' || pickup.pickup_status === 'scheduled') && (
               <>
                 <Button
                   onClick={() => handleStatusUpdate(pickup.pickup_order_id, 'in_transit', 'På väg till kund')}
