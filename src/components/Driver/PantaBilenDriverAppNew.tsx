@@ -39,6 +39,13 @@ const PantaBilenDriverAppNew = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+  // Load stats on component mount and driver change
+  useEffect(() => {
+    if (currentDriver?.id) {
+      loadDriverStats();
+    }
+  }, [currentDriver?.id]);
+
   // Helper functions
   const getCurrentTime = () => new Date().toLocaleTimeString('sv-SE', { 
     hour: '2-digit', 
@@ -747,13 +754,6 @@ const PantaBilenDriverAppNew = () => {
       </div>
     );
   }
-
-  // Load stats on component mount and driver change
-  useEffect(() => {
-    if (currentDriver?.id) {
-      loadDriverStats();
-    }
-  }, [currentDriver?.id]);
 
   return (
     <div className="min-h-screen bg-gray-50">
