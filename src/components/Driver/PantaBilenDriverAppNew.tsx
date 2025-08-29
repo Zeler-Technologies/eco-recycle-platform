@@ -494,36 +494,50 @@ const PantaBilenDriverAppNew = () => {
               </div>
               {pickup.pickup_address && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const address = pickup.pickup_address;
                     if (address) {
-                      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-                      
                       try {
-                        // Try to open in new tab
-                        const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                        
-                        // If blocked, show fallback
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                          // Copy to clipboard as fallback
-                          navigator.clipboard.writeText(mapsUrl).then(() => {
-                            toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
-                          }).catch(() => {
-                            toast.error('Kunde inte kopiera länk');
-                          });
+                        // Use your existing Google Maps API to get precise coordinates
+                        const { data: geocodeData, error } = await supabase.functions.invoke('google-maps', {
+                          body: {
+                            service: 'geocode',
+                            params: {
+                              address: address,
+                              language: 'sv'
+                            }
+                          }
+                        });
+
+                        if (error) throw error;
+
+                        if (geocodeData?.results?.[0]?.geometry?.location) {
+                          const { lat, lng } = geocodeData.results[0].geometry.location;
+                          // Create precise navigation URL with coordinates
+                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${geocodeData.results[0].place_id || ''}`;
+                          
+                          const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                            // Fallback if popup blocked
+                            navigator.clipboard.writeText(mapsUrl).then(() => {
+                              toast.info('🗺️ Precis navigationslänk kopierad! Öppna i din webbläsare.');
+                            });
+                          }
+                        } else {
+                          // Fallback to address-based navigation
+                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                          window.open(mapsUrl, '_blank', 'noopener,noreferrer');
                         }
                       } catch (error) {
-                        // Fallback: Copy URL to clipboard
-                        navigator.clipboard.writeText(mapsUrl).then(() => {
-                          toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
-                        }).catch(() => {
-                          toast.error('Kunde inte kopiera länk');
-                        });
+                        console.error('Geocoding error:', error);
+                        // Fallback to simple address navigation
+                        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
                       }
                     }
                   }}
                   className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
-                  title="Navigera till upphämtningsplats"
+                  title="Navigera till upphämtningsplats med Google Maps"
                 >
                   <Navigation className="w-4 h-4" />
                 </button>
@@ -644,36 +658,50 @@ const PantaBilenDriverAppNew = () => {
               </div>
               {pickup.pickup_address && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const address = pickup.pickup_address;
                     if (address) {
-                      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-                      
                       try {
-                        // Try to open in new tab
-                        const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                        
-                        // If blocked, show fallback
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                          // Copy to clipboard as fallback
-                          navigator.clipboard.writeText(mapsUrl).then(() => {
-                            toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
-                          }).catch(() => {
-                            toast.error('Kunde inte kopiera länk');
-                          });
+                        // Use your existing Google Maps API to get precise coordinates
+                        const { data: geocodeData, error } = await supabase.functions.invoke('google-maps', {
+                          body: {
+                            service: 'geocode',
+                            params: {
+                              address: address,
+                              language: 'sv'
+                            }
+                          }
+                        });
+
+                        if (error) throw error;
+
+                        if (geocodeData?.results?.[0]?.geometry?.location) {
+                          const { lat, lng } = geocodeData.results[0].geometry.location;
+                          // Create precise navigation URL with coordinates
+                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${geocodeData.results[0].place_id || ''}`;
+                          
+                          const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                            // Fallback if popup blocked
+                            navigator.clipboard.writeText(mapsUrl).then(() => {
+                              toast.info('🗺️ Precis navigationslänk kopierad! Öppna i din webbläsare.');
+                            });
+                          }
+                        } else {
+                          // Fallback to address-based navigation
+                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                          window.open(mapsUrl, '_blank', 'noopener,noreferrer');
                         }
                       } catch (error) {
-                        // Fallback: Copy URL to clipboard
-                        navigator.clipboard.writeText(mapsUrl).then(() => {
-                          toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
-                        }).catch(() => {
-                          toast.error('Kunde inte kopiera länk');
-                        });
+                        console.error('Geocoding error:', error);
+                        // Fallback to simple address navigation
+                        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
                       }
                     }
                   }}
                   className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
-                  title="Navigera till upphämtningsplats"
+                  title="Navigera till upphämtningsplats med Google Maps"
                 >
                   <Navigation className="w-4 h-4" />
                 </button>
