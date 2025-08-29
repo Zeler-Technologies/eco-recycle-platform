@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LogOut, RefreshCw, Calendar, MapPin, Car, Phone, Euro, Camera, Navigation, Clock, CheckCircle, TrendingUp, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { RescheduleModal } from './RescheduleModal';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -492,14 +493,40 @@ const PantaBilenDriverAppNew = () => {
                 <span className="flex-1">{pickup.pickup_address}</span>
               </div>
               {pickup.pickup_address && (
-                <a 
-                  href={`https://maps.google.com/?q=${encodeURIComponent(pickup.pickup_address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 text-blue-600 hover:text-blue-800"
+                <button
+                  onClick={() => {
+                    const address = pickup.pickup_address;
+                    if (address) {
+                      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                      
+                      try {
+                        // Try to open in new tab
+                        const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                        
+                        // If blocked, show fallback
+                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                          // Copy to clipboard as fallback
+                          navigator.clipboard.writeText(mapsUrl).then(() => {
+                            toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
+                          }).catch(() => {
+                            toast.error('Kunde inte kopiera länk');
+                          });
+                        }
+                      } catch (error) {
+                        // Fallback: Copy URL to clipboard
+                        navigator.clipboard.writeText(mapsUrl).then(() => {
+                          toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
+                        }).catch(() => {
+                          toast.error('Kunde inte kopiera länk');
+                        });
+                      }
+                    }
+                  }}
+                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
+                  title="Navigera till upphämtningsplats"
                 >
                   <Navigation className="w-4 h-4" />
-                </a>
+                </button>
               )}
             </div>
             
@@ -616,14 +643,40 @@ const PantaBilenDriverAppNew = () => {
                 <span className="flex-1">{pickup.pickup_address || 'Adress saknas'}</span>
               </div>
               {pickup.pickup_address && (
-                <a 
-                  href={`https://maps.google.com/?q=${encodeURIComponent(pickup.pickup_address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 text-blue-600 hover:text-blue-800"
+                <button
+                  onClick={() => {
+                    const address = pickup.pickup_address;
+                    if (address) {
+                      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+                      
+                      try {
+                        // Try to open in new tab
+                        const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+                        
+                        // If blocked, show fallback
+                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                          // Copy to clipboard as fallback
+                          navigator.clipboard.writeText(mapsUrl).then(() => {
+                            toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
+                          }).catch(() => {
+                            toast.error('Kunde inte kopiera länk');
+                          });
+                        }
+                      } catch (error) {
+                        // Fallback: Copy URL to clipboard
+                        navigator.clipboard.writeText(mapsUrl).then(() => {
+                          toast.info('🗺️ Länk kopierad! Öppna i din webbläsare.');
+                        }).catch(() => {
+                          toast.error('Kunde inte kopiera länk');
+                        });
+                      }
+                    }
+                  }}
+                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
+                  title="Navigera till upphämtningsplats"
                 >
                   <Navigation className="w-4 h-4" />
-                </a>
+                </button>
               )}
             </div>
             
