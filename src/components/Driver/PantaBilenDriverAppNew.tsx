@@ -112,91 +112,186 @@ const PantaBilenDriverAppNew = () => {
     return Math.round(R * c * 10) / 10; // Round to 1 decimal
   };
 
-  // Navigation Button Component - Uses proper <a> tags to avoid blocking
+  // Navigation Button Component with full debugging
   const NavigationButton = ({ pickup }: { pickup: any }) => {
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [navigationUrl, setNavigationUrl] = useState('');
+    const [debugInfo, setDebugInfo] = useState('');
 
     const prepareNavigation = async () => {
+      console.log('🔍 DEBUG: prepareNavigation called');
+      
       const destinationAddress = pickup.pickup_address;
+      console.log('🔍 DEBUG: Destination address:', destinationAddress);
+      
       if (!destinationAddress) {
+        console.error('❌ No destination address available');
         toast.error('Ingen adress tillgänglig');
         return;
       }
 
       setIsGettingLocation(true);
+      setDebugInfo('Starting location fetch...');
       toast.info('📍 Hämtar din position...');
 
       try {
-        // Try to get current location
-        if ('geolocation' in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              // Success: We have the current location
-              const { latitude, longitude } = position.coords;
-              setUserLocation({ lat: latitude, lng: longitude });
-              const origin = `${latitude},${longitude}`;
-              const destination = encodeURIComponent(destinationAddress);
-              
-              // Create navigation URL with origin and destination
-              const navUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
-              setNavigationUrl(navUrl);
-              setIsGettingLocation(false);
-              toast.success('✅ Position hämtad - klicka igen för att navigera');
-            },
-            (error) => {
-              // Error: Fall back to destination-only navigation
-              console.warn('Could not get location:', error);
-              const destination = encodeURIComponent(destinationAddress);
-              const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-              setNavigationUrl(navUrl);
-              setIsGettingLocation(false);
-              toast.info('📍 Använder endast destination');
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0
-            }
-          );
-        } else {
-          // No geolocation support
+        // Check if geolocation is available
+        if (!('geolocation' in navigator)) {
+          console.error('❌ Geolocation not supported');
+          setDebugInfo('Geolocation not supported');
+          // Fallback to destination-only
           const destination = encodeURIComponent(destinationAddress);
           const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+          console.log('🔍 DEBUG: Fallback URL:', navUrl);
           setNavigationUrl(navUrl);
           setIsGettingLocation(false);
+          toast.warning('GPS stöds ej - använder endast destination');
+          return;
         }
+
+        console.log('🔍 DEBUG: Requesting geolocation...');
+        setDebugInfo('Requesting GPS permission...');
+
+        // Request current position
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // SUCCESS
+            console.log('✅ GPS Success:', position);
+            setDebugInfo(`GPS: ${position.coords.latitude}, ${position.coords.longitude}`);
+            
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
+            const origin = `${latitude},${longitude}`;
+            const destination = encodeURIComponent(destinationAddress);
+            
+            const navUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
+            console.log('🔍 DEBUG: Navigation URL with GPS:', navUrl);
+            
+            setNavigationUrl(navUrl);
+            setIsGettingLocation(false);
+            toast.success('✅ Position hämtad - klicka igen för att navigera');
+          },
+          (error) => {
+            // ERROR
+            console.error('❌ GPS Error:', error);
+            let errorMessage = 'GPS fel: ';
+            
+            switch(error.code) {
+              case error.PERMISSION_DENIED:
+                errorMessage += 'Tillåtelse nekad';
+                toast.error('GPS-tillåtelse nekad i webbläsaren');
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMessage += 'Position ej tillgänglig';
+                toast.error('GPS-position ej tillgänglig');
+                break;
+              case error.TIMEOUT:
+                errorMessage += 'Timeout';
+                toast.error('GPS-timeout - försök igen');
+                break;
+              default:
+                errorMessage += 'Okänt fel';
+                toast.error('GPS-fel uppstod');
+            }
+            
+            setDebugInfo(errorMessage);
+            
+            // Fallback to destination-only
+            const destination = encodeURIComponent(destinationAddress);
+            const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+            console.log('🔍 DEBUG: Fallback URL after error:', navUrl);
+            
+            setNavigationUrl(navUrl);
+            setIsGettingLocation(false);
+            toast.info('📍 Använder endast destination (utan GPS)');
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000, // Increased timeout to 10 seconds
+            maximumAge: 0
+          }
+        );
       } catch (error) {
-        console.error('Navigation error:', error);
-        toast.error('Fel vid navigering');
+        console.error('❌ Unexpected error:', error);
+        setDebugInfo(`Error: ${error.message}`);
+        toast.error('Oväntat fel: ' + error.message);
         setIsGettingLocation(false);
+        
+        // Final fallback
+        const destination = encodeURIComponent(destinationAddress);
+        const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+        setNavigationUrl(navUrl);
       }
     };
 
     // If we don't have a URL yet, show button to get location
     if (!navigationUrl) {
       return (
-        <button 
-          className="w-full bg-gray-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2"
-          onClick={prepareNavigation}
-          disabled={isGettingLocation}
-        >
-          {isGettingLocation ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-              Hämtar position...
-            </>
-          ) : (
-            <>
-              <Navigation className="w-5 h-5" />
-              Hämta vägbeskrivning
-            </>
+        <div className="w-full">
+          <button 
+            className="w-full bg-gray-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 mb-2"
+            onClick={prepareNavigation}
+            disabled={isGettingLocation}
+          >
+            {isGettingLocation ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                Hämtar position...
+              </>
+            ) : (
+              <>
+                <Navigation className="w-5 h-5" />
+                Hämta vägbeskrivning
+              </>
+            )}
+          </button>
+          
+          {/* Debug info for development */}
+          {debugInfo && (
+            <div className="text-xs text-gray-500 text-center">
+              Debug: {debugInfo}
+            </div>
           )}
-        </button>
+        </div>
       );
     }
 
     // Once we have URL, show it as a proper link
+    return (
+      <div className="w-full">
+        <a 
+          href={navigationUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 no-underline block mb-2"
+        >
+          <Navigation className="w-5 h-5" />
+          Öppna navigation
+        </a>
+        
+        {/* Show the URL for debugging */}
+        <div className="text-xs text-gray-500 break-all">
+          {navigationUrl}
+        </div>
+      </div>
+    );
+  };
+
+  // Simple Navigation Button without GPS (fallback option)
+  const SimpleNavigationButton = ({ pickup }: { pickup: any }) => {
+    if (!pickup?.pickup_address) {
+      return (
+        <button 
+          className="w-full bg-gray-400 text-white py-4 rounded-xl text-base font-semibold opacity-50 cursor-not-allowed"
+          disabled
+        >
+          Ingen adress tillgänglig
+        </button>
+      );
+    }
+
+    const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pickup.pickup_address)}`;
+
     return (
       <a 
         href={navigationUrl}
@@ -205,7 +300,7 @@ const PantaBilenDriverAppNew = () => {
         className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 no-underline block"
       >
         <Navigation className="w-5 h-5" />
-        Öppna navigation
+        Navigera till adress
       </a>
     );
   };
