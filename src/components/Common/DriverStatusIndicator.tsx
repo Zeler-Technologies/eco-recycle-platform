@@ -50,7 +50,7 @@ const DriverStatusIndicator: React.FC<DriverStatusIndicatorProps> = ({ driver, s
 
     const statusMap: Record<string, { label: string; color: string }> = {
       'available': { label: 'Tillgänglig', color: 'bg-green-500' },
-      'busy': { label: 'Upptagen', color: 'bg-orange-500' },
+      'busy': { label: 'Upptagen', color: 'bg-red-500' },
       'offline': { label: 'Offline', color: 'bg-gray-500' },
       'active': { label: 'Aktiv', color: 'bg-green-500' },
       'on_break': { label: 'Paus', color: 'bg-blue-500' }
