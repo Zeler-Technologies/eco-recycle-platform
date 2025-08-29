@@ -40,6 +40,7 @@ const PantaBilenDriverAppNew = () => {
   });
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   // Load stats on component mount and driver change
   useEffect(() => {
@@ -47,6 +48,17 @@ const PantaBilenDriverAppNew = () => {
       loadDriverStats();
     }
   }, [currentDriver?.id]);
+
+  // Request location permission on component mount
+  useEffect(() => {
+    if ('geolocation' in navigator && 'permissions' in navigator) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'prompt') {
+          console.log('Location permission not yet granted');
+        }
+      });
+    }
+  }, []);
 
   // Helper functions
   const getCurrentTime = () => new Date().toLocaleTimeString('sv-SE', { 
@@ -98,6 +110,89 @@ const PantaBilenDriverAppNew = () => {
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return Math.round(R * c * 10) / 10; // Round to 1 decimal
+  };
+
+  // GPS Navigation handler
+  const handleNavigation = async (destinationAddress: string) => {
+    if (!destinationAddress) {
+      toast.error('Ingen adress tillgänglig');
+      return;
+    }
+
+    // Show loading state
+    toast.info('🔄 Hämtar din position...');
+
+    try {
+      // Get current location
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // Success: We have the current location
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
+            const origin = `${latitude},${longitude}`;
+            const destination = encodeURIComponent(destinationAddress);
+            
+            // Create navigation URL with origin and destination
+            const navigationUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
+            
+            try {
+              // Try to open in new tab first
+              const newWindow = window.open(navigationUrl, '_blank', 'noopener,noreferrer');
+              
+              // If blocked, fallback to current tab
+              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                window.location.href = navigationUrl;
+              } else {
+                toast.success('🗺️ Navigation öppnad!');
+              }
+            } catch (error) {
+              // Fallback: direct navigation
+              window.location.href = navigationUrl;
+            }
+          },
+          (error) => {
+            // Error: Fall back to destination-only navigation
+            console.warn('Could not get location:', error);
+            toast.warning('Kunde inte hämta position - öppnar karta utan startpunkt');
+            
+            const destination = encodeURIComponent(destinationAddress);
+            const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+            
+            try {
+              const newWindow = window.open(navigationUrl, '_blank', 'noopener,noreferrer');
+              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                window.location.href = navigationUrl;
+              }
+            } catch (error) {
+              window.location.href = navigationUrl;
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        // Geolocation not supported
+        toast.error('Din enhet stöder inte GPS-positionering');
+        const destination = encodeURIComponent(destinationAddress);
+        const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+        
+        try {
+          const newWindow = window.open(navigationUrl, '_blank', 'noopener,noreferrer');
+          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+            window.location.href = navigationUrl;
+          }
+        } catch (error) {
+          window.location.href = navigationUrl;
+        }
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+      toast.error('Fel vid navigering');
+    }
   };
 
   // Driver status update handler
@@ -494,52 +589,12 @@ const PantaBilenDriverAppNew = () => {
               </div>
               {pickup.pickup_address && (
                 <button
-                  onClick={async () => {
-                    const address = pickup.pickup_address;
-                    if (address) {
-                      try {
-                        // Use your existing Google Maps API to get precise coordinates
-                        const { data: geocodeData, error } = await supabase.functions.invoke('google-maps', {
-                          body: {
-                            service: 'geocode',
-                            params: {
-                              address: address,
-                              language: 'sv'
-                            }
-                          }
-                        });
-
-                        if (error) throw error;
-
-                        if (geocodeData?.results?.[0]?.geometry?.location) {
-                          const { lat, lng } = geocodeData.results[0].geometry.location;
-                          // Create precise navigation URL with coordinates
-                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${geocodeData.results[0].place_id || ''}`;
-                          
-                          const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            // Fallback if popup blocked
-                            navigator.clipboard.writeText(mapsUrl).then(() => {
-                              toast.info('🗺️ Precis navigationslänk kopierad! Öppna i din webbläsare.');
-                            });
-                          }
-                        } else {
-                          // Fallback to address-based navigation
-                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-                          window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                        }
-                      } catch (error) {
-                        console.error('Geocoding error:', error);
-                        // Fallback to simple address navigation
-                        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-                        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                      }
-                    }
-                  }}
-                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
-                  title="Navigera till upphämtningsplats med Google Maps"
+                  onClick={() => handleNavigation(pickup.pickup_address)}
+                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded flex items-center gap-1"
+                  title="Navigera härifrån till upphämtningsplats"
                 >
                   <Navigation className="w-4 h-4" />
+                  <span className="text-xs hidden sm:inline">GPS</span>
                 </button>
               )}
             </div>
@@ -548,6 +603,18 @@ const PantaBilenDriverAppNew = () => {
               <div className="flex items-center text-sm text-purple-600">
                 <MapPin className="w-3 h-3 mr-2" />
                 <span>Avstånd: {distance} km</span>
+              </div>
+            )}
+            
+            {userLocation && pickup.pickup_latitude && pickup.pickup_longitude && (
+              <div className="flex items-center text-sm text-green-600">
+                <MapPin className="w-3 h-3 mr-2" />
+                <span>Avstånd från dig: {calculateDistance(
+                  userLocation.lat, 
+                  userLocation.lng, 
+                  pickup.pickup_latitude, 
+                  pickup.pickup_longitude
+                )} km</span>
               </div>
             )}
             
@@ -658,52 +725,12 @@ const PantaBilenDriverAppNew = () => {
               </div>
               {pickup.pickup_address && (
                 <button
-                  onClick={async () => {
-                    const address = pickup.pickup_address;
-                    if (address) {
-                      try {
-                        // Use your existing Google Maps API to get precise coordinates
-                        const { data: geocodeData, error } = await supabase.functions.invoke('google-maps', {
-                          body: {
-                            service: 'geocode',
-                            params: {
-                              address: address,
-                              language: 'sv'
-                            }
-                          }
-                        });
-
-                        if (error) throw error;
-
-                        if (geocodeData?.results?.[0]?.geometry?.location) {
-                          const { lat, lng } = geocodeData.results[0].geometry.location;
-                          // Create precise navigation URL with coordinates
-                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${geocodeData.results[0].place_id || ''}`;
-                          
-                          const newWindow = window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            // Fallback if popup blocked
-                            navigator.clipboard.writeText(mapsUrl).then(() => {
-                              toast.info('🗺️ Precis navigationslänk kopierad! Öppna i din webbläsare.');
-                            });
-                          }
-                        } else {
-                          // Fallback to address-based navigation
-                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-                          window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                        }
-                      } catch (error) {
-                        console.error('Geocoding error:', error);
-                        // Fallback to simple address navigation
-                        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-                        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-                      }
-                    }
-                  }}
-                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
-                  title="Navigera till upphämtningsplats med Google Maps"
+                  onClick={() => handleNavigation(pickup.pickup_address)}
+                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded flex items-center gap-1"
+                  title="Navigera härifrån till upphämtningsplats"
                 >
                   <Navigation className="w-4 h-4" />
+                  <span className="text-xs hidden sm:inline">GPS</span>
                 </button>
               )}
             </div>
@@ -712,6 +739,18 @@ const PantaBilenDriverAppNew = () => {
               <div className="flex items-center text-sm text-purple-600">
                 <MapPin className="w-3 h-3 mr-2" />
                 <span>Avstånd: {distance} km</span>
+              </div>
+            )}
+            
+            {userLocation && pickup.pickup_latitude && pickup.pickup_longitude && (
+              <div className="flex items-center text-sm text-green-600">
+                <MapPin className="w-3 h-3 mr-2" />
+                <span>Avstånd från dig: {calculateDistance(
+                  userLocation.lat, 
+                  userLocation.lng, 
+                  pickup.pickup_latitude, 
+                  pickup.pickup_longitude
+                )} km</span>
               </div>
             )}
             
