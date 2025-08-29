@@ -14,7 +14,8 @@ interface Driver {
   email?: string;
   vehicle_type?: string;
   vehicle_registration?: string;
-  driver_status: string;
+  driver_status?: string;
+  current_status?: string;
   status: string;
   current_latitude?: number;
   current_longitude?: number;
@@ -23,6 +24,7 @@ interface Driver {
   scrapyard_id?: number;
   max_capacity_kg?: number;
   last_location_update?: string;
+  last_activity_update?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -122,10 +124,19 @@ export const useDriverIntegration = () => {
       }
 
       // Map the direct query result to match expected format
+      const driverData = directDriverData as any;
       const mappedDriver: Driver = {
-        ...directDriverData,
-        driver_id: directDriverData.id,
-        status: directDriverData.driver_status
+        ...driverData,
+        driver_id: driverData.id,
+        status: driverData.status || 'off_duty',
+        driver_status: driverData.driver_status || 'offline',
+        current_status: driverData.current_status || 'offline',
+        auth_user_id: driverData.auth_user_id || '',
+        full_name: driverData.full_name || '',
+        phone_number: driverData.phone_number || '',
+        tenant_id: driverData.tenant_id || 0,
+        is_active: driverData.is_active || false,
+        created_at: driverData.created_at || ''
       };
       setDriver(mappedDriver);
 
