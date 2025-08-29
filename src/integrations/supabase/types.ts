@@ -844,6 +844,84 @@ export type Database = {
           },
         ]
       }
+      daily_summaries: {
+        Row: {
+          average_pickup_value: number | null
+          created_at: string | null
+          id: number
+          pickups_assigned: number | null
+          pickups_cancelled: number | null
+          pickups_completed: number | null
+          pickups_created: number | null
+          sms_cost: number | null
+          sms_failed: number | null
+          sms_sent: number | null
+          summary_date: string
+          tenant_id: number | null
+          total_quoted: number | null
+          total_revenue: number | null
+          total_weight_kg: number | null
+          updated_at: string | null
+          vehicles_excellent: number | null
+          vehicles_fair: number | null
+          vehicles_good: number | null
+          vehicles_poor: number | null
+          vehicles_scrap: number | null
+          vehicles_with_battery: number | null
+          vehicles_with_catalytic: number | null
+        }
+        Insert: {
+          average_pickup_value?: number | null
+          created_at?: string | null
+          id?: number
+          pickups_assigned?: number | null
+          pickups_cancelled?: number | null
+          pickups_completed?: number | null
+          pickups_created?: number | null
+          sms_cost?: number | null
+          sms_failed?: number | null
+          sms_sent?: number | null
+          summary_date: string
+          tenant_id?: number | null
+          total_quoted?: number | null
+          total_revenue?: number | null
+          total_weight_kg?: number | null
+          updated_at?: string | null
+          vehicles_excellent?: number | null
+          vehicles_fair?: number | null
+          vehicles_good?: number | null
+          vehicles_poor?: number | null
+          vehicles_scrap?: number | null
+          vehicles_with_battery?: number | null
+          vehicles_with_catalytic?: number | null
+        }
+        Update: {
+          average_pickup_value?: number | null
+          created_at?: string | null
+          id?: number
+          pickups_assigned?: number | null
+          pickups_cancelled?: number | null
+          pickups_completed?: number | null
+          pickups_created?: number | null
+          sms_cost?: number | null
+          sms_failed?: number | null
+          sms_sent?: number | null
+          summary_date?: string
+          tenant_id?: number | null
+          total_quoted?: number | null
+          total_revenue?: number | null
+          total_weight_kg?: number | null
+          updated_at?: string | null
+          vehicles_excellent?: number | null
+          vehicles_fair?: number | null
+          vehicles_good?: number | null
+          vehicles_poor?: number | null
+          vehicles_scrap?: number | null
+          vehicles_with_battery?: number | null
+          vehicles_with_catalytic?: number | null
+        }
+        Relationships: []
+      }
       deletion_info: {
         Row: {
           car_id: string
@@ -911,6 +989,61 @@ export type Database = {
           },
           {
             foreignKeyName: "distance_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      driver_activity_log: {
+        Row: {
+          created_at: string | null
+          driver_id: string | null
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          status: string
+          tenant_id: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          driver_id?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          status: string
+          tenant_id?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          driver_id?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          status?: string
+          tenant_id?: number | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_activity_log_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_activity_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "driver_activity_log_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1186,16 +1319,19 @@ export type Database = {
           created_at: string | null
           current_latitude: number | null
           current_longitude: number | null
+          current_status: string | null
           driver_status: string | null
           email: string | null
           full_name: string
           id: string
           is_active: boolean | null
+          last_activity_update: string | null
           last_location_update: string | null
           max_capacity_kg: number | null
           phone_number: string
           scrapyard_id: number | null
           status: Database["public"]["Enums"]["driver_status"]
+          status_updated_at: string | null
           tenant_id: number
           updated_at: string | null
           vehicle_registration: string | null
@@ -1207,16 +1343,19 @@ export type Database = {
           created_at?: string | null
           current_latitude?: number | null
           current_longitude?: number | null
+          current_status?: string | null
           driver_status?: string | null
           email?: string | null
           full_name: string
           id?: string
           is_active?: boolean | null
+          last_activity_update?: string | null
           last_location_update?: string | null
           max_capacity_kg?: number | null
           phone_number: string
           scrapyard_id?: number | null
           status?: Database["public"]["Enums"]["driver_status"]
+          status_updated_at?: string | null
           tenant_id: number
           updated_at?: string | null
           vehicle_registration?: string | null
@@ -1228,16 +1367,19 @@ export type Database = {
           created_at?: string | null
           current_latitude?: number | null
           current_longitude?: number | null
+          current_status?: string | null
           driver_status?: string | null
           email?: string | null
           full_name?: string
           id?: string
           is_active?: boolean | null
+          last_activity_update?: string | null
           last_location_update?: string | null
           max_capacity_kg?: number | null
           phone_number?: string
           scrapyard_id?: number | null
           status?: Database["public"]["Enums"]["driver_status"]
+          status_updated_at?: string | null
           tenant_id?: number
           updated_at?: string | null
           vehicle_registration?: string | null
@@ -1516,6 +1658,153 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      pickup_logs: {
+        Row: {
+          car_brand: string | null
+          car_model: string | null
+          car_year: number | null
+          condition_notes: string | null
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          driver_id: string | null
+          driver_name: string | null
+          event_timestamp: string | null
+          event_type: string
+          final_price: number | null
+          has_battery: boolean | null
+          has_catalytic_converter: boolean | null
+          id: number
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string | null
+          photos: Json | null
+          pickup_address: string | null
+          pickup_date: string | null
+          pickup_order_id: string | null
+          pickup_time: string | null
+          price_adjustments: Json | null
+          quoted_price: number | null
+          registration_number: string | null
+          sms_cost_total: number | null
+          sms_sent_count: number | null
+          tenant_id: number | null
+          transportstyrelsen_id: string | null
+          updated_at: string | null
+          vehicle_condition: string | null
+          weight_kg: number | null
+        }
+        Insert: {
+          car_brand?: string | null
+          car_model?: string | null
+          car_year?: number | null
+          condition_notes?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
+          event_timestamp?: string | null
+          event_type: string
+          final_price?: number | null
+          has_battery?: boolean | null
+          has_catalytic_converter?: boolean | null
+          id?: number
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          photos?: Json | null
+          pickup_address?: string | null
+          pickup_date?: string | null
+          pickup_order_id?: string | null
+          pickup_time?: string | null
+          price_adjustments?: Json | null
+          quoted_price?: number | null
+          registration_number?: string | null
+          sms_cost_total?: number | null
+          sms_sent_count?: number | null
+          tenant_id?: number | null
+          transportstyrelsen_id?: string | null
+          updated_at?: string | null
+          vehicle_condition?: string | null
+          weight_kg?: number | null
+        }
+        Update: {
+          car_brand?: string | null
+          car_model?: string | null
+          car_year?: number | null
+          condition_notes?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
+          event_timestamp?: string | null
+          event_type?: string
+          final_price?: number | null
+          has_battery?: boolean | null
+          has_catalytic_converter?: boolean | null
+          id?: number
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          photos?: Json | null
+          pickup_address?: string | null
+          pickup_date?: string | null
+          pickup_order_id?: string | null
+          pickup_time?: string | null
+          price_adjustments?: Json | null
+          quoted_price?: number | null
+          registration_number?: string | null
+          sms_cost_total?: number | null
+          sms_sent_count?: number | null
+          tenant_id?: number | null
+          transportstyrelsen_id?: string | null
+          updated_at?: string | null
+          vehicle_condition?: string | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickup_logs_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_pickup_orders_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_pickup_status_unified"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "pickup_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_unified_pickup_status"
+            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
@@ -2008,6 +2297,7 @@ export type Database = {
           created_at: string
           id: number
           is_active: boolean | null
+          is_primary: boolean | null
           latitude: number | null
           longitude: number | null
           materials_accepted: Json | null
@@ -2030,6 +2320,7 @@ export type Database = {
           created_at?: string
           id?: never
           is_active?: boolean | null
+          is_primary?: boolean | null
           latitude?: number | null
           longitude?: number | null
           materials_accepted?: Json | null
@@ -2052,6 +2343,7 @@ export type Database = {
           created_at?: string
           id?: never
           is_active?: boolean | null
+          is_primary?: boolean | null
           latitude?: number | null
           longitude?: number | null
           materials_accepted?: Json | null
@@ -2078,6 +2370,102 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      sms_logs: {
+        Row: {
+          cost_amount: number
+          created_at: string | null
+          currency: string | null
+          delivered_at: string | null
+          id: number
+          message_content: string | null
+          message_type: string
+          pickup_log_id: number | null
+          pickup_order_id: string | null
+          provider: string | null
+          provider_message_id: string | null
+          provider_response: Json | null
+          recipient_name: string | null
+          recipient_phone: string
+          sent_at: string | null
+          status: string | null
+          tenant_id: number | null
+        }
+        Insert: {
+          cost_amount?: number
+          created_at?: string | null
+          currency?: string | null
+          delivered_at?: string | null
+          id?: number
+          message_content?: string | null
+          message_type: string
+          pickup_log_id?: number | null
+          pickup_order_id?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          recipient_name?: string | null
+          recipient_phone: string
+          sent_at?: string | null
+          status?: string | null
+          tenant_id?: number | null
+        }
+        Update: {
+          cost_amount?: number
+          created_at?: string | null
+          currency?: string | null
+          delivered_at?: string | null
+          id?: number
+          message_content?: string | null
+          message_type?: string
+          pickup_log_id?: number | null
+          pickup_order_id?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          recipient_name?: string | null
+          recipient_phone?: string
+          sent_at?: string | null
+          status?: string | null
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_pickup_log_id_fkey"
+            columns: ["pickup_log_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_pickup_orders_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_pickup_status_unified"
+            referencedColumns: ["pickup_order_id"]
+          },
+          {
+            foreignKeyName: "sms_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_unified_pickup_status"
+            referencedColumns: ["pickup_order_id"]
           },
         ]
       }
