@@ -22,7 +22,8 @@ const PantaBilenDriverAppNew = () => {
     error,
     handleSelfAssignment,
     updatePickupStatus,
-    refreshAllPickupData
+    refreshAllPickupData,
+    loadDriverInfo
   } = useDriverIntegration();
 
   // Local state
@@ -116,8 +117,12 @@ const PantaBilenDriverAppNew = () => {
       if (error) throw error;
       
       toast.success(`Status ändrad till: ${getDriverStatusText(newStatus)}`);
-      // Refresh driver data
-      await refreshAllPickupData();
+      
+      // Refresh driver data AND pickup data
+      await Promise.all([
+        loadDriverInfo(),
+        refreshAllPickupData()
+      ]);
     } catch (error) {
       toast.error('Kunde inte uppdatera status');
     } finally {

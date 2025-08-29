@@ -395,11 +395,12 @@ export const useDriverIntegration = () => {
     handleSelfAssignment,
     loadAvailablePickups,
     loadAssignedPickups,
+    loadDriverInfo,
     
     // Legacy function stubs for backward compatibility
     updateDriverStatus: async () => console.log('updateDriverStatus not implemented'),
     refreshData: () => Promise.all([loadAvailablePickups(), loadAssignedPickups()]),
     updatePickupStatus: handleStatusTransition,
-    refreshAllPickupData: () => Promise.all([loadAvailablePickups(), loadAssignedPickups()])
+    refreshAllPickupData: () => Promise.all([loadAvailablePickups(), loadAssignedPickups(), loadDriverInfo()])
   };
 };
