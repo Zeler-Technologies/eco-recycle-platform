@@ -112,198 +112,205 @@ const PantaBilenDriverAppNew = () => {
     return Math.round(R * c * 10) / 10; // Round to 1 decimal
   };
 
-  // Navigation Button Component with full debugging
+  // Enhanced Navigation Button Component
   const NavigationButton = ({ pickup }: { pickup: any }) => {
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [navigationUrl, setNavigationUrl] = useState('');
-    const [debugInfo, setDebugInfo] = useState('');
 
     const prepareNavigation = async () => {
-      console.log('🔍 DEBUG: prepareNavigation called');
-      
       const destinationAddress = pickup.pickup_address;
-      console.log('🔍 DEBUG: Destination address:', destinationAddress);
       
       if (!destinationAddress) {
-        console.error('❌ No destination address available');
         toast.error('Ingen adress tillgänglig');
         return;
       }
 
       setIsGettingLocation(true);
-      setDebugInfo('Starting location fetch...');
       toast.info('📍 Hämtar din position...');
 
       try {
-        // Check if geolocation is available
         if (!('geolocation' in navigator)) {
-          console.error('❌ Geolocation not supported');
-          setDebugInfo('Geolocation not supported');
-          // Fallback to destination-only
           const destination = encodeURIComponent(destinationAddress);
           const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-          console.log('🔍 DEBUG: Fallback URL:', navUrl);
           setNavigationUrl(navUrl);
           setIsGettingLocation(false);
           toast.warning('GPS stöds ej - använder endast destination');
           return;
         }
 
-        console.log('🔍 DEBUG: Requesting geolocation...');
-        setDebugInfo('Requesting GPS permission...');
-
-        // Request current position
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            // SUCCESS
-            console.log('✅ GPS Success:', position);
-            setDebugInfo(`GPS: ${position.coords.latitude}, ${position.coords.longitude}`);
-            
             const { latitude, longitude } = position.coords;
             setUserLocation({ lat: latitude, lng: longitude });
             const origin = `${latitude},${longitude}`;
             const destination = encodeURIComponent(destinationAddress);
             
             const navUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
-            console.log('🔍 DEBUG: Navigation URL with GPS:', navUrl);
-            
             setNavigationUrl(navUrl);
             setIsGettingLocation(false);
-            toast.success('✅ Position hämtad - klicka igen för att navigera');
+            toast.success('✅ Position hämtad - navigering redo');
           },
           (error) => {
-            // ERROR
-            console.error('❌ GPS Error:', error);
-            let errorMessage = 'GPS fel: ';
-            
-            switch(error.code) {
-              case error.PERMISSION_DENIED:
-                errorMessage += 'Tillåtelse nekad';
-                toast.error('GPS-tillåtelse nekad i webbläsaren');
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMessage += 'Position ej tillgänglig';
-                toast.error('GPS-position ej tillgänglig');
-                break;
-              case error.TIMEOUT:
-                errorMessage += 'Timeout';
-                toast.error('GPS-timeout - försök igen');
-                break;
-              default:
-                errorMessage += 'Okänt fel';
-                toast.error('GPS-fel uppstod');
-            }
-            
-            setDebugInfo(errorMessage);
-            
-            // Fallback to destination-only
             const destination = encodeURIComponent(destinationAddress);
             const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-            console.log('🔍 DEBUG: Fallback URL after error:', navUrl);
-            
             setNavigationUrl(navUrl);
             setIsGettingLocation(false);
-            toast.info('📍 Använder endast destination (utan GPS)');
+            toast.info('📍 Använder endast destination');
           },
           {
             enableHighAccuracy: true,
-            timeout: 10000, // Increased timeout to 10 seconds
+            timeout: 10000,
             maximumAge: 0
           }
         );
       } catch (error) {
-        console.error('❌ Unexpected error:', error);
-        setDebugInfo(`Error: ${error.message}`);
-        toast.error('Oväntat fel: ' + error.message);
-        setIsGettingLocation(false);
-        
-        // Final fallback
         const destination = encodeURIComponent(destinationAddress);
         const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
         setNavigationUrl(navUrl);
+        setIsGettingLocation(false);
       }
     };
 
-    // If we don't have a URL yet, show button to get location
+    // Primary navigation button - always green and prominent
     if (!navigationUrl) {
       return (
-        <div className="w-full">
-          <button 
-            className="w-full bg-gray-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 mb-2"
-            onClick={prepareNavigation}
-            disabled={isGettingLocation}
-          >
-            {isGettingLocation ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                Hämtar position...
-              </>
-            ) : (
-              <>
-                <Navigation className="w-5 h-5" />
-                Hämta vägbeskrivning
-              </>
-            )}
-          </button>
-          
-          {/* Debug info for development */}
-          {debugInfo && (
-            <div className="text-xs text-gray-500 text-center">
-              Debug: {debugInfo}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Once we have URL, show it as a proper link
-    return (
-      <div className="w-full">
-        <a 
-          href={navigationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 no-underline block mb-2"
-        >
-          <Navigation className="w-5 h-5" />
-          Öppna navigation
-        </a>
-        
-        {/* Show the URL for debugging */}
-        <div className="text-xs text-gray-500 break-all">
-          {navigationUrl}
-        </div>
-      </div>
-    );
-  };
-
-  // Simple Navigation Button without GPS (fallback option)
-  const SimpleNavigationButton = ({ pickup }: { pickup: any }) => {
-    if (!pickup?.pickup_address) {
-      return (
         <button 
-          className="w-full bg-gray-400 text-white py-4 rounded-xl text-base font-semibold opacity-50 cursor-not-allowed"
-          disabled
+          className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-bold shadow-lg flex items-center justify-center gap-3 transition-all hover:bg-green-700 disabled:opacity-70"
+          onClick={prepareNavigation}
+          disabled={isGettingLocation}
         >
-          Ingen adress tillgänglig
+          {isGettingLocation ? (
+            <>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+              <span>Hämtar position...</span>
+            </>
+          ) : (
+            <>
+              <Navigation className="w-6 h-6" />
+              <span>Starta GPS Navigation</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </>
+          )}
         </button>
       );
     }
-
-    const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pickup.pickup_address)}`;
 
     return (
       <a 
         href={navigationUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 no-underline block"
+        className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-bold shadow-lg flex items-center justify-center gap-3 no-underline block transition-all hover:bg-green-700"
       >
-        <Navigation className="w-5 h-5" />
-        Navigera till adress
+        <Navigation className="w-6 h-6" />
+        <span>Öppna Navigation</span>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
       </a>
     );
   };
+
+  // Enhanced Pickup Card Component
+  const ImprovedPickupCard = ({ pickup, isActive }: { pickup: any; isActive?: boolean }) => (
+    <div className={`
+      bg-white rounded-xl shadow-md p-4 mb-4 border-2 transition-all
+      ${isActive ? 'border-green-500 shadow-lg scale-[1.02]' : 'border-transparent'}
+    `}>
+      {/* Active indicator */}
+      {isActive && (
+        <div className="flex items-center gap-2 mb-3 text-green-600">
+          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+          <span className="text-sm font-semibold">Aktiv upphämtning</span>
+        </div>
+      )}
+      
+      {/* Customer info - More prominent */}
+      <div className="mb-3">
+        <h3 className="text-lg font-bold text-gray-900">{pickup.owner_name}</h3>
+        <a href={`tel:${pickup.phone_number}`} className="flex items-center gap-2 text-blue-600 mt-1 hover:text-blue-700">
+          <Phone className="w-4 h-4" />
+          <span className="font-medium">{pickup.phone_number}</span>
+        </a>
+      </div>
+      
+      {/* Address - Clickable for navigation */}
+      <div className="mb-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+        <div className="flex items-start gap-2">
+          <MapPin className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium text-gray-900">{pickup.pickup_address}</p>
+            {userLocation && pickup.latitude && pickup.longitude && (
+              <p className="text-sm text-green-600 mt-1">
+                📍 {calculateDistance(userLocation.lat, userLocation.lng, pickup.latitude, pickup.longitude)} km bort
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Car info */}
+      <div className="flex items-center gap-2 mb-4 text-gray-700">
+        <Car className="w-5 h-5" />
+        <span className="font-medium">
+          {pickup.car_brand} {pickup.car_model} • {pickup.registration_number}
+        </span>
+      </div>
+      
+      {/* Date/Time */}
+      <div className="flex items-center gap-2 mb-4 text-gray-600">
+        <Calendar className="w-4 h-4" />
+        <span className="text-sm">{formatDate(pickup.scheduled_date)}</span>
+      </div>
+      
+      {/* Action buttons - Based on status */}
+      <div className="space-y-2">
+        {pickup.status === 'scheduled' && (
+          <button 
+            onClick={() => handleSelfAssign(pickup.id, pickup.owner_name)}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
+            disabled={isAssigning}
+          >
+            {isAssigning ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                Tilldela mig
+              </>
+            )}
+          </button>
+        )}
+        
+        {pickup.status === 'assigned' && (
+          <div className="flex gap-2">
+            <button 
+              onClick={() => handleStatusUpdate(pickup.id, 'in_progress', 'Påbörjade upphämtning')}
+              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8" />
+                  </svg>
+                  Påbörja
+                </>
+              )}
+            </button>
+          </div>
+        )}
+        
+        {pickup.status === 'in_progress' && (
+          <NavigationButton pickup={pickup} />
+        )}
+      </div>
+    </div>
+  );
 
   // Driver status update handler
   const updateDriverStatus = async (newStatus: string) => {
@@ -337,6 +344,32 @@ const PantaBilenDriverAppNew = () => {
   };
 
   // Load driver stats
+  // Enhanced Daily Stats Component
+  const DailyStats = ({ stats }: { stats: any }) => {
+    const inProgress = assignedPickups.filter(p => p.status === 'in_progress').length;
+    const pending = assignedPickups.filter(p => p.status === 'assigned').length;
+    
+    return (
+      <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+        <h3 className="font-bold text-gray-900 mb-3">Dagens översikt</h3>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{stats.todayCompleted}</div>
+            <div className="text-sm text-gray-600">Klara</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{inProgress}</div>
+            <div className="text-sm text-gray-600">Pågående</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-amber-600">{pending}</div>
+            <div className="text-sm text-gray-600">Väntande</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const loadDriverStats = async () => {
     if (!currentDriver?.id) return;
     
@@ -1064,8 +1097,8 @@ const PantaBilenDriverAppNew = () => {
         {/* Driver Status Toggle */}
         <DriverStatusToggle />
         
-        {/* Driver Stats */}
-        <DriverStats />
+        {/* Enhanced Daily Stats */}
+        <DailyStats stats={driverStats} />
         
         {/* Tab Navigation */}
         <TabNavigation />
@@ -1091,9 +1124,10 @@ const PantaBilenDriverAppNew = () => {
             ) : (
               <div>
                 {availablePickups.map((pickup) => (
-                  <AvailablePickupCard
+                  <ImprovedPickupCard
                     key={pickup.pickup_order_id}
                     pickup={pickup}
+                    isActive={false}
                   />
                 ))}
               </div>
@@ -1121,9 +1155,10 @@ const PantaBilenDriverAppNew = () => {
             ) : (
               <div>
                 {assignedPickups.map((pickup) => (
-                  <AssignedPickupCard
+                  <ImprovedPickupCard
                     key={pickup.pickup_order_id}
                     pickup={pickup}
+                    isActive={pickup.status === 'in_progress'}
                   />
                 ))}
               </div>
