@@ -112,87 +112,102 @@ const PantaBilenDriverAppNew = () => {
     return Math.round(R * c * 10) / 10; // Round to 1 decimal
   };
 
-  // GPS Navigation handler
-  const handleNavigation = async (destinationAddress: string) => {
-    if (!destinationAddress) {
-      toast.error('Ingen adress tillgänglig');
-      return;
-    }
+  // Navigation Button Component - Uses proper <a> tags to avoid blocking
+  const NavigationButton = ({ pickup }: { pickup: any }) => {
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
+    const [navigationUrl, setNavigationUrl] = useState('');
 
-    // Show loading state
-    toast.info('🔄 Hämtar din position...');
-
-    try {
-      // Get current location
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            // Success: We have the current location
-            const { latitude, longitude } = position.coords;
-            setUserLocation({ lat: latitude, lng: longitude });
-            const origin = `${latitude},${longitude}`;
-            const destination = encodeURIComponent(destinationAddress);
-            
-            // Create navigation URL with origin and destination
-            const navigationUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
-            
-            try {
-              // Try to open in new tab first
-              const newWindow = window.open(navigationUrl, '_blank', 'noopener,noreferrer');
-              
-              // If blocked, fallback to current tab
-              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                window.location.href = navigationUrl;
-              } else {
-                toast.success('🗺️ Navigation öppnad!');
-              }
-            } catch (error) {
-              // Fallback: direct navigation
-              window.location.href = navigationUrl;
-            }
-          },
-          (error) => {
-            // Error: Fall back to destination-only navigation
-            console.warn('Could not get location:', error);
-            toast.warning('Kunde inte hämta position - öppnar karta utan startpunkt');
-            
-            const destination = encodeURIComponent(destinationAddress);
-            const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-            
-            try {
-              const newWindow = window.open(navigationUrl, '_blank', 'noopener,noreferrer');
-              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                window.location.href = navigationUrl;
-              }
-            } catch (error) {
-              window.location.href = navigationUrl;
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
-          }
-        );
-      } else {
-        // Geolocation not supported
-        toast.error('Din enhet stöder inte GPS-positionering');
-        const destination = encodeURIComponent(destinationAddress);
-        const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-        
-        try {
-          const newWindow = window.open(navigationUrl, '_blank', 'noopener,noreferrer');
-          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-            window.location.href = navigationUrl;
-          }
-        } catch (error) {
-          window.location.href = navigationUrl;
-        }
+    const prepareNavigation = async () => {
+      const destinationAddress = pickup.pickup_address;
+      if (!destinationAddress) {
+        toast.error('Ingen adress tillgänglig');
+        return;
       }
-    } catch (error) {
-      console.error('Navigation error:', error);
-      toast.error('Fel vid navigering');
+
+      setIsGettingLocation(true);
+      toast.info('📍 Hämtar din position...');
+
+      try {
+        // Try to get current location
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              // Success: We have the current location
+              const { latitude, longitude } = position.coords;
+              setUserLocation({ lat: latitude, lng: longitude });
+              const origin = `${latitude},${longitude}`;
+              const destination = encodeURIComponent(destinationAddress);
+              
+              // Create navigation URL with origin and destination
+              const navUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
+              setNavigationUrl(navUrl);
+              setIsGettingLocation(false);
+              toast.success('✅ Position hämtad - klicka igen för att navigera');
+            },
+            (error) => {
+              // Error: Fall back to destination-only navigation
+              console.warn('Could not get location:', error);
+              const destination = encodeURIComponent(destinationAddress);
+              const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+              setNavigationUrl(navUrl);
+              setIsGettingLocation(false);
+              toast.info('📍 Använder endast destination');
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0
+            }
+          );
+        } else {
+          // No geolocation support
+          const destination = encodeURIComponent(destinationAddress);
+          const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+          setNavigationUrl(navUrl);
+          setIsGettingLocation(false);
+        }
+      } catch (error) {
+        console.error('Navigation error:', error);
+        toast.error('Fel vid navigering');
+        setIsGettingLocation(false);
+      }
+    };
+
+    // If we don't have a URL yet, show button to get location
+    if (!navigationUrl) {
+      return (
+        <button 
+          className="w-full bg-gray-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2"
+          onClick={prepareNavigation}
+          disabled={isGettingLocation}
+        >
+          {isGettingLocation ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+              Hämtar position...
+            </>
+          ) : (
+            <>
+              <Navigation className="w-5 h-5" />
+              Hämta vägbeskrivning
+            </>
+          )}
+        </button>
+      );
     }
+
+    // Once we have URL, show it as a proper link
+    return (
+      <a 
+        href={navigationUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full bg-green-600 text-white py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 no-underline block"
+      >
+        <Navigation className="w-5 h-5" />
+        Öppna navigation
+      </a>
+    );
   };
 
   // Driver status update handler
@@ -588,14 +603,9 @@ const PantaBilenDriverAppNew = () => {
                 <span className="flex-1">{pickup.pickup_address}</span>
               </div>
               {pickup.pickup_address && (
-                <button
-                  onClick={() => handleNavigation(pickup.pickup_address)}
-                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded flex items-center gap-1"
-                  title="Navigera härifrån till upphämtningsplats"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span className="text-xs hidden sm:inline">GPS</span>
-                </button>
+                <div className="ml-2">
+                  <NavigationButton pickup={pickup} />
+                </div>
               )}
             </div>
             
@@ -724,14 +734,9 @@ const PantaBilenDriverAppNew = () => {
                 <span className="flex-1">{pickup.pickup_address || 'Adress saknas'}</span>
               </div>
               {pickup.pickup_address && (
-                <button
-                  onClick={() => handleNavigation(pickup.pickup_address)}
-                  className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded flex items-center gap-1"
-                  title="Navigera härifrån till upphämtningsplats"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span className="text-xs hidden sm:inline">GPS</span>
-                </button>
+                <div className="ml-2">
+                  <NavigationButton pickup={pickup} />
+                </div>
               )}
             </div>
             
