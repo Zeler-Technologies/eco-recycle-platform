@@ -196,13 +196,29 @@ export class PickupLoggingService {
 
       // Update SMS count and cost in pickup_logs if associated with a pickup
       if (data.pickupOrderId) {
-        const { error: updateError } = await supabase.rpc('increment_sms_count', {
-          p_pickup_order_id: data.pickupOrderId,
-          p_cost_to_add: costAmount
-        });
+        // First, let's get the current values
+        const { data: currentLog, error: fetchError } = await supabase
+          .from('pickup_logs')
+          .select('sms_sent_count, sms_cost_total')
+          .eq('pickup_order_id', data.pickupOrderId)
+          .eq('event_type', 'completed')
+          .single();
 
-        if (updateError) {
-          console.error('Error updating SMS count in pickup_logs:', updateError);
+        if (!fetchError && currentLog) {
+          // Update with new values
+          const { error: updateError } = await supabase
+            .from('pickup_logs')
+            .update({
+              sms_sent_count: (currentLog.sms_sent_count || 0) + 1,
+              sms_cost_total: (currentLog.sms_cost_total || 0) + costAmount,
+              updated_at: new Date().toISOString()
+            })
+            .eq('pickup_order_id', data.pickupOrderId)
+            .eq('event_type', 'completed');
+
+          if (updateError) {
+            console.error('Error updating SMS count in pickup_logs:', updateError);
+          }
         }
       }
 
