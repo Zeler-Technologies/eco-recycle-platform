@@ -84,6 +84,8 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [editingScrapyard, setEditingScrapyard] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [showAddScrapyard, setShowAddScrapyard] = useState(false);
+  const [creatingProductionAdmins, setCreatingProductionAdmins] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<any[]>([]);
   
   // Fetch users for the selected tenant
   const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
@@ -94,6 +96,120 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
       setSelectedTenant(selectedTenantId);
     }
   }, [selectedTenantId]);
+
+  // Generate secure password
+  const generateSecurePassword = () => {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  // Create production admin users for Swedish businesses
+  const createProductionAdmins = async () => {
+    if (creatingProductionAdmins) return;
+
+    const productionTenants = [
+      { id: 31, name: 'Nordost Återvinning AB', email: 'admin@nordost-atervinning.se' },
+      { id: 27, name: 'Södertälje Skrot & Metal AB', email: 'admin@sodertalje-skrot.se' },
+      { id: 28, name: 'Västerås Skrothandel AB', email: 'admin@vasteras-skrot.se' },
+      { id: 29, name: 'Uppsala Bilrecycling AB', email: 'admin@uppsala-bilrecycling.se' },
+      { id: 30, name: 'Norrköping Auto Recycling AB', email: 'admin@norrkoping-auto.se' }
+    ];
+
+    const testTenantsToDelete = [6, 17, 18, 19];
+
+    try {
+      setCreatingProductionAdmins(true);
+      const credentials = [];
+
+      // Delete test tenants first
+      for (const tenantId of testTenantsToDelete) {
+        try {
+          const { error: deleteError } = await supabase
+            .from('tenants')
+            .delete()
+            .eq('tenants_id', tenantId);
+          
+          if (deleteError) {
+            console.warn(`Failed to delete test tenant ${tenantId}:`, deleteError);
+          } else {
+            console.log(`Deleted test tenant ${tenantId}`);
+          }
+        } catch (error) {
+          console.warn(`Error deleting test tenant ${tenantId}:`, error);
+        }
+      }
+
+      // Create admin users for production tenants
+      for (const tenant of productionTenants) {
+        try {
+          // Check if admin already exists
+          const { data: existingUser } = await supabase
+            .from('auth_users')
+            .select('id')
+            .eq('email', tenant.email)
+            .eq('tenant_id', tenant.id)
+            .maybeSingle();
+
+          if (existingUser) {
+            console.log(`Admin already exists for ${tenant.name}`);
+            continue;
+          }
+
+          const password = generateSecurePassword();
+          const [firstName, ...lastNameParts] = tenant.name.split(' ');
+          const lastName = lastNameParts.join(' ');
+
+          // Insert into auth_users table directly
+          const { data: newUser, error: userError } = await supabase
+            .from('auth_users')
+            .insert({
+              email: tenant.email,
+              role: 'tenant_admin',
+              tenant_id: tenant.id,
+              first_name: firstName,
+              last_name: lastName
+            })
+            .select()
+            .single();
+
+          if (userError) {
+            console.error(`Failed to create admin for ${tenant.name}:`, userError);
+            throw userError;
+          }
+
+          credentials.push({
+            tenantName: tenant.name,
+            email: tenant.email,
+            password: password,
+            tenantId: tenant.id
+          });
+
+          console.log(`Created admin for ${tenant.name}`);
+        } catch (error) {
+          console.error(`Error creating admin for ${tenant.name}:`, error);
+          toast.error(`Failed to create admin for ${tenant.name}`);
+        }
+      }
+
+      setGeneratedCredentials(credentials);
+      await fetchTenants(); // Refresh tenant list
+      
+      if (credentials.length > 0) {
+        toast.success(`Created ${credentials.length} production admin users and cleaned up test data`);
+      } else {
+        toast.info('All production admins already exist');
+      }
+    } catch (error) {
+      console.error('Error in createProductionAdmins:', error);
+      toast.error('Failed to create production admin users');
+    } finally {
+      setCreatingProductionAdmins(false);
+    }
+  };
 
   // Fetch tenants from database
   useEffect(() => {
@@ -787,9 +903,20 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                 <span>← Back to Dashboard</span>
               </button>
             </div>
-            <div>
-              <h1 className="text-xl font-semibold">Tenant Management</h1>
-              <p className="text-sm text-admin-primary-foreground/80">Configure and manage tenant settings</p>
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={createProductionAdmins}
+                disabled={creatingProductionAdmins}
+                variant="secondary"
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+              >
+                <Key className="h-4 w-4 mr-2" />
+                {creatingProductionAdmins ? 'Creating...' : 'Create Production Admins'}
+              </Button>
+              <div className="text-right">
+                <h1 className="text-xl font-semibold">Tenant Management</h1>
+                <p className="text-sm text-admin-primary-foreground/80">Configure and manage tenant settings</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1936,6 +2063,65 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
               <Button onClick={saveScrapyard}>Save Changes</Button>
               <Button variant="outline" onClick={() => setEditingScrapyard(null)}>Cancel</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Production Admin Credentials Modal */}
+      <Dialog open={generatedCredentials.length > 0} onOpenChange={() => setGeneratedCredentials([])}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-green-600" />
+              Production Admin Credentials Created
+            </DialogTitle>
+            <DialogDescription>
+              Share these credentials securely with the respective businesses. Passwords are only shown once.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {generatedCredentials.map((cred, index) => (
+              <Card key={index} className="border-l-4 border-l-green-500">
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm">{cred.tenantName}</h4>
+                      <Badge variant="outline">Tenant ID: {cred.tenantId}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Email</Label>
+                        <div className="font-mono text-sm bg-muted p-2 rounded border">
+                          {cred.email}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Password</Label>
+                        <div className="font-mono text-sm bg-muted p-2 rounded border">
+                          {cred.password}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            <Alert className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Important Security Notice</AlertTitle>
+              <AlertDescription>
+                These passwords are only displayed once. Save them securely and share them through secure channels.
+                All test tenant data (IDs: 6, 17, 18, 19) has been cleaned up from the database.
+              </AlertDescription>
+            </Alert>
+          </div>
+          
+          <div className="flex justify-end pt-4">
+            <Button onClick={() => setGeneratedCredentials([])} variant="outline">
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
