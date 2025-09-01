@@ -33,8 +33,14 @@ import {
   Key,
   History,
   Car,
-  Percent
+  Percent,
+  Building,
+  Edit2,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TenantManagementProps {
   onBack: () => void;
@@ -71,6 +77,14 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [tenantScrapyards, setTenantScrapyards] = useState<any[]>([]);
   const [scrapyardsLoading, setScrapyardsLoading] = useState(false);
   const [scrapyardError, setScrapyardError] = useState<string | null>(null);
+  
+  // New state for address management UI
+  const [editingTenantAddress, setEditingTenantAddress] = useState(false);
+  const [newTenantAddress, setNewTenantAddress] = useState('');
+  const [editingScrapyard, setEditingScrapyard] = useState<any>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [showAddScrapyard, setShowAddScrapyard] = useState(false);
+  
   // Fetch users for the selected tenant
   const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
 
@@ -374,6 +388,136 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
     refetchUsers();
     toast.success('User management completed successfully');
   };
+
+  // New functions for address management
+  const updateTenantAddress = async () => {
+    if (!selectedTenant || !newTenantAddress.trim()) {
+      toast.error('Please enter a valid address');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ base_address: newTenantAddress.trim() })
+        .eq('tenants_id', selectedTenant);
+
+      if (error) throw error;
+
+      // Update local state
+      setTenants(prev => prev.map(t => 
+        t.tenants_id === selectedTenant 
+          ? { ...t, base_address: newTenantAddress.trim() }
+          : t
+      ));
+      
+      setEditingTenantAddress(false);
+      setNewTenantAddress('');
+      toast.success('Tenant address updated successfully');
+    } catch (error) {
+      console.error('Error updating tenant address:', error);
+      toast.error('Failed to update tenant address');
+    }
+  };
+
+  const editScrapyard = (scrapyard: any) => {
+    setEditForm({ ...scrapyard });
+    setEditingScrapyard(scrapyard.id);
+  };
+
+  const makePrimary = async (scrapyardId: number) => {
+    if (!selectedTenant) return;
+
+    try {
+      // Set all scrapyards to non-primary
+      const { error: resetError } = await supabase
+        .from('scrapyards')
+        .update({ is_primary: false })
+        .eq('tenant_id', selectedTenant);
+
+      if (resetError) throw resetError;
+
+      // Set selected scrapyard as primary
+      const { error: setPrimaryError } = await supabase
+        .from('scrapyards')
+        .update({ is_primary: true })
+        .eq('id', scrapyardId);
+
+      if (setPrimaryError) throw setPrimaryError;
+
+      // Refresh scrapyards
+      await fetchTenantWithScrapyards(selectedTenant);
+      toast.success('Primary scrapyard updated');
+    } catch (error) {
+      console.error('Error setting primary scrapyard:', error);
+      toast.error('Failed to update primary scrapyard');
+    }
+  };
+
+  const saveScrapyard = async () => {
+    if (!editForm || !editingScrapyard) return;
+
+    try {
+      const { error } = await supabase
+        .from('scrapyards')
+        .update({
+          name: editForm.name,
+          address: editForm.address,
+          postal_code: editForm.postal_code,
+          city: editForm.city,
+          contact_person: editForm.contact_person,
+          contact_phone: editForm.contact_phone,
+          contact_email: editForm.contact_email,
+        })
+        .eq('id', editingScrapyard);
+
+      if (error) throw error;
+
+      // Handle primary scrapyard change
+      if (editForm.is_primary && selectedTenant) {
+        await makePrimary(editingScrapyard);
+      }
+
+      // Refresh scrapyards
+      if (selectedTenant) {
+        await fetchTenantWithScrapyards(selectedTenant);
+      }
+      
+      setEditingScrapyard(null);
+      setEditForm({});
+      toast.success('Scrapyard updated successfully');
+    } catch (error) {
+      console.error('Error updating scrapyard:', error);
+      toast.error('Failed to update scrapyard');
+    }
+  };
+
+  const deleteScrapyard = async (scrapyardId: number) => {
+    if (!selectedTenant) return;
+
+    try {
+      const { error } = await supabase
+        .from('scrapyards')
+        .delete()
+        .eq('id', scrapyardId);
+
+      if (error) throw error;
+
+      // Refresh scrapyards
+      await fetchTenantWithScrapyards(selectedTenant);
+      toast.success('Scrapyard location removed');
+    } catch (error) {
+      console.error('Error deleting scrapyard:', error);
+      toast.error('Failed to remove scrapyard location');
+    }
+  };
+
+  // Initialize tenant address when editing starts
+  useEffect(() => {
+    if (editingTenantAddress && selectedTenantData) {
+      setNewTenantAddress(selectedTenantData.base_address || '');
+    }
+  }, [editingTenantAddress, selectedTenantData]);
 
   const handleSaveChanges = async () => {
     if (!selectedTenant || !formData) return;
@@ -713,19 +857,57 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
                       <Separator />
 
-                      {/* Address Information */}
+                      {/* NEW SECTION - Tenant Base Address */}
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Building className="h-5 w-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold">Main Tenant Address</h3>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => setEditingTenantAddress(true)}>
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </div>
+                        
+                        <Card className="border-2 border-blue-200 bg-blue-50/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="default" className="bg-blue-600">PRIMARY</Badge>
+                                  <span className="text-sm text-muted-foreground">Tenant Base Address</span>
+                                </div>
+                                <div className="text-base font-medium">
+                                  {selectedTenantData?.base_address || "No address set"}
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  This is the main address for {selectedTenantData?.name}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <Badge variant="outline" className="text-green-600 border-green-600">
+                                  ✓ Complete
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <Separator />
+
+                      {/* REDESIGNED - Scrapyard Locations Section */}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-semibold flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            Scrapyard Locations
-                          </h4>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingSection(editingSection === 'address' ? null : 'address')}
-                          >
-                            {editingSection === 'address' ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-orange-600" />
+                            <h3 className="text-lg font-semibold">Scrapyard Locations</h3>
+                            <Badge variant="secondary">{tenantScrapyards.length} location(s)</Badge>
+                          </div>
+                          <Button onClick={() => setShowAddScrapyard(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Location
                           </Button>
                         </div>
 
@@ -747,141 +929,144 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                           </Alert>
                         )}
 
-                        {/* Scrapyard Selector */}
+                        {/* NEW DESIGN - Scrapyard Cards */}
                         <div className="space-y-3">
-                          <Label htmlFor="scrapyardSelect">Select Scrapyard Location</Label>
                           {scrapyardsLoading ? (
                             <div className="text-sm text-muted-foreground">Loading scrapyards...</div>
                           ) : tenantScrapyards.length === 0 ? (
                             <div className="text-sm text-muted-foreground">No scrapyard locations found</div>
                           ) : (
-                            <Select
-                              value={selectedScrapyardId?.toString() || ''}
-                              onValueChange={(value) => setSelectedScrapyardId(parseInt(value))}
-                              disabled={editingSection !== 'address'}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a scrapyard location" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {tenantScrapyards.map((scrapyard, index) => {
-                                  const addressComplete = !!(scrapyard.address && scrapyard.postal_code && scrapyard.city);
-                                  const fullAddress = addressComplete 
-                                    ? [scrapyard.address, scrapyard.postal_code, scrapyard.city].filter(Boolean).join(', ')
-                                    : 'No address set';
-                                  return (
-                                    <SelectItem key={scrapyard.id} value={scrapyard.id.toString()}>
-                                      <div className="flex items-center gap-2 w-full">
-                                        <MapPin className="h-4 w-4" />
-                                        <div className="flex flex-col items-start">
-                                          <span className="font-medium">{fullAddress}</span>
-                                          {fullAddress !== 'No address set' && (
-                                            <span className="text-xs text-muted-foreground">
-                                              {scrapyard.name || `Location ${index + 1}`}
-                                              {scrapyard.is_primary && <span className="ml-2 text-blue-600 font-semibold">[PRIMARY]</span>}
-                                            </span>
+                            tenantScrapyards.map((scrapyard, index) => {
+                              const addressComplete = !!(scrapyard.address && scrapyard.postal_code && scrapyard.city);
+                              const fullAddress = addressComplete 
+                                ? [scrapyard.address, scrapyard.postal_code, scrapyard.city].filter(Boolean).join(', ')
+                                : 'No address set';
+                              const isPrimary = index === 0; // First scrapyard is considered primary
+                              
+                              return (
+                                <Card key={scrapyard.id} className={`
+                                  ${isPrimary 
+                                    ? 'border-2 border-green-200 bg-green-50/30' 
+                                    : 'border border-gray-200'
+                                  }
+                                `}>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        {/* Scrapyard Status and Type */}
+                                        <div className="flex items-center gap-2 mb-2">
+                                          {isPrimary ? (
+                                            <Badge className="bg-green-600">PRIMARY SCRAPYARD</Badge>
+                                          ) : (
+                                            <Badge variant="outline">SECONDARY LOCATION</Badge>
+                                          )}
+                                          <Badge variant="secondary">{scrapyard.name}</Badge>
+                                        </div>
+                                        
+                                        {/* Address Display */}
+                                        <div className="space-y-1">
+                                          <div className="text-base font-medium">
+                                            {fullAddress}
+                                          </div>
+                                          {addressComplete && (
+                                            <div className="text-sm text-muted-foreground">
+                                              {scrapyard.postal_code} {scrapyard.city}
+                                            </div>
                                           )}
                                         </div>
-                                        <Badge 
-                                          className={addressComplete 
-                                            ? 'bg-status-completed text-white' 
-                                            : 'bg-status-cancelled text-white'}
-                                        >
-                                          {addressComplete ? 'Complete' : 'Incomplete'}
-                                        </Badge>
+                                        
+                                        {/* Address Consistency Check */}
+                                        <div className="mt-2">
+                                          {isPrimary ? (
+                                            <div className="flex items-center gap-2">
+                                              {scrapyard.address === selectedTenantData?.base_address ? (
+                                                <>
+                                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                                  <span className="text-sm text-green-600">Matches tenant base address</span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                  <span className="text-sm text-amber-600">Different from tenant base address</span>
+                                                </>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <span className="text-sm text-gray-500">Secondary location - no consistency check needed</span>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Contact Information */}
+                                        {(scrapyard.contact_person || scrapyard.contact_phone || scrapyard.contact_email) && (
+                                          <div className="mt-3 pt-3 border-t border-gray-200">
+                                            <div className="text-sm space-y-1">
+                                              {scrapyard.contact_person && (
+                                                <div>Contact: {scrapyard.contact_person}</div>
+                                              )}
+                                              {scrapyard.contact_phone && (
+                                                <div>Phone: {scrapyard.contact_phone}</div>
+                                              )}
+                                              {scrapyard.contact_email && (
+                                                <div>Email: {scrapyard.contact_email}</div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
+                                      
+                                      {/* Actions */}
+                                      <div className="flex flex-col gap-2">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          onClick={() => editScrapyard(scrapyard)}
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                        
+                                        {!isPrimary && tenantScrapyards.length > 1 && (
+                                          <>
+                                            <Button 
+                                              variant="outline" 
+                                              size="sm"
+                                              onClick={() => makePrimary(scrapyard.id)}
+                                            >
+                                              Make Primary
+                                            </Button>
+                                            <Button 
+                                              variant="outline" 
+                                              size="sm"
+                                              className="text-red-600 border-red-600"
+                                              onClick={() => deleteScrapyard(scrapyard.id)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })
                           )}
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={editingSection !== 'address'}
-                            className="w-full"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add New Scrapyard Location
-                          </Button>
                         </div>
 
-                        {/* Address Form */}
-                        {selectedScrapyardId && (
-                          <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                            <div className="flex items-center justify-between">
-                              <h5 className="font-medium">Address Details</h5>
-                              <Badge className={getAddressStatusColor()}>
-                                {getAddressStatus()}
-                              </Badge>
-                            </div>
-                            
-                            <div className="grid gap-4">
-                              <div>
-                                <Label htmlFor="address" className="flex items-center gap-1">
-                                  Street Address <span className="text-red-500">*</span>
-                                  <span className="text-xs text-muted-foreground">(Required)</span>
-                                </Label>
-                                <Input
-                                  id="address"
-                                  value={formData.address || ''}
-                                  onChange={(e) => handleInputChange('address', e.target.value)}
-                                  disabled={editingSection !== 'address'}
-                                  placeholder="Enter street address"
-                                  className={!formData.address && editingSection === 'address' ? 'border-red-500' : ''}
-                                />
-                                {!formData.address && editingSection === 'address' && (
-                                  <p className="text-xs text-red-500 mt-1">Street address is required</p>
-                                )}
-                              </div>
-                              
-                              <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                  <Label htmlFor="postalCode" className="flex items-center gap-1">
-                                    Postal Code <span className="text-red-500">*</span>
-                                    <span className="text-xs text-muted-foreground">(Required)</span>
-                                  </Label>
-                                  <Input
-                                    id="postalCode"
-                                    value={formData.postalCode || ''}
-                                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                                    disabled={editingSection !== 'address'}
-                                    placeholder="Enter postal code"
-                                    className={!formData.postalCode && editingSection === 'address' ? 'border-red-500' : ''}
-                                  />
-                                  {!formData.postalCode && editingSection === 'address' && (
-                                    <p className="text-xs text-red-500 mt-1">Postal code is required</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <Label htmlFor="city" className="flex items-center gap-1">
-                                    City <span className="text-red-500">*</span>
-                                    <span className="text-xs text-muted-foreground">(Required)</span>
-                                  </Label>
-                                  <Input
-                                    id="city"
-                                    value={formData.city || ''}
-                                    onChange={(e) => handleInputChange('city', e.target.value)}
-                                    disabled={editingSection !== 'address'}
-                                    placeholder="Enter city"
-                                    className={!formData.city && editingSection === 'address' ? 'border-red-500' : ''}
-                                  />
-                                  {!formData.city && editingSection === 'address' && (
-                                    <p className="text-xs text-red-500 mt-1">City is required</p>
-                                  )}
-                                </div>
-                              </div>
+                        {/* Summary Information */}
+                        {tenantScrapyards.length > 0 && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="text-sm text-gray-600">
+                              <div>Total Locations: {tenantScrapyards.length}</div>
+                              <div>Primary: {tenantScrapyards.find((s, i) => i === 0)?.name || "None set"}</div>
+                              <div>Address Consistency: {
+                                tenantScrapyards[0]?.address === selectedTenantData?.base_address 
+                                  ? "✓ Consistent" 
+                                  : "⚠ Needs Review"
+                              }</div>
                             </div>
                           </div>
                         )}
 
-                        {!selectedScrapyardId && tenantScrapyards.length > 0 && (
-                          <div className="p-4 border rounded-lg bg-muted/10 text-center">
-                            <p className="text-sm text-muted-foreground">Select a scrapyard location to edit address details</p>
-                          </div>
-                        )}
 
                         <div>
                           <Label htmlFor="invoiceEmail">Invoice Email</Label>
@@ -1531,6 +1716,110 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
           onSuccess={handleUserModalSuccess}
         />
       )}
+
+      {/* Tenant Address Edit Modal */}
+      <Dialog open={editingTenantAddress} onOpenChange={setEditingTenantAddress}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Tenant Base Address</DialogTitle>
+            <DialogDescription>
+              This will update the main address for {selectedTenantData?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Full Address</Label>
+              <Input 
+                value={newTenantAddress} 
+                onChange={(e) => setNewTenantAddress(e.target.value)}
+                placeholder="Street, Postal Code, City"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={updateTenantAddress}>Update</Button>
+              <Button variant="outline" onClick={() => setEditingTenantAddress(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scrapyard Edit Modal */}
+      <Dialog open={editingScrapyard !== null} onOpenChange={() => setEditingScrapyard(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Scrapyard Location</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Scrapyard Name</Label>
+              <Input 
+                value={editForm.name || ''} 
+                onChange={(e) => setEditForm({...editForm, name: e.target.value})} 
+              />
+            </div>
+            <div>
+              <Label>Address</Label>
+              <Input 
+                value={editForm.address || ''} 
+                onChange={(e) => setEditForm({...editForm, address: e.target.value})} 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Postal Code</Label>
+                <Input 
+                  value={editForm.postal_code || ''} 
+                  onChange={(e) => setEditForm({...editForm, postal_code: e.target.value})} 
+                />
+              </div>
+              <div>
+                <Label>City</Label>
+                <Input 
+                  value={editForm.city || ''} 
+                  onChange={(e) => setEditForm({...editForm, city: e.target.value})} 
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Contact Person</Label>
+              <Input 
+                value={editForm.contact_person || ''} 
+                onChange={(e) => setEditForm({...editForm, contact_person: e.target.value})} 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Contact Phone</Label>
+                <Input 
+                  value={editForm.contact_phone || ''} 
+                  onChange={(e) => setEditForm({...editForm, contact_phone: e.target.value})} 
+                />
+              </div>
+              <div>
+                <Label>Contact Email</Label>
+                <Input 
+                  type="email"
+                  value={editForm.contact_email || ''} 
+                  onChange={(e) => setEditForm({...editForm, contact_email: e.target.value})} 
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                checked={editForm.is_primary || false} 
+                onCheckedChange={(checked) => setEditForm({...editForm, is_primary: checked})}
+              />
+              <Label>Primary Scrapyard</Label>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={saveScrapyard}>Save Changes</Button>
+              <Button variant="outline" onClick={() => setEditingScrapyard(null)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
