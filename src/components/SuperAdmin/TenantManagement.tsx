@@ -208,7 +208,23 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
         }
       }
 
+      console.log('🚀 Final credentials array:', credentials);
+      console.log('📊 Credentials length:', credentials.length);
+      
+      // FOR TESTING: Always show modal with at least some data
+      if (credentials.length === 0) {
+        credentials.push({
+          tenantName: 'Test Modal Display',
+          email: 'test@example.com',
+          password: 'TestPassword123',
+          tenantId: 999
+        });
+        console.log('🧪 Added test credential to show modal');
+      }
+      
       setGeneratedCredentials(credentials);
+      console.log('🎯 Set generatedCredentials state with length:', credentials.length);
+      
       await fetchTenants(); // Refresh tenant list
       
       if (credentials.length > 0) {
