@@ -979,7 +979,10 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
             </div>
             <div className="flex items-center gap-4">
               <Button
-                onClick={createProductionAdmins}
+                onClick={() => {
+                  console.log('🔥🔥🔥 BUTTON CLICKED - Direct inline handler!');
+                  createProductionAdmins();
+                }}
                 disabled={creatingProductionAdmins}
                 variant="secondary"
                 className="bg-white/10 hover:bg-white/20 text-white border-white/20"
