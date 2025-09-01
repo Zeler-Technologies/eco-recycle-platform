@@ -86,6 +86,16 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   const [showAddScrapyard, setShowAddScrapyard] = useState(false);
   const [creatingProductionAdmins, setCreatingProductionAdmins] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<any[]>([]);
+  const [newScrapyardForm, setNewScrapyardForm] = useState({
+    name: '',
+    address: '',
+    postal_code: '',
+    city: '',
+    contact_person: '',
+    contact_phone: '',
+    contact_email: '',
+    is_primary: false
+  });
   
   // Fetch users for the selected tenant
   const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
@@ -208,6 +218,46 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
       toast.error('Failed to create production admin users');
     } finally {
       setCreatingProductionAdmins(false);
+    }
+  };
+
+  // Add new scrapyard/facility
+  const addNewScrapyard = async () => {
+    if (!selectedTenant) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('scrapyards')
+        .insert({
+          ...newScrapyardForm,
+          tenant_id: selectedTenant,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh scrapyards list
+      await fetchTenantWithScrapyards(selectedTenant);
+      
+      // Reset form and close modal
+      setNewScrapyardForm({
+        name: '',
+        address: '',
+        postal_code: '',
+        city: '',
+        contact_person: '',
+        contact_phone: '',
+        contact_email: '',
+        is_primary: false
+      });
+      setShowAddScrapyard(false);
+      
+      toast.success('New facility added successfully');
+    } catch (error) {
+      console.error('Error adding scrapyard:', error);
+      toast.error('Failed to add new facility');
     }
   };
 
@@ -2121,6 +2171,126 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
           <div className="flex justify-end pt-4">
             <Button onClick={() => setGeneratedCredentials([])} variant="outline">
               Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Scrapyard/Facility Modal */}
+      <Dialog open={showAddScrapyard} onOpenChange={setShowAddScrapyard}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-green-600" />
+              Add New Facility Location
+            </DialogTitle>
+            <DialogDescription>
+              Add a new facility location for {selectedTenantData?.name || 'this tenant'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="facility-name">Facility Name</Label>
+                <Input
+                  id="facility-name"
+                  value={newScrapyardForm.name}
+                  onChange={(e) => setNewScrapyardForm({...newScrapyardForm, name: e.target.value})}
+                  placeholder="e.g., Stockholm North Facility"
+                />
+              </div>
+              <div>
+                <Label htmlFor="facility-address">Address</Label>
+                <Input
+                  id="facility-address"
+                  value={newScrapyardForm.address}
+                  onChange={(e) => setNewScrapyardForm({...newScrapyardForm, address: e.target.value})}
+                  placeholder="Street address"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="postal-code">Postal Code</Label>
+                <Input
+                  id="postal-code"
+                  value={newScrapyardForm.postal_code}
+                  onChange={(e) => setNewScrapyardForm({...newScrapyardForm, postal_code: e.target.value})}
+                  placeholder="12345"
+                />
+              </div>
+              <div>
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={newScrapyardForm.city}
+                  onChange={(e) => setNewScrapyardForm({...newScrapyardForm, city: e.target.value})}
+                  placeholder="Stockholm"
+                />
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">Contact Information</h4>
+              <div>
+                <Label htmlFor="contact-person">Contact Person</Label>
+                <Input
+                  id="contact-person"
+                  value={newScrapyardForm.contact_person}
+                  onChange={(e) => setNewScrapyardForm({...newScrapyardForm, contact_person: e.target.value})}
+                  placeholder="Manager name"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contact-phone">Phone</Label>
+                  <Input
+                    id="contact-phone"
+                    value={newScrapyardForm.contact_phone}
+                    onChange={(e) => setNewScrapyardForm({...newScrapyardForm, contact_phone: e.target.value})}
+                    placeholder="+46 8 123 456"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contact-email">Email</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={newScrapyardForm.contact_email}
+                    onChange={(e) => setNewScrapyardForm({...newScrapyardForm, contact_email: e.target.value})}
+                    placeholder="facility@company.se"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="is-primary"
+                checked={newScrapyardForm.is_primary}
+                onCheckedChange={(checked) => setNewScrapyardForm({...newScrapyardForm, is_primary: !!checked})}
+              />
+              <Label htmlFor="is-primary" className="text-sm">
+                Set as main location (will replace current main location)
+              </Label>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 pt-4">
+            <Button 
+              onClick={addNewScrapyard}
+              disabled={!newScrapyardForm.name || !newScrapyardForm.address}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Add Facility
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddScrapyard(false)}>
+              Cancel
             </Button>
           </div>
         </DialogContent>
