@@ -774,10 +774,14 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                       <div className="flex items-center gap-2 w-full">
                                         <MapPin className="h-4 w-4" />
                                         <div className="flex flex-col items-start">
-                                          <span className="font-medium">{scrapyard.name || `Location ${index + 1}`}</span>
-                                          <span className="text-xs text-muted-foreground">{fullAddress}</span>
+                                          <span className="font-medium">{fullAddress}</span>
+                                          {fullAddress !== 'No address set' && (
+                                            <span className="text-xs text-muted-foreground">
+                                              {scrapyard.name || `Location ${index + 1}`}
+                                              {scrapyard.is_primary && <span className="ml-2 text-blue-600 font-semibold">[PRIMARY]</span>}
+                                            </span>
+                                          )}
                                         </div>
-                                        {index === 0 && <Badge variant="secondary">Primary</Badge>}
                                         <Badge 
                                           className={addressComplete 
                                             ? 'bg-status-completed text-white' 
