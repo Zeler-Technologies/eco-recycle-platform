@@ -119,7 +119,12 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
   // Create production admin users for Swedish businesses
   const createProductionAdmins = async () => {
-    if (creatingProductionAdmins) return;
+    console.log('🔥 BUTTON CLICKED - createProductionAdmins function called!');
+    
+    if (creatingProductionAdmins) {
+      console.log('⏸️ Function already running, returning early');
+      return;
+    }
     
     console.log('Starting createProductionAdmins function');
     setCreatingProductionAdmins(true);
