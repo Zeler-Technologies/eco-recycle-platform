@@ -445,12 +445,82 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
       if (setPrimaryError) throw setPrimaryError;
 
+      // Ask if user wants to sync tenant address
+      const shouldSync = window.confirm(
+        'Primary scrapyard updated! Do you want to update the tenant base address to match this location?'
+      );
+
+      if (shouldSync) {
+        await syncTenantAddressWithPrimary(selectedTenant);
+      }
+
       // Refresh scrapyards
       await fetchTenantWithScrapyards(selectedTenant);
       toast.success('Primary scrapyard updated');
     } catch (error) {
       console.error('Error setting primary scrapyard:', error);
       toast.error('Failed to update primary scrapyard');
+    }
+  };
+
+  const syncTenantAddressWithPrimary = async (tenantId: number) => {
+    try {
+      // Get primary scrapyard address
+      const { data: primaryScrapyard } = await supabase
+        .from('scrapyards')
+        .select('address, postal_code, city')
+        .eq('tenant_id', tenantId)
+        .eq('is_primary', true)
+        .single();
+
+      if (!primaryScrapyard) throw new Error('No primary scrapyard found');
+
+      // Update tenant base address
+      const { error } = await supabase
+        .from('tenants')  
+        .update({ base_address: primaryScrapyard.address })
+        .eq('tenants_id', tenantId);
+
+      if (error) throw error;
+      
+      toast.success('Tenant address synced with primary scrapyard');
+      fetchTenantWithScrapyards(tenantId); // Refresh data
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Failed to sync addresses');
+    }
+  };
+
+  const checkAddressConsistency = async (tenantId: number) => {
+    try {
+      // Get tenant base address
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('base_address')
+        .eq('tenants_id', tenantId)
+        .single();
+
+      // Get primary scrapyard address  
+      const { data: primaryScrapyard } = await supabase
+        .from('scrapyards')
+        .select('address')
+        .eq('tenant_id', tenantId)
+        .eq('is_primary', true)
+        .single();
+
+      const isConsistent = tenant?.base_address === primaryScrapyard?.address;
+      
+      toast.info(
+        isConsistent 
+          ? '✅ Addresses are consistent' 
+          : '⚠️ Tenant and primary scrapyard addresses differ'
+      );
+      
+      return isConsistent;
+    } catch (error) {
+      console.error('Consistency check failed:', error);
+      toast.error('Failed to check address consistency');
+      return false;
     }
   };
 
@@ -859,24 +929,40 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
                       {/* NEW SECTION - Tenant Base Address */}
                       <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Building className="h-5 w-5 text-blue-600" />
-                            <h3 className="text-lg font-semibold">Main Tenant Address</h3>
-                          </div>
-                          <Button variant="outline" size="sm" onClick={() => setEditingTenantAddress(true)}>
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
-                        </div>
+                         <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                             <Building className="h-5 w-5 text-blue-600" />
+                             <h3 className="text-lg font-semibold">Main Tenant Address</h3>
+                           </div>
+                           <div className="flex gap-2">
+                             <Button 
+                               size="sm" 
+                               variant="ghost"
+                               onClick={() => selectedTenant && checkAddressConsistency(selectedTenant)}
+                             >
+                               Check Consistency
+                             </Button>
+                             <Button 
+                               size="sm" 
+                               variant="outline"
+                               onClick={() => selectedTenant && syncTenantAddressWithPrimary(selectedTenant)}
+                             >
+                               Sync with Primary
+                             </Button>
+                             <Button variant="outline" size="sm" onClick={() => setEditingTenantAddress(true)}>
+                               <Edit2 className="h-4 w-4 mr-2" />
+                               Edit
+                             </Button>
+                           </div>
+                         </div>
                         
                         <Card className="border-2 border-blue-200 bg-blue-50/50">
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="default" className="bg-blue-600">PRIMARY</Badge>
-                                  <span className="text-sm text-muted-foreground">Tenant Base Address</span>
+                                  <Badge variant="default" className="bg-blue-600">BASE</Badge>
+                                  <span className="text-sm text-muted-foreground">Main Tenant Address</span>
                                 </div>
                                 <div className="text-base font-medium">
                                   {selectedTenantData?.base_address || "No address set"}
@@ -941,7 +1027,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               const fullAddress = addressComplete 
                                 ? [scrapyard.address, scrapyard.postal_code, scrapyard.city].filter(Boolean).join(', ')
                                 : 'No address set';
-                              const isPrimary = index === 0; // First scrapyard is considered primary
+                              const isPrimary = scrapyard.is_primary; // Use actual is_primary field from database
                               
                               return (
                                 <Card key={scrapyard.id} className={`
@@ -1057,12 +1143,12 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                             <div className="text-sm text-gray-600">
                               <div>Total Locations: {tenantScrapyards.length}</div>
-                              <div>Primary: {tenantScrapyards.find((s, i) => i === 0)?.name || "None set"}</div>
-                              <div>Address Consistency: {
-                                tenantScrapyards[0]?.address === selectedTenantData?.base_address 
-                                  ? "✓ Consistent" 
-                                  : "⚠ Needs Review"
-                              }</div>
+                               <div>Primary: {tenantScrapyards.find(s => s.is_primary)?.name || "None set"}</div>
+                               <div>Address Consistency: {
+                                 tenantScrapyards.find(s => s.is_primary)?.address === selectedTenantData?.base_address 
+                                   ? "✓ Consistent" 
+                                   : "⚠ Needs Review"
+                               }</div>
                             </div>
                           </div>
                         )}
