@@ -1065,22 +1065,47 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                         <div className="mt-2">
                                            {isPrimary ? (
                                              <div className="flex items-center gap-2">
-                                               {!selectedTenantData?.base_address ? (
-                                                 <>
-                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                                   <span className="text-sm text-amber-600">Tenant base address not set</span>
-                                                 </>
-                                               ) : scrapyard.address === selectedTenantData?.base_address ? (
-                                                 <>
-                                                   <CheckCircle className="h-4 w-4 text-green-600" />
-                                                   <span className="text-sm text-green-600">Matches tenant base address</span>
-                                                 </>
-                                               ) : (
-                                                 <>
-                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                                   <span className="text-sm text-amber-600">Different from tenant base address</span>
-                                                 </>
-                                               )}
+                                               {(() => {
+                                                 // Debug logging for address comparison
+                                                 console.log('🔍 DEBUGGING ADDRESS COMPARISON:');
+                                                 console.log('Tenant base_address:', selectedTenantData?.base_address);
+                                                 console.log('Primary scrapyard address:', scrapyard.address);
+                                                 console.log('Are they equal?', scrapyard.address === selectedTenantData?.base_address);
+                                                 console.log('Tenant type:', typeof selectedTenantData?.base_address);
+                                                 console.log('Scrapyard type:', typeof scrapyard.address);
+                                                 
+                                                 // Normalize addresses for comparison (trim whitespace)
+                                                 const tenantAddress = selectedTenantData?.base_address?.trim();
+                                                 const scrapyardAddress = scrapyard.address?.trim();
+                                                 const isConsistent = tenantAddress === scrapyardAddress;
+                                                 
+                                                 console.log('After trimming - Tenant:', tenantAddress);
+                                                 console.log('After trimming - Scrapyard:', scrapyardAddress);
+                                                 console.log('Final comparison result:', isConsistent);
+                                                 
+                                                 if (!tenantAddress) {
+                                                   return (
+                                                     <>
+                                                       <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                       <span className="text-sm text-amber-600">Tenant base address not set</span>
+                                                     </>
+                                                   );
+                                                 } else if (isConsistent) {
+                                                   return (
+                                                     <>
+                                                       <CheckCircle className="h-4 w-4 text-green-600" />
+                                                       <span className="text-sm text-green-600">Matches tenant base address</span>
+                                                     </>
+                                                   );
+                                                 } else {
+                                                   return (
+                                                     <>
+                                                       <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                       <span className="text-sm text-amber-600">Different from tenant base address</span>
+                                                     </>
+                                                   );
+                                                 }
+                                               })()}
                                              </div>
                                           ) : (
                                             <span className="text-sm text-gray-500">Secondary location - no consistency check needed</span>
@@ -1151,11 +1176,12 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             <div className="text-sm text-gray-600">
                               <div>Total Locations: {tenantScrapyards.length}</div>
                                <div>Primary: {tenantScrapyards.find(s => s.is_primary)?.name || "None set"}</div>
-                               <div>Address Consistency: {
-                                 tenantScrapyards.find(s => s.is_primary)?.address === selectedTenantData?.base_address 
-                                   ? "✓ Consistent" 
-                                   : "⚠ Needs Review"
-                               }</div>
+                               <div>Address Consistency: {(() => {
+                                 const primaryScrapyard = tenantScrapyards.find(s => s.is_primary);
+                                 const tenantAddress = selectedTenantData?.base_address?.trim();
+                                 const scrapyardAddress = primaryScrapyard?.address?.trim();
+                                 return tenantAddress === scrapyardAddress ? "✓ Consistent" : "⚠ Needs Review";
+                               })()}</div>
                             </div>
                           </div>
                         )}
