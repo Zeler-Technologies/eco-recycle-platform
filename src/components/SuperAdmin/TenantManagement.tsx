@@ -1063,20 +1063,25 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                         
                                         {/* Address Consistency Check */}
                                         <div className="mt-2">
-                                          {isPrimary ? (
-                                            <div className="flex items-center gap-2">
-                                              {scrapyard.address === selectedTenantData?.base_address ? (
-                                                <>
-                                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                                  <span className="text-sm text-green-600">Matches tenant base address</span>
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                                  <span className="text-sm text-amber-600">Different from tenant base address</span>
-                                                </>
-                                              )}
-                                            </div>
+                                           {isPrimary ? (
+                                             <div className="flex items-center gap-2">
+                                               {!selectedTenantData?.base_address ? (
+                                                 <>
+                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                   <span className="text-sm text-amber-600">Tenant base address not set</span>
+                                                 </>
+                                               ) : scrapyard.address === selectedTenantData?.base_address ? (
+                                                 <>
+                                                   <CheckCircle className="h-4 w-4 text-green-600" />
+                                                   <span className="text-sm text-green-600">Matches tenant base address</span>
+                                                 </>
+                                               ) : (
+                                                 <>
+                                                   <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                   <span className="text-sm text-amber-600">Different from tenant base address</span>
+                                                 </>
+                                               )}
+                                             </div>
                                           ) : (
                                             <span className="text-sm text-gray-500">Secondary location - no consistency check needed</span>
                                           )}
