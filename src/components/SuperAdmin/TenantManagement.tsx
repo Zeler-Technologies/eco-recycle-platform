@@ -425,7 +425,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
     setEditingScrapyard(scrapyard.id);
   };
 
-  const makePrimary = async (scrapyardId: number) => {
+  const setMainLocation = async (scrapyardId: number) => {
     if (!selectedTenant) return;
 
     try {
@@ -445,45 +445,45 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
       if (setPrimaryError) throw setPrimaryError;
 
-      // Ask if user wants to sync tenant address
+      // Ask if user wants to sync business address
       const shouldSync = window.confirm(
-        'Primary scrapyard updated! Do you want to update the tenant base address to match this location?'
+        'Main location updated! Do you want to update the business headquarters address to match this location?'
       );
 
       if (shouldSync) {
-        await syncTenantAddressWithPrimary(selectedTenant);
+        await syncBusinessAddressWithMainLocation(selectedTenant);
       }
 
       // Refresh scrapyards
       await fetchTenantWithScrapyards(selectedTenant);
-      toast.success('Primary scrapyard updated');
+      toast.success('Main location updated');
     } catch (error) {
-      console.error('Error setting primary scrapyard:', error);
-      toast.error('Failed to update primary scrapyard');
+      console.error('Error setting main location:', error);
+      toast.error('Failed to update main location');
     }
   };
 
-  const syncTenantAddressWithPrimary = async (tenantId: number) => {
+  const syncBusinessAddressWithMainLocation = async (tenantId: number) => {
     try {
-      // Get primary scrapyard address
-      const { data: primaryScrapyard } = await supabase
+      // Get main location address
+      const { data: mainLocation } = await supabase
         .from('scrapyards')
         .select('address, postal_code, city')
         .eq('tenant_id', tenantId)
         .eq('is_primary', true)
         .single();
 
-      if (!primaryScrapyard) throw new Error('No primary scrapyard found');
+      if (!mainLocation) throw new Error('No main location found');
 
-      // Update tenant base address
+      // Update business headquarters address
       const { error } = await supabase
         .from('tenants')  
-        .update({ base_address: primaryScrapyard.address })
+        .update({ base_address: mainLocation.address })
         .eq('tenants_id', tenantId);
 
       if (error) throw error;
       
-      toast.success('Tenant address synced with primary scrapyard');
+      toast.success('Business address synced with main location');
       fetchTenantWithScrapyards(tenantId); // Refresh data
     } catch (error) {
       console.error('Sync error:', error);
@@ -543,9 +543,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
       if (error) throw error;
 
-      // Handle primary scrapyard change
+      // Handle main location change
       if (editForm.is_primary && selectedTenant) {
-        await makePrimary(editingScrapyard);
+        await setMainLocation(editingScrapyard);
       }
 
       // Refresh scrapyards
@@ -930,10 +930,10 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                       {/* NEW SECTION - Tenant Base Address */}
                       <div className="space-y-6">
                          <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-2">
-                             <Building className="h-5 w-5 text-blue-600" />
-                             <h3 className="text-lg font-semibold">Main Tenant Address</h3>
-                           </div>
+                            <div className="flex items-center gap-2">
+                              <Building className="h-5 w-5 text-blue-600" />
+                              <h3 className="text-lg font-semibold">🏢 Business Information</h3>
+                            </div>
                            <div className="flex gap-2">
                              <Button 
                                size="sm" 
@@ -945,9 +945,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                              <Button 
                                size="sm" 
                                variant="outline"
-                               onClick={() => selectedTenant && syncTenantAddressWithPrimary(selectedTenant)}
-                             >
-                               Sync with Primary
+                                onClick={() => selectedTenant && syncBusinessAddressWithMainLocation(selectedTenant)}
+                              >
+                                Sync with Main Location
                              </Button>
                              <Button variant="outline" size="sm" onClick={() => setEditingTenantAddress(true)}>
                                <Edit2 className="h-4 w-4 mr-2" />
@@ -960,16 +960,16 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="default" className="bg-blue-600">BASE</Badge>
-                                  <span className="text-sm text-muted-foreground">Main Tenant Address</span>
-                                </div>
+                                 <div className="flex items-center gap-2 mb-2">
+                                   <Badge variant="default" className="bg-blue-600">HEADQUARTERS</Badge>
+                                   <span className="text-sm text-muted-foreground">Business Address</span>
+                                 </div>
                                 <div className="text-base font-medium">
                                   {selectedTenantData?.base_address || "No address set"}
                                 </div>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  This is the main address for {selectedTenantData?.name}
-                                </div>
+                                 <div className="text-sm text-muted-foreground mt-1">
+                                   Main business address for legal and billing
+                                 </div>
                               </div>
                               <div className="text-right">
                                 <Badge variant="outline" className="text-green-600 border-green-600">
@@ -986,15 +986,15 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                       {/* REDESIGNED - Scrapyard Locations Section */}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-5 w-5 text-orange-600" />
-                            <h3 className="text-lg font-semibold">Scrapyard Locations</h3>
-                            <Badge variant="secondary">{tenantScrapyards.length} location(s)</Badge>
-                          </div>
-                          <Button onClick={() => setShowAddScrapyard(true)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Location
-                          </Button>
+                           <div className="flex items-center gap-2">
+                             <MapPin className="h-5 w-5 text-orange-600" />
+                             <h3 className="text-lg font-semibold">📍 Facility Locations</h3>
+                             <Badge variant="secondary">{tenantScrapyards.length} facility(s)</Badge>
+                           </div>
+                           <Button onClick={() => setShowAddScrapyard(true)}>
+                             <Plus className="h-4 w-4 mr-2" />
+                             Add New Facility
+                           </Button>
                         </div>
 
                         {scrapyardError && (
@@ -1041,11 +1041,11 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                       <div className="flex-1">
                                         {/* Scrapyard Status and Type */}
                                         <div className="flex items-center gap-2 mb-2">
-                                          {isPrimary ? (
-                                            <Badge className="bg-green-600">PRIMARY SCRAPYARD</Badge>
-                                          ) : (
-                                            <Badge variant="outline">SECONDARY LOCATION</Badge>
-                                          )}
+                                           {isPrimary ? (
+                                             <Badge className="bg-green-600">MAIN LOCATION</Badge>
+                                           ) : (
+                                             <Badge variant="outline">BRANCH LOCATION</Badge>
+                                           )}
                                           <Badge variant="secondary">{scrapyard.name}</Badge>
                                         </div>
                                         
@@ -1092,23 +1092,23 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                                    );
                                                  } else if (isConsistent) {
                                                    return (
-                                                     <>
-                                                       <CheckCircle className="h-4 w-4 text-green-600" />
-                                                       <span className="text-sm text-green-600">Matches tenant base address</span>
-                                                     </>
+                                                      <>
+                                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                                        <span className="text-sm text-green-600">Matches business headquarters</span>
+                                                      </>
                                                    );
                                                  } else {
                                                    return (
-                                                     <>
-                                                       <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                                       <span className="text-sm text-amber-600">Different from tenant base address</span>
-                                                     </>
+                                                      <>
+                                                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                        <span className="text-sm text-amber-600">Different from business headquarters</span>
+                                                      </>
                                                    );
                                                  }
                                                })()}
                                              </div>
                                           ) : (
-                                            <span className="text-sm text-gray-500">Secondary location - no consistency check needed</span>
+                                            <span className="text-sm text-gray-500">Branch location - no consistency check needed</span>
                                           )}
                                         </div>
                                         
@@ -1146,10 +1146,10 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                             <Button 
                                               variant="outline" 
                                               size="sm"
-                                              onClick={() => makePrimary(scrapyard.id)}
+                                              onClick={() => setMainLocation(scrapyard.id)}
                                               className="text-xs px-2 py-1 h-8"
                                             >
-                                              Primary
+                                              Set as Main
                                             </Button>
                                             <Button 
                                               variant="outline" 
