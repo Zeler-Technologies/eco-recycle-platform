@@ -1106,11 +1106,12 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                       </div>
                                       
                                       {/* Actions */}
-                                      <div className="flex flex-col gap-2">
+                                      <div className="flex flex-col gap-2 shrink-0 ml-4">
                                         <Button 
                                           variant="outline" 
                                           size="sm"
                                           onClick={() => editScrapyard(scrapyard)}
+                                          className="w-10 h-10"
                                         >
                                           <Edit2 className="h-4 w-4" />
                                         </Button>
@@ -1121,13 +1122,14 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                               variant="outline" 
                                               size="sm"
                                               onClick={() => makePrimary(scrapyard.id)}
+                                              className="text-xs px-2 py-1 h-8"
                                             >
-                                              Make Primary
+                                              Primary
                                             </Button>
                                             <Button 
                                               variant="outline" 
                                               size="sm"
-                                              className="text-red-600 border-red-600"
+                                              className="text-red-600 border-red-600 hover:bg-red-50 w-10 h-10"
                                               onClick={() => deleteScrapyard(scrapyard.id)}
                                             >
                                               <Trash2 className="h-4 w-4" />
