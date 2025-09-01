@@ -766,11 +766,17 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               <SelectContent>
                                 {tenantScrapyards.map((scrapyard, index) => {
                                   const addressComplete = !!(scrapyard.address && scrapyard.postal_code && scrapyard.city);
+                                  const fullAddress = addressComplete 
+                                    ? [scrapyard.address, scrapyard.postal_code, scrapyard.city].filter(Boolean).join(', ')
+                                    : 'No address set';
                                   return (
                                     <SelectItem key={scrapyard.id} value={scrapyard.id.toString()}>
                                       <div className="flex items-center gap-2 w-full">
                                         <MapPin className="h-4 w-4" />
-                                        <span>{scrapyard.name || `Location ${index + 1}`}</span>
+                                        <div className="flex flex-col items-start">
+                                          <span className="font-medium">{scrapyard.name || `Location ${index + 1}`}</span>
+                                          <span className="text-xs text-muted-foreground">{fullAddress}</span>
+                                        </div>
                                         {index === 0 && <Badge variant="secondary">Primary</Badge>}
                                         <Badge 
                                           className={addressComplete 
