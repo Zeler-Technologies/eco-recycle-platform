@@ -979,20 +979,13 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
             </div>
             <div className="flex items-center gap-4">
               <Button
-                onClick={() => {
-                  // Force show modal with test data
-                  setGeneratedCredentials([{
-                    tenantName: 'Test Modal Display',
-                    email: 'test@example.com', 
-                    password: 'TestPassword123',
-                    tenantId: 999
-                  }]);
-                }}
+                onClick={createProductionAdmins}
+                disabled={creatingProductionAdmins}
                 variant="secondary"
                 className="bg-white/10 hover:bg-white/20 text-white border-white/20"
               >
                 <Key className="h-4 w-4 mr-2" />
-                Show Modal Test
+                {creatingProductionAdmins ? 'Creating...' : 'Create Production Admins'}
               </Button>
               <div className="text-right">
                 <h1 className="text-xl font-semibold">Tenant Management</h1>
