@@ -120,6 +120,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   // Create production admin users for Swedish businesses
   const createProductionAdmins = async () => {
     if (creatingProductionAdmins) return;
+    
+    console.log('Starting createProductionAdmins function');
+    setCreatingProductionAdmins(true);
 
     const productionTenants = [
       { id: 31, name: 'Nordost Återvinning AB', email: 'admin@nordost-atervinning.se' },
