@@ -144,6 +144,13 @@ const PostalCodeManager = () => {
       const text = await file.text();
       console.log(`File size: ${text.length} characters`);
       
+      // Debug: test a known-good sample row (should be lat 57.9167, lng 19.1333)
+      const testRow = "SE\t624 66\tFårö\tGotland\t05\t\t\t\t\t\t57.9167\t19.1333\t4";
+      const testCols = testRow.split('\t');
+      console.log('Test parsing (expected lat 57.9167, lng 19.1333):', {
+        postal: testCols[1], city: testCols[2], col10: testCols[10], col11: testCols[11]
+      });
+
       const lines = text.split('\n').filter(line => line.trim());
       const postalCodes: any[] = [];
       
@@ -152,6 +159,15 @@ const PostalCodeManager = () => {
         
         // CRITICAL: Split by TAB character for Swedish format
         const columns = line.split('\t');
+
+        // Debug: Log first few rows to verify column positions
+        if (index < 5) {
+          console.log(`Row ${index}: Columns 10-12:`, {
+            col10: columns[10],
+            col11: columns[11],
+            col12: columns[12]
+          });
+        }
         
         if (columns.length < 4) {
           console.warn(`Row ${index + 1}: Not enough columns (${columns.length})`);
@@ -164,8 +180,6 @@ const PostalCodeManager = () => {
         const postalCodeRaw = columns[1]?.trim(); // "624 66"
         const city = columns[2]?.trim(); // "Fårö"
         const region = columns[3]?.trim(); // "Gotland"
-        const latitude = columns[10] ? parseFloat(columns[10].trim()) : null; // 57.9167
-        const longitude = columns[11] ? parseFloat(columns[11].trim()) : null; // 19.1333
         
         // Skip invalid rows
         if (!countryCode || !postalCodeRaw || !city) {
@@ -181,16 +195,47 @@ const PostalCodeManager = () => {
           console.warn(`Row ${index + 1}: Invalid postal code: ${postalCodeRaw}`);
           return;
         }
-        
-        // Validate Swedish coordinates (optional but recommended)
-        let validLat = latitude;
-        let validLng = longitude;
-        
-        if (latitude && longitude) {
-          if (latitude < 55 || latitude > 70 || longitude < 10 || longitude > 25) {
-            console.warn(`Row ${index + 1}: Coordinates outside Sweden bounds`);
-            validLat = null;
-            validLng = null;
+
+        // Attempt to parse coordinates from expected positions
+        let parsedLat: number | null = columns[10]?.trim() ? parseFloat(columns[10].trim()) : null;
+        let parsedLng: number | null = columns[11]?.trim() ? parseFloat(columns[11].trim()) : null;
+
+        // Swap detection: if lat looks like 10-25 and lng like 55-70, swap them
+        if (parsedLat !== null && parsedLng !== null) {
+          if (parsedLat >= 10 && parsedLat <= 25 && parsedLng >= 55 && parsedLng <= 70) {
+            console.warn(`Row ${index + 1}: Coordinates appear swapped for ${postalCode}, fixing...`);
+            [parsedLat, parsedLng] = [parsedLng, parsedLat];
+          }
+        }
+
+        // Fallback: scan adjacent columns (8..14) to find plausible Swedish lat/lng if missing
+        if ((parsedLat === null || parsedLng === null) && columns.length >= 8) {
+          for (let i = 8; i < Math.min(columns.length, 15); i++) {
+            const raw = columns[i]?.trim();
+            if (!raw) continue;
+            const val = parseFloat(raw);
+            if (Number.isNaN(val)) continue;
+
+            if (val >= 55 && val <= 70 && parsedLat === null) {
+              parsedLat = val;
+              console.log(`Row ${index + 1}: Found latitude ${val} in column ${i}`);
+            } else if (val >= 10 && val <= 25 && parsedLng === null) {
+              parsedLng = val;
+              console.log(`Row ${index + 1}: Found longitude ${val} in column ${i}`);
+            }
+
+            if (parsedLat !== null && parsedLng !== null) break;
+          }
+        }
+
+        // Final validation: ensure both coordinates are in Swedish ranges
+        let finalLat = parsedLat;
+        let finalLng = parsedLng;
+        if (finalLat !== null && finalLng !== null) {
+          if (finalLat < 55 || finalLat > 70 || finalLng < 10 || finalLng > 25) {
+            console.warn(`Row ${index + 1}: Invalid coordinates for ${postalCode}: lat=${finalLat}, lng=${finalLng}`);
+            finalLat = null;
+            finalLng = null;
           }
         }
         
@@ -199,8 +244,8 @@ const PostalCodeManager = () => {
           city: city,
           region: region || '',
           country: country,
-          latitude: validLat,
-          longitude: validLng,
+          latitude: finalLat,
+          longitude: finalLng,
           is_active: true
         });
       });
