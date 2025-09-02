@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,9 @@ import { Search, MapPin, Plus, Minus, CheckCircle2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import ChunkedPostalCodeList from './ChunkedPostalCodeList';
+import BulkSelectionControls from './BulkSelectionControls';
+import SmartPostalCodeFilter from './SmartPostalCodeFilter';
 
 interface PostalCode {
   id: string;
@@ -19,6 +22,8 @@ interface PostalCode {
   city: string;
   region: string | null;
   country: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface SelectedPostalCode {
@@ -29,8 +34,10 @@ interface SelectedPostalCode {
 const PostalCodeSelector = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [filteredPostalCodes, setFilteredPostalCodes] = useState<PostalCode[]>([]);
   const { session } = useSupabaseSession();
   const queryClient = useQueryClient();
+
 
   // Get current user's tenant info
   const { data: userTenant } = useQuery({
@@ -47,27 +54,18 @@ const PostalCodeSelector = () => {
     },
   });
 
-  // Fetch available postal codes for tenant's country
+  // Fetch ALL postal codes for tenant's country (no filtering here for performance)
   const { data: availablePostalCodes = [], isLoading: loadingAvailable } = useQuery({
-    queryKey: ['available-postal-codes', userTenant?.tenants?.country, searchTerm, selectedRegion],
+    queryKey: ['available-postal-codes', userTenant?.tenants?.country],
     enabled: !!userTenant?.tenants?.country,
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('postal_codes_master')
-        .select('*')
+        .select('id, postal_code, city, region, country')
         .eq('country', userTenant.tenants.country)
         .eq('is_active', true)
         .order('postal_code');
 
-      if (searchTerm) {
-        query = query.or(`postal_code.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
-      }
-
-      if (selectedRegion) {
-        query = query.eq('region', selectedRegion);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as PostalCode[];
     },
@@ -82,7 +80,7 @@ const PostalCodeSelector = () => {
         .from('tenant_coverage_areas')
         .select(`
           postal_code_id,
-          postal_codes_master(*)
+          postal_codes_master(id, postal_code, city, region, country)
         `)
         .eq('tenant_id', userTenant.tenant_id)
         .eq('is_active', true);
@@ -92,6 +90,11 @@ const PostalCodeSelector = () => {
     },
   });
 
+  // Use Set for O(1) lookups instead of array operations
+  const selectedCodesSet = useMemo(() => {
+    return new Set(selectedPostalCodes.map(spc => spc.postal_code_id));
+  }, [selectedPostalCodes]);
+
   // Get unique regions for filtering
   const regions = React.useMemo(() => {
     const regionSet = new Set<string>();
@@ -100,6 +103,138 @@ const PostalCodeSelector = () => {
     });
     return Array.from(regionSet).sort();
   }, [availablePostalCodes]);
+
+  // Optimized bulk operations
+  const bulkSelect = useCallback(async (type: string, config?: any) => {
+    if (!userTenant?.tenant_id) return;
+    
+    let targetCodes: PostalCode[] = [];
+    
+    switch (type) {
+      case 'coordinates':
+        targetCodes = filteredPostalCodes.filter(pc => pc.latitude && pc.longitude);
+        break;
+      case 'major_cities':
+        const majorCities = ['Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Västerås', 'Örebro'];
+        targetCodes = filteredPostalCodes.filter(pc => 
+          majorCities.some(city => pc.city.toLowerCase().includes(city.toLowerCase()))
+        );
+        break;
+      case 'range':
+        if (config?.start && config?.end) {
+          const start = parseInt(config.start);
+          const end = parseInt(config.end);
+          targetCodes = filteredPostalCodes.filter(pc => {
+            const codeNum = parseInt(pc.postal_code);
+            return codeNum >= start && codeNum <= end;
+          });
+        }
+        break;
+      case 'region':
+        targetCodes = filteredPostalCodes.filter(pc => pc.region === config);
+        break;
+      default:
+        return;
+    }
+    
+    if (targetCodes.length === 0) return;
+    
+    try {
+      const inserts = targetCodes
+        .filter(pc => !selectedCodesSet.has(pc.id))
+        .map(pc => ({
+          tenant_id: userTenant.tenant_id,
+          postal_code_id: pc.id
+        }));
+      
+      if (inserts.length === 0) return;
+      
+      // Batch insert
+      const batchSize = 100;
+      for (let i = 0; i < inserts.length; i += batchSize) {
+        const batch = inserts.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .upsert(batch, { onConflict: 'tenant_id,postal_code_id' });
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Bulk-val slutfört",
+        description: `${inserts.length} postnummer tillagda.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error) {
+      toast({
+        title: "Fel vid bulk-val",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [filteredPostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
+
+  const bulkDeselect = useCallback(async (codeIds: string[]) => {
+    if (!userTenant?.tenant_id || codeIds.length === 0) return;
+    
+    try {
+      // Delete in batches
+      for (const codeId of codeIds) {
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .delete()
+          .eq('tenant_id', userTenant.tenant_id)
+          .eq('postal_code_id', codeId);
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Bulk-borttagning slutförd",
+        description: `${codeIds.length} postnummer borttagna.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error) {
+      toast({
+        title: "Fel vid bulk-borttagning",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [userTenant?.tenant_id, queryClient]);
+
+  const selectAll = useCallback(() => {
+    const unselectedCodes = filteredPostalCodes.filter(pc => !selectedCodesSet.has(pc.id));
+    if (unselectedCodes.length > 0) {
+      bulkSelect('filtered');
+    }
+  }, [filteredPostalCodes, selectedCodesSet, bulkSelect]);
+
+  const deselectAll = useCallback(async () => {
+    if (!userTenant?.tenant_id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('tenant_coverage_areas')
+        .delete()
+        .eq('tenant_id', userTenant.tenant_id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Alla postnummer borttagna",
+        description: "Alla valda postnummer har tagits bort från ditt täckningsområde.",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error) {
+      toast({
+        title: "Fel vid borttagning",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [userTenant?.tenant_id, queryClient]);
 
   // Toggle postal code selection
   const togglePostalCode = useMutation({
@@ -203,25 +338,28 @@ const PostalCodeSelector = () => {
   });
 
   const isPostalCodeSelected = (postalCodeId: string) => {
-    return selectedPostalCodes.some(spc => spc.postal_code_id === postalCodeId);
+    return selectedCodesSet.has(postalCodeId);
   };
 
   const isRegionSelected = (region: string) => {
     const regionPostalCodes = availablePostalCodes.filter(pc => pc.region === region);
-    const selectedPostalCodeIds = selectedPostalCodes.map(spc => spc.postal_code_id);
-    return regionPostalCodes.every(pc => selectedPostalCodeIds.includes(pc.id));
+    return regionPostalCodes.length > 0 && regionPostalCodes.every(pc => selectedCodesSet.has(pc.id));
   };
 
   const getRegionProgress = (region: string) => {
     const regionPostalCodes = availablePostalCodes.filter(pc => pc.region === region);
-    const selectedPostalCodeIds = selectedPostalCodes.map(spc => spc.postal_code_id);
-    const selectedCount = regionPostalCodes.filter(pc => selectedPostalCodeIds.includes(pc.id)).length;
+    const selectedCount = regionPostalCodes.filter(pc => selectedCodesSet.has(pc.id)).length;
     return {
       selected: selectedCount,
       total: regionPostalCodes.length,
       percentage: regionPostalCodes.length > 0 ? (selectedCount / regionPostalCodes.length) * 100 : 0
     };
   };
+
+  // Toggle individual postal code
+  const handleTogglePostalCode = useCallback((postalCodeId: string, isSelected: boolean) => {
+    togglePostalCode.mutate({ postalCodeId, isSelected });
+  }, [togglePostalCode]);
 
   if (!userTenant) {
     return (
@@ -242,127 +380,40 @@ const PostalCodeSelector = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Filters and Search */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Filter & Sök</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="search">Sök postnummer eller stad</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  id="search"
-                  placeholder="Sök..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+      {/* Smart Filtering */}
+      <SmartPostalCodeFilter
+        allPostalCodes={availablePostalCodes}
+        selectedCodes={selectedCodesSet}
+        onFilteredResults={setFilteredPostalCodes}
+      />
 
-            <div>
-              <Label>Filter efter region</Label>
-              <div className="space-y-2 mt-2">
-                <Button
-                  variant={selectedRegion === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedRegion(null)}
-                  className="w-full justify-start"
-                >
-                  Alla regioner
-                </Button>
-                {regions.map((region) => {
-                  const progress = getRegionProgress(region);
-                  const isSelected = isRegionSelected(region);
-                  
-                  return (
-                    <div key={region} className="space-y-1">
-                      <Button
-                        variant={selectedRegion === region ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedRegion(region === selectedRegion ? null : region)}
-                        className="w-full justify-start"
-                      >
-                        {region}
-                        <Badge variant="outline" className="ml-auto">
-                          {progress.selected}/{progress.total}
-                        </Badge>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleRegion.mutate({ region, isSelected: !isSelected })}
-                        disabled={toggleRegion.isPending}
-                        className="w-full text-xs"
-                      >
-                        {isSelected ? (
-                          <>
-                            <Minus className="h-3 w-3 mr-1" />
-                            Ta bort alla
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-3 w-3 mr-1" />
-                            Välj alla
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Bulk Selection Controls */}
+      <BulkSelectionControls
+        filteredPostalCodes={filteredPostalCodes}
+        selectedCodes={selectedCodesSet}
+        onBulkSelect={bulkSelect}
+        onBulkDeselect={bulkDeselect}
+        onSelectAll={selectAll}
+        onDeselectAll={deselectAll}
+      />
 
-        {/* Available Postal Codes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Available Postal Codes - Virtualized */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Tillgängliga postnummer</CardTitle>
             <CardDescription>
-              {loadingAvailable ? 'Laddar...' : `${availablePostalCodes.length} postnummer funna`}
+              {loadingAvailable ? 'Laddar...' : `${filteredPostalCodes.length} av ${availablePostalCodes.length} postnummer`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-96">
-              <div className="space-y-2">
-                {availablePostalCodes.map((pc) => {
-                  const isSelected = isPostalCodeSelected(pc.id);
-                  
-                  return (
-                    <div
-                      key={pc.id}
-                      className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        isSelected ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => togglePostalCode.mutate({ 
-                        postalCodeId: pc.id, 
-                        isSelected: !isSelected 
-                      })}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={() => {}}
-                        className="pointer-events-none"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{pc.postal_code}</span>
-                          {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{pc.city}</p>
-                        {pc.region && (
-                          <p className="text-xs text-muted-foreground">{pc.region}</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+            <ChunkedPostalCodeList
+              postalCodes={filteredPostalCodes}
+              selectedCodes={selectedCodesSet}
+              onToggle={handleTogglePostalCode}
+              height={500}
+              isLoading={loadingAvailable}
+            />
           </CardContent>
         </Card>
 
