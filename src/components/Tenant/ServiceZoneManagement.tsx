@@ -87,6 +87,10 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   // Edit postal code modal
   const [isEditingPostal, setIsEditingPostal] = useState(false);
   const [editingPostalData, setEditingPostalData] = useState<any>(null);
+
+  // Import postal codes modal and file handling
+  const [isImportingPostal, setIsImportingPostal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -484,6 +488,70 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     setApplicableBonuses(applicable);
   };
 
+  // File import functions
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleImportPostalCodes = async () => {
+    if (!selectedFile) {
+      toast({
+        title: "Fel",
+        description: "Välj en fil att importera",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const text = await selectedFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      // Parse SE.txt format: Country Code, Postal Code, Place Name, Admin Name1, Admin Code1, Admin Name2, Admin Code2, Admin Name3, Admin Code3, Latitude, Longitude, Accuracy
+      const postalCodes = [];
+      
+      for (const line of lines) {
+        const parts = line.split('\t');
+        if (parts.length >= 3 && parts[0] === 'SE') {
+          postalCodes.push({
+            postal_code: parts[1],
+            city: parts[2],
+            address: '', // Will be filled later if needed
+            is_active: true
+          });
+        }
+      }
+
+      if (postalCodes.length === 0) {
+        toast({
+          title: "Fel",
+          description: "Inga giltiga postnummer hittades i filen",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Framgång",
+        description: `${postalCodes.length} postnummer importerade från fil`,
+      });
+
+      setIsImportingPostal(false);
+      setSelectedFile(null);
+      
+    } catch (error) {
+      console.error('Error importing postal codes:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte importera postnummer från fil",
+        variant: "destructive"
+      });
+    }
+  };
+
   const startEditingDistanceRule = (rule: any) => {
     setEditingDistanceRule(rule);
     setNewDistanceRule({
@@ -562,7 +630,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                   <CardDescription>Konfigurera vilka postnummer som omfattas av era hämtningstjänster</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Dialog>
+                  <Dialog open={isImportingPostal} onOpenChange={setIsImportingPostal}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="gap-2">
                         <Upload className="h-4 w-4" />
@@ -584,11 +652,33 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                             SE.txt filen kan laddas ner från GeoNames.org gratis. Alternativt kan du manuellt lägga till postnummer nedan.
                           </AlertDescription>
                         </Alert>
-                        <Input type="file" accept=".csv,.txt" />
+                        <Input 
+                          type="file" 
+                          accept=".csv,.txt" 
+                          onChange={handleFileSelect}
+                        />
+                        {selectedFile && (
+                          <div className="text-sm text-muted-foreground">
+                            Vald fil: {selectedFile.name}
+                          </div>
+                        )}
                       </div>
                       <DialogFooter>
-                        <Button variant="outline">Avbryt</Button>
-                        <Button>Importera</Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setIsImportingPostal(false);
+                            setSelectedFile(null);
+                          }}
+                        >
+                          Avbryt
+                        </Button>
+                        <Button 
+                          onClick={handleImportPostalCodes}
+                          disabled={!selectedFile}
+                        >
+                          Importera
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
