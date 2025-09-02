@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Save, RotateCcw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { fixSwedishEncoding } from '@/utils/swedishEncoding';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PricingManagementProps {
   onBack?: () => void;
@@ -80,16 +81,52 @@ const defaultSettings: Omit<PricingSettings, 'tenantId'> = {
   }
 };
 
-// Helper function to save to memory (same as in pricing calculator)
-const savePricingToMemory = (tenantId: string, settings: any) => {
+// Helper function to save pricing settings to database
+const savePricingToDatabase = async (tenantId: string, settings: any, toast: any) => {
+  if (!tenantId) {
+    toast({
+      title: "Fel",
+      description: "Inget tenant ID tillgängligt",
+      variant: "destructive"
+    });
+    return false;
+  }
+
   try {
+    console.log('Saving pricing settings to database:', settings);
+    
+    const { data, error } = await supabase.rpc('save_pricing_settings' as any, {
+      p_tenant_id: parseInt(tenantId),
+      p_pricing_settings: settings
+    });
+
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+
+    console.log('Database save successful:', data);
+
+    // Keep memory cache for UI responsiveness
     if (!(window as any).__PRICING_SETTINGS) {
       (window as any).__PRICING_SETTINGS = {};
     }
     (window as any).__PRICING_SETTINGS[tenantId] = settings;
-    console.log('Pricing settings saved to memory for tenant:', tenantId);
-  } catch (err) {
-    console.error('Error saving pricing settings to memory:', err);
+
+    toast({
+      title: "Framgång",
+      description: "Prisuppsättningar sparade i databasen"
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error saving pricing settings:', error);
+    toast({
+      title: "Fel", 
+      description: "Kunde inte spara prisuppsättningar",
+      variant: "destructive"
+    });
+    return false;
   }
 };
 
@@ -108,73 +145,148 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    loadPricingSettings();
+    if (tenantId) {
+      loadPricingFromDatabase();
+    }
   }, [tenantId]);
 
-  const loadPricingSettings = () => {
+  const loadPricingFromDatabase = async () => {
+    if (!tenantId) {
+      console.log('No tenant ID, skipping pricing load');
+      return;
+    }
+
     try {
       setIsLoading(true);
+      console.log('Loading pricing settings from database for tenant:', tenantId);
       
-      // Load from memory storage
-      const savedSettings = (window as any).__PRICING_SETTINGS;
-      if (savedSettings && savedSettings[tenantId]) {
-        const loadedSettings = savedSettings[tenantId];
+      const { data, error } = await supabase.rpc('get_pricing_settings' as any, {
+        p_tenant_id: parseInt(tenantId)
+      });
+
+      if (error) {
+        console.error('Database load error:', error);
+        throw error;
+      }
+
+      console.log('Loaded pricing settings:', data);
+
+      // Cache in memory for performance
+      if (!(window as any).__PRICING_SETTINGS) {
+        (window as any).__PRICING_SETTINGS = {};
+      }
+      (window as any).__PRICING_SETTINGS[tenantId] = data;
+
+      // Update UI state with loaded settings
+      if (data) {
+        const dbData = data as any;
         setSettings({
           tenantId,
-          ageBonuses: loadedSettings.ageBonuses || defaultSettings.ageBonuses,
-          oldCarDeduction: loadedSettings.oldCarDeduction || defaultSettings.oldCarDeduction,
-          distanceAdjustments: loadedSettings.distanceAdjustments || defaultSettings.distanceAdjustments,
-          partsBonuses: loadedSettings.partsBonuses || defaultSettings.partsBonuses,
-          fuelAdjustments: loadedSettings.fuelAdjustments || defaultSettings.fuelAdjustments
+          ageBonuses: {
+            age0to5: dbData.ageBonuses?.['0-4.99'] || defaultSettings.ageBonuses.age0to5,
+            age5to10: dbData.ageBonuses?.['5-9.99'] || defaultSettings.ageBonuses.age5to10,
+            age10to15: dbData.ageBonuses?.['10-14.99'] || defaultSettings.ageBonuses.age10to15,
+            age15to20: dbData.ageBonuses?.['15-19.99'] || defaultSettings.ageBonuses.age15to20,
+            age20plus: dbData.ageBonuses?.['20+'] || defaultSettings.ageBonuses.age20plus
+          },
+          oldCarDeduction: {
+            before1990: dbData.oldCarDeductions?.pre1990 || defaultSettings.oldCarDeduction.before1990
+          },
+          distanceAdjustments: {
+            dropoffComplete: dbData.distanceAdjustments?.dropoff?.complete_0km || defaultSettings.distanceAdjustments.dropoffComplete,
+            dropoffIncomplete: dbData.distanceAdjustments?.dropoff?.incomplete_0km || defaultSettings.distanceAdjustments.dropoffIncomplete,
+            pickup0to20: dbData.distanceAdjustments?.pickup?.['0-20km'] || defaultSettings.distanceAdjustments.pickup0to20,
+            pickup20to50: dbData.distanceAdjustments?.pickup?.['20-50km'] || defaultSettings.distanceAdjustments.pickup20to50,
+            pickup50to75: dbData.distanceAdjustments?.pickup?.['50-75km'] || defaultSettings.distanceAdjustments.pickup50to75,
+            pickup75to100: dbData.distanceAdjustments?.pickup?.['75-100km'] || defaultSettings.distanceAdjustments.pickup75to100,
+            pickup100plus: dbData.distanceAdjustments?.pickup?.['100+km'] || defaultSettings.distanceAdjustments.pickup100plus
+          },
+          partsBonuses: {
+            engineTransmissionCatalyst: dbData.partsBonuses?.engine_transmission_catalytic || defaultSettings.partsBonuses.engineTransmissionCatalyst,
+            batteryWheelsOther: dbData.partsBonuses?.battery_wheels_complete || defaultSettings.partsBonuses.batteryWheelsOther
+          },
+          fuelAdjustments: {
+            gasoline: dbData.fuelAdjustments?.bensin || defaultSettings.fuelAdjustments.gasoline,
+            ethanol: dbData.fuelAdjustments?.etanol || defaultSettings.fuelAdjustments.ethanol,
+            electric: dbData.fuelAdjustments?.el || defaultSettings.fuelAdjustments.electric,
+            other: dbData.fuelAdjustments?.annat || defaultSettings.fuelAdjustments.other
+          }
         });
+        
         setLastSaved(new Date());
+        console.log('UI state updated with loaded settings');
+        
         toast({
           title: fixSwedishEncoding("Inställningar laddade"),
-          description: fixSwedishEncoding("Sparade prisinställningar har laddats från minnet."),
-        });
-      } else {
-        console.log('No existing pricing settings found, using defaults');
-        setSettings({
-          ...defaultSettings,
-          tenantId
-        });
-        toast({
-          title: fixSwedishEncoding("Standardinställningar"),
-          description: fixSwedishEncoding("Använder standardvärden för prisinställningar."),
+          description: fixSwedishEncoding("Sparade prisinställningar har laddats från databasen."),
         });
       }
-    } catch (err) {
-      console.error('Error loading pricing settings:', err);
+    } catch (error) {
+      console.error('Error loading pricing settings:', error);
       setSettings({
         ...defaultSettings,
         tenantId
+      });
+      toast({
+        title: "Varning",
+        description: "Kunde inte ladda sparade prisuppsättningar, använder standardvärden",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const savePricingSettingsToMemory = () => {
+  const handleSaveSettings = async () => {
     try {
       setIsSaving(true);
 
-      // Save to memory
-      savePricingToMemory(tenantId, {
-        ageBonuses: settings.ageBonuses,
-        oldCarDeduction: settings.oldCarDeduction,
-        distanceAdjustments: settings.distanceAdjustments,
-        partsBonuses: settings.partsBonuses,
-        fuelAdjustments: settings.fuelAdjustments
-      });
+      // Transform UI state to database format
+      const dbSettings = {
+        ageBonuses: {
+          '0-4.99': settings.ageBonuses.age0to5,
+          '5-9.99': settings.ageBonuses.age5to10,
+          '10-14.99': settings.ageBonuses.age10to15,
+          '15-19.99': settings.ageBonuses.age15to20,
+          '20+': settings.ageBonuses.age20plus
+        },
+        oldCarDeductions: {
+          pre1990: settings.oldCarDeduction.before1990
+        },
+        distanceAdjustments: {
+          dropoff: {
+            complete_0km: settings.distanceAdjustments.dropoffComplete,
+            incomplete_0km: settings.distanceAdjustments.dropoffIncomplete
+          },
+          pickup: {
+            '0-20km': settings.distanceAdjustments.pickup0to20,
+            '20-50km': settings.distanceAdjustments.pickup20to50,
+            '50-75km': settings.distanceAdjustments.pickup50to75,
+            '75-100km': settings.distanceAdjustments.pickup75to100,
+            '100+km': settings.distanceAdjustments.pickup100plus
+          }
+        },
+        partsBonuses: {
+          engine_transmission_catalytic: settings.partsBonuses.engineTransmissionCatalyst,
+          battery_wheels_complete: settings.partsBonuses.batteryWheelsOther
+        },
+        fuelAdjustments: {
+          bensin: settings.fuelAdjustments.gasoline,
+          etanol: settings.fuelAdjustments.ethanol,
+          el: settings.fuelAdjustments.electric,
+          annat: settings.fuelAdjustments.other
+        },
+        lastUpdated: new Date().toISOString(),
+        version: '1.0'
+      };
       
-      setHasChanges(false);
-      setLastSaved(new Date());
-
-      toast({
-        title: fixSwedishEncoding("Sparades framgångsrikt"),
-        description: fixSwedishEncoding("Prisinställningarna har sparats och är nu aktiva för prisberäkningar."),
-      });
-
+      console.log('Preparing to save settings:', dbSettings);
+      const success = await savePricingToDatabase(tenantId, dbSettings, toast);
+      
+      if (success) {
+        setHasChanges(false);
+        setLastSaved(new Date());
+      }
     } catch (err) {
       console.error('Error saving pricing settings:', err);
       toast({
@@ -227,7 +339,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       return;
     }
 
-    savePricingSettingsToMemory();
+    handleSaveSettings();
   };
 
   const handleReset = () => {
@@ -341,7 +453,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
                   <p className="text-sm text-orange-600">Du har gjort ändringar som inte har sparats ännu.</p>
                 </div>
                 <Button 
-                  onClick={savePricingSettingsToMemory}
+                  onClick={handleSaveSettings}
                   disabled={isSaving}
                   className="bg-orange-600 hover:bg-orange-700"
                 >
