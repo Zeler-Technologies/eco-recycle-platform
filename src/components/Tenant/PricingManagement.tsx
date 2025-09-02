@@ -12,6 +12,7 @@ import { Save, RotateCcw, AlertCircle, ArrowLeft, Loader2, Plus, Edit, Trash2, C
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { fixSwedishEncoding } from '@/utils/swedishEncoding';
 import { supabase } from '@/integrations/supabase/client';
+import DistanceRulesManager from './DistanceRulesManager';
 
 interface PricingManagementProps {
   onBack?: () => void;
@@ -832,25 +833,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
               </AlertDescription>
             </Alert>
             
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Distansbaserade Avdrag</CardTitle>
-                    <CardDescription>Hantera automatiska avdrag baserat på körsträcka</CardDescription>
-                  </div>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Lägg till ny regel
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  Distansregler kommer att implementeras här...
-                </div>
-              </CardContent>
-            </Card>
+            <DistanceRulesManager tenantId={tenantId} />
           </TabsContent>
         </Tabs>
       </div>
