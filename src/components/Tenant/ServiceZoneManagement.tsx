@@ -84,6 +84,10 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   // Map verification modal
   const [showMapModal, setShowMapModal] = useState(false);
   
+  // Edit postal code modal
+  const [isEditingPostal, setIsEditingPostal] = useState(false);
+  const [editingPostalData, setEditingPostalData] = useState<any>(null);
+  
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -502,6 +506,24 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     setIsAddingBonus(true);
   };
 
+  const handleEditPostal = (postal: any) => {
+    setEditingPostalData({
+      code: postal.code,
+      city: postal.city,
+      address: postal.address,
+      active: postal.active
+    });
+    setIsEditingPostal(true);
+  };
+
+  const handleSavePostalEdit = () => {
+    // Here you would update the postal code in your data source
+    // For now, we'll just close the modal
+    setIsEditingPostal(false);
+    setEditingPostalData(null);
+    // In a real implementation, you would update the mockPostalCodes or make an API call
+  };
+
   const filteredPostalCodes = mockPostalCodes.filter(code => 
     code.code.includes(searchTerm) || 
     code.city.toLowerCase().includes(searchTerm.toLowerCase())
@@ -655,16 +677,16 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                             {postal.active ? "Aktiv" : "Inaktiv"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                         <TableCell className="text-right">
+                           <div className="flex justify-end gap-2">
+                             <Button variant="ghost" size="sm" onClick={() => handleEditPostal(postal)}>
+                               <Edit className="h-4 w-4" />
+                             </Button>
+                             <Button variant="ghost" size="sm" className="text-destructive">
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1194,6 +1216,79 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         onClose={() => setShowMapModal(false)}
         address={baseAddress}
       />
+
+      {/* Edit Postal Code Modal */}
+      <Dialog open={isEditingPostal} onOpenChange={setIsEditingPostal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redigera postnummer</DialogTitle>
+            <DialogDescription>Uppdatera postnummer, ort, adress och status</DialogDescription>
+          </DialogHeader>
+          {editingPostalData && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-postal">Postnummer</Label>
+                <Input
+                  id="edit-postal"
+                  value={editingPostalData.code}
+                  onChange={(e) => setEditingPostalData({
+                    ...editingPostalData,
+                    code: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-city">Ort</Label>
+                <Input
+                  id="edit-city"
+                  value={editingPostalData.city}
+                  onChange={(e) => setEditingPostalData({
+                    ...editingPostalData,
+                    city: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-address">Adress</Label>
+                <Input
+                  id="edit-address"
+                  value={editingPostalData.address}
+                  onChange={(e) => setEditingPostalData({
+                    ...editingPostalData,
+                    address: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <Select 
+                  value={editingPostalData.active ? "active" : "inactive"}
+                  onValueChange={(value) => setEditingPostalData({
+                    ...editingPostalData,
+                    active: value === "active"
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Aktiv</SelectItem>
+                    <SelectItem value="inactive">Inaktiv</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditingPostal(false)}>
+              Avbryt
+            </Button>
+            <Button onClick={handleSavePostalEdit}>
+              Spara ändringar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
