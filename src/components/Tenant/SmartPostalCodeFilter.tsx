@@ -188,14 +188,14 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
         <div>
           <Label>Region/Län</Label>
           <Select 
-            value={filters.region} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, region: value }))}
+            value={filters.region || "all"} 
+            onValueChange={(value) => setFilters(prev => ({ ...prev, region: value === "all" ? "" : value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Välj region..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Alla regioner</SelectItem>
+              <SelectItem value="all">Alla regioner</SelectItem>
               {regions.map(region => (
                 <SelectItem key={region} value={region}>{region}</SelectItem>
               ))}
@@ -207,14 +207,14 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
         <div>
           <Label>Stad</Label>
           <Select 
-            value={filters.city} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
+            value={filters.city || "all"} 
+            onValueChange={(value) => setFilters(prev => ({ ...prev, city: value === "all" ? "" : value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Välj stad..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Alla städer</SelectItem>
+              <SelectItem value="all">Alla städer</SelectItem>
               {cities.map(city => (
                 <SelectItem key={city} value={city}>{city}</SelectItem>
               ))}
