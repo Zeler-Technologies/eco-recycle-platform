@@ -58,6 +58,7 @@ interface MessageLog {
   status: 'sent' | 'failed' | 'pending';
   template: string;
   pickupId: string;
+  cost_amount?: number;
 }
 
 interface CustomMessageTemplate {
@@ -291,7 +292,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 
       if (error) throw error;
       
-      // Transform database data to match MessageLog interface
+      // Transform database data to match MessageLog interface with cost
       const transformedData = (data || []).map(record => ({
         id: record.id.toString(),
         customer: record.recipient_name || 'Okänd',
@@ -300,7 +301,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         timestamp: record.created_at,
         status: (['sent', 'failed', 'pending'].includes(record.status) ? record.status : 'pending') as 'sent' | 'failed' | 'pending',
         template: record.message_type || 'Okänd mall',
-        pickupId: record.pickup_order_id || 'N/A'
+        pickupId: record.pickup_order_id || 'N/A',
+        cost_amount: record.cost_amount || 0
       }));
       
       setMessageHistory(transformedData);
