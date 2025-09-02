@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Save, RotateCcw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { Save, RotateCcw, AlertCircle, ArrowLeft, Loader2, Plus, Edit, Trash2, Calculator } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { fixSwedishEncoding } from '@/utils/swedishEncoding';
 import { supabase } from '@/integrations/supabase/client';
@@ -437,380 +439,420 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
       </header>
 
       <div className="space-y-6 p-6">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Justera ersättningar och avdrag som påverkar bilens värdering. Alla ändringar sparas i minnet för användning i prisberäkningar.
-          </AlertDescription>
-        </Alert>
+        <Tabs defaultValue="settings" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="settings">Prisinställningar</TabsTrigger>
+            <TabsTrigger value="distance">Distansregler</TabsTrigger>
+          </TabsList>
 
-        {hasChanges && (
-          <Card className="border-orange-200 bg-orange-50">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-orange-800">Osparade ändringar</h3>
-                  <p className="text-sm text-orange-600">Du har gjort ändringar som inte har sparats ännu.</p>
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Justera ersättningar och avdrag som påverkar bilens värdering. Alla ändringar sparas i minnet för användning i prisberäkningar.
+              </AlertDescription>
+            </Alert>
+
+            {hasChanges && (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-orange-800">Osparade ändringar</h3>
+                      <p className="text-sm text-orange-600">Du har gjort ändringar som inte har sparats ännu.</p>
+                    </div>
+                    <Button 
+                      onClick={handleSaveSettings}
+                      disabled={isSaving}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Spara alla ändringar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Age Bonuses Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Åldersbonus för Bil</CardTitle>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" disabled={isSaving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Spara
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Är du säker på att du vill spara ändringarna för åldersbonus?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleSectionSave('Åldersbonus', settings.ageBonuses, [
+                          { field: 'age0to5', min: 0, max: 20000 },
+                          { field: 'age5to10', min: 0, max: 20000 },
+                          { field: 'age10to15', min: 0, max: 20000 },
+                          { field: 'age15to20', min: 0, max: 20000 },
+                          { field: 'age20plus', min: 0, max: 20000 }
+                        ])}>
+                          Spara
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
-                <Button 
-                  onClick={handleSaveSettings}
-                  disabled={isSaving}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Spara alla ändringar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Age Bonuses Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Åldersbonus för Bil</CardTitle>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Spara
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Är du säker på att du vill spara ändringarna för åldersbonus?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Avbryt</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleSectionSave('Åldersbonus', settings.ageBonuses, [
-                      { field: 'age0to5', min: 0, max: 20000 },
-                      { field: 'age5to10', min: 0, max: 20000 },
-                      { field: 'age10to15', min: 0, max: 20000 },
-                      { field: 'age15to20', min: 0, max: 20000 },
-                      { field: 'age20plus', min: 0, max: 20000 }
-                    ])}>
-                      Spara
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <InputField
-              label="0–4,99 år"
-              value={settings.ageBonuses.age0to5}
-              onChange={(value) => handleInputChange('ageBonuses', 'age0to5', value)}
-              min={0}
-              max={20000}
-            />
-            <InputField
-              label="5–9,99 år"
-              value={settings.ageBonuses.age5to10}
-              onChange={(value) => handleInputChange('ageBonuses', 'age5to10', value)}
-              min={0}
-              max={20000}
-            />
-            <InputField
-              label="10–14,99 år"
-              value={settings.ageBonuses.age10to15}
-              onChange={(value) => handleInputChange('ageBonuses', 'age10to15', value)}
-              min={0}
-              max={20000}
-            />
-            <InputField
-              label="15–19,99 år"
-              value={settings.ageBonuses.age15to20}
-              onChange={(value) => handleInputChange('ageBonuses', 'age15to20', value)}
-              min={0}
-              max={20000}
-            />
-            <InputField
-              label="20 år eller äldre"
-              value={settings.ageBonuses.age20plus}
-              onChange={(value) => handleInputChange('ageBonuses', 'age20plus', value)}
-              min={0}
-              max={20000}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Old Car Deduction Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Avdrag för gamla årsmodeller</CardTitle>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Spara
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Är du säker på att du vill spara ändringarna för avdrag?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Avbryt</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleSectionSave('Avdrag för gamla årsmodeller', settings.oldCarDeduction, [
-                      { field: 'before1990', min: -5000, max: 0 }
-                    ])}>
-                      Spara
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <InputField
-              label="Före 1990"
-              value={settings.oldCarDeduction.before1990}
-              onChange={(value) => handleInputChange('oldCarDeduction', 'before1990', value)}
-              min={-5000}
-              max={0}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Distance Adjustments Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Avståndsjusteringar</CardTitle>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Spara
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Är du säker på att du vill spara ändringarna för avståndsjusteringar?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Avbryt</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleSectionSave('Avståndsjusteringar', settings.distanceAdjustments, [
-                      { field: 'dropoffComplete', min: 0, max: 5000 },
-                      { field: 'dropoffIncomplete', min: 0, max: 5000 },
-                      { field: 'pickup0to20', min: -5000, max: 0 },
-                      { field: 'pickup20to50', min: -5000, max: 0 },
-                      { field: 'pickup50to75', min: -5000, max: 0 },
-                      { field: 'pickup75to100', min: -5000, max: 0 },
-                      { field: 'pickup100plus', min: -5000, max: 0 }
-                    ])}>
-                      Spara
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h4 className="font-semibold mb-3">Avlämning (Drop-off)</h4>
-              <div className="space-y-4">
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <InputField
-                  label="0 km avlämning (komplett bil)"
-                  value={settings.distanceAdjustments.dropoffComplete}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'dropoffComplete', value)}
+                  label="0–4,99 år"
+                  value={settings.ageBonuses.age0to5}
+                  onChange={(value) => handleInputChange('ageBonuses', 'age0to5', value)}
+                  min={0}
+                  max={20000}
+                />
+                <InputField
+                  label="5–9,99 år"
+                  value={settings.ageBonuses.age5to10}
+                  onChange={(value) => handleInputChange('ageBonuses', 'age5to10', value)}
+                  min={0}
+                  max={20000}
+                />
+                <InputField
+                  label="10–14,99 år"
+                  value={settings.ageBonuses.age10to15}
+                  onChange={(value) => handleInputChange('ageBonuses', 'age10to15', value)}
+                  min={0}
+                  max={20000}
+                />
+                <InputField
+                  label="15–19,99 år"
+                  value={settings.ageBonuses.age15to20}
+                  onChange={(value) => handleInputChange('ageBonuses', 'age15to20', value)}
+                  min={0}
+                  max={20000}
+                />
+                <InputField
+                  label="20 år eller äldre"
+                  value={settings.ageBonuses.age20plus}
+                  onChange={(value) => handleInputChange('ageBonuses', 'age20plus', value)}
+                  min={0}
+                  max={20000}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Old Car Deduction Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Avdrag för gamla årsmodeller</CardTitle>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" disabled={isSaving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Spara
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Är du säker på att du vill spara ändringarna för avdrag?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleSectionSave('Avdrag för gamla årsmodeller', settings.oldCarDeduction, [
+                          { field: 'before1990', min: -5000, max: 0 }
+                        ])}>
+                          Spara
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <InputField
+                  label="Före 1990"
+                  value={settings.oldCarDeduction.before1990}
+                  onChange={(value) => handleInputChange('oldCarDeduction', 'before1990', value)}
+                  min={-5000}
+                  max={0}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Distance Adjustments Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Avståndsjusteringar</CardTitle>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" disabled={isSaving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Spara
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Är du säker på att du vill spara ändringarna för avståndsjusteringar?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleSectionSave('Avståndsjusteringar', settings.distanceAdjustments, [
+                          { field: 'dropoffComplete', min: 0, max: 5000 },
+                          { field: 'dropoffIncomplete', min: 0, max: 5000 },
+                          { field: 'pickup0to20', min: -5000, max: 0 },
+                          { field: 'pickup20to50', min: -5000, max: 0 },
+                          { field: 'pickup50to75', min: -5000, max: 0 },
+                          { field: 'pickup75to100', min: -5000, max: 0 },
+                          { field: 'pickup100plus', min: -5000, max: 0 }
+                        ])}>
+                          Spara
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Avlämning (Drop-off)</h4>
+                  <div className="space-y-4">
+                    <InputField
+                      label="0 km avlämning (komplett bil)"
+                      value={settings.distanceAdjustments.dropoffComplete}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'dropoffComplete', value)}
+                      min={0}
+                      max={5000}
+                    />
+                    <InputField
+                      label="0 km avlämning (ofullständig bil)"
+                      value={settings.distanceAdjustments.dropoffIncomplete}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'dropoffIncomplete', value)}
+                      min={0}
+                      max={5000}
+                    />
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <h4 className="font-semibold mb-3">Hämtning (Pickup)</h4>
+                  <div className="space-y-4">
+                    <InputField
+                      label="0–20 km"
+                      value={settings.distanceAdjustments.pickup0to20}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'pickup0to20', value)}
+                      min={-5000}
+                      max={0}
+                    />
+                    <InputField
+                      label="20–50 km"
+                      value={settings.distanceAdjustments.pickup20to50}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'pickup20to50', value)}
+                      min={-5000}
+                      max={0}
+                    />
+                    <InputField
+                      label="50–75 km"
+                      value={settings.distanceAdjustments.pickup50to75}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'pickup50to75', value)}
+                      min={-5000}
+                      max={0}
+                    />
+                    <InputField
+                      label="75–100 km"
+                      value={settings.distanceAdjustments.pickup75to100}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'pickup75to100', value)}
+                      min={-5000}
+                      max={0}
+                    />
+                    <InputField
+                      label="100+ km"
+                      value={settings.distanceAdjustments.pickup100plus}
+                      onChange={(value) => handleInputChange('distanceAdjustments', 'pickup100plus', value)}
+                      min={-5000}
+                      max={0}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Parts Bonuses Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Bonus för värdefulla delar</CardTitle>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" disabled={isSaving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Spara
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Är du säker på att du vill spara ändringarna för delbonus?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleSectionSave('Bonus för värdefulla delar', settings.partsBonuses, [
+                          { field: 'engineTransmissionCatalyst', min: 0, max: 5000 },
+                          { field: 'batteryWheelsOther', min: 0, max: 5000 }
+                        ])}>
+                          Spara
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <InputField
+                  label="Motor / Växellåda / Katalysator"
+                  value={settings.partsBonuses.engineTransmissionCatalyst}
+                  onChange={(value) => handleInputChange('partsBonuses', 'engineTransmissionCatalyst', value)}
                   min={0}
                   max={5000}
                 />
                 <InputField
-                  label="0 km avlämning (ofullständig bil)"
-                  value={settings.distanceAdjustments.dropoffIncomplete}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'dropoffIncomplete', value)}
+                  label="Batteri / Fyra hjul / Övrigt komplett"
+                  value={settings.partsBonuses.batteryWheelsOther}
+                  onChange={(value) => handleInputChange('partsBonuses', 'batteryWheelsOther', value)}
                   min={0}
                   max={5000}
                 />
-              </div>
+              </CardContent>
+            </Card>
+
+            {/* Fuel Adjustments Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Bränslejustering</CardTitle>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" disabled={isSaving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Spara
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Är du säker på att du vill spara ändringarna för bränslejustering?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleSectionSave('Bränslejustering', settings.fuelAdjustments, [
+                          { field: 'other', min: -1000, max: 0 }
+                        ])}>
+                          Spara
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <InputField
+                  label="Bensin"
+                  value={settings.fuelAdjustments.gasoline}
+                  onChange={() => {}}
+                  min={0}
+                  max={0}
+                  disabled={true}
+                />
+                <InputField
+                  label="Etanol"
+                  value={settings.fuelAdjustments.ethanol}
+                  onChange={() => {}}
+                  min={0}
+                  max={0}
+                  disabled={true}
+                />
+                <InputField
+                  label="El (Electric)"
+                  value={settings.fuelAdjustments.electric}
+                  onChange={() => {}}
+                  min={0}
+                  max={0}
+                  disabled={true}
+                />
+                <InputField
+                  label="Annat bränsle"
+                  value={settings.fuelAdjustments.other}
+                  onChange={(value) => handleInputChange('fuelAdjustments', 'other', value)}
+                  min={-1000}
+                  max={0}
+                />
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-center pt-6">
+              <Button 
+                variant="outline" 
+                onClick={handleReset} 
+                className="flex items-center space-x-2"
+                disabled={isSaving}
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>Återställ till standard</span>
+              </Button>
             </div>
+          </TabsContent>
+
+          {/* Distance Rules Tab */}
+          <TabsContent value="distance" className="space-y-6">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Hantera distansbaserade avdrag som automatiskt tillämpas baserat på hämtningsavstånd. Dessa regler kompletterar de fasta avståndsjusteringarna.
+              </AlertDescription>
+            </Alert>
             
-            <Separator />
-            
-            <div>
-              <h4 className="font-semibold mb-3">Hämtning (Pickup)</h4>
-              <div className="space-y-4">
-                <InputField
-                  label="0–20 km"
-                  value={settings.distanceAdjustments.pickup0to20}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'pickup0to20', value)}
-                  min={-5000}
-                  max={0}
-                />
-                <InputField
-                  label="20–50 km"
-                  value={settings.distanceAdjustments.pickup20to50}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'pickup20to50', value)}
-                  min={-5000}
-                  max={0}
-                />
-                <InputField
-                  label="50–75 km"
-                  value={settings.distanceAdjustments.pickup50to75}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'pickup50to75', value)}
-                  min={-5000}
-                  max={0}
-                />
-                <InputField
-                  label="75–100 km"
-                  value={settings.distanceAdjustments.pickup75to100}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'pickup75to100', value)}
-                  min={-5000}
-                  max={0}
-                />
-                <InputField
-                  label="100+ km"
-                  value={settings.distanceAdjustments.pickup100plus}
-                  onChange={(value) => handleInputChange('distanceAdjustments', 'pickup100plus', value)}
-                  min={-5000}
-                  max={0}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Parts Bonuses Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Bonus för värdefulla delar</CardTitle>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Spara
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Distansbaserade Avdrag</CardTitle>
+                    <CardDescription>Hantera automatiska avdrag baserat på körsträcka</CardDescription>
+                  </div>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Lägg till ny regel
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Är du säker på att du vill spara ändringarna för delbonus?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Avbryt</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleSectionSave('Bonus för värdefulla delar', settings.partsBonuses, [
-                      { field: 'engineTransmissionCatalyst', min: 0, max: 5000 },
-                      { field: 'batteryWheelsOther', min: 0, max: 5000 }
-                    ])}>
-                      Spara
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <InputField
-              label="Motor / Växellåda / Katalysator"
-              value={settings.partsBonuses.engineTransmissionCatalyst}
-              onChange={(value) => handleInputChange('partsBonuses', 'engineTransmissionCatalyst', value)}
-              min={0}
-              max={5000}
-            />
-            <InputField
-              label="Batteri / Fyra hjul / Övrigt komplett"
-              value={settings.partsBonuses.batteryWheelsOther}
-              onChange={(value) => handleInputChange('partsBonuses', 'batteryWheelsOther', value)}
-              min={0}
-              max={5000}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Fuel Adjustments Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Bränslejustering</CardTitle>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Spara
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Bekräfta ändringar</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Är du säker på att du vill spara ändringarna för bränslejustering?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Avbryt</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleSectionSave('Bränslejustering', settings.fuelAdjustments, [
-                      { field: 'other', min: -1000, max: 0 }
-                    ])}>
-                      Spara
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <InputField
-              label="Bensin"
-              value={settings.fuelAdjustments.gasoline}
-              onChange={() => {}}
-              min={0}
-              max={0}
-              disabled={true}
-            />
-            <InputField
-              label="Etanol"
-              value={settings.fuelAdjustments.ethanol}
-              onChange={() => {}}
-              min={0}
-              max={0}
-              disabled={true}
-            />
-            <InputField
-              label="El (Electric)"
-              value={settings.fuelAdjustments.electric}
-              onChange={() => {}}
-              min={0}
-              max={0}
-              disabled={true}
-            />
-            <InputField
-              label="Annat bränsle"
-              value={settings.fuelAdjustments.other}
-              onChange={(value) => handleInputChange('fuelAdjustments', 'other', value)}
-              min={-1000}
-              max={0}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-center pt-6">
-          <Button 
-            variant="outline" 
-            onClick={handleReset} 
-            className="flex items-center space-x-2"
-            disabled={isSaving}
-          >
-            <RotateCcw className="h-4 w-4" />
-            <span>Återställ till standard</span>
-          </Button>
-        </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  Distansregler kommer att implementeras här...
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
