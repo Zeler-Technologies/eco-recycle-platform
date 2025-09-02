@@ -1009,18 +1009,32 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                   </div>
                 </div>
 
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <Settings className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-yellow-800">SMS-leverans kräver konfiguration</h4>
-                      <p className="text-sm text-yellow-700 mt-1">
-                        För att skicka riktiga SMS-meddelanden behöver du integrera med en SMS-leverantör som Twilio. 
-                        Detta kräver backend-funktionalitet som kan aktiveras genom att ansluta till Supabase.
-                      </p>
+                {user?.role === 'super_admin' ? (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Settings className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-yellow-800">SMS-leverans kräver konfiguration</h4>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          För att skicka riktiga SMS-meddelanden behöver du integrera med en SMS-leverantör som Twilio. 
+                          Detta kräver backend-funktionalitet som kan aktiveras genom att ansluta till Supabase.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Eye className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-800">SMS-inställningar</h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          SMS-inställningar hanteras av systemadministratören. Du kan se användning och hantera mallar nedan.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
