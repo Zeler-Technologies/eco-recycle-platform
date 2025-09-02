@@ -20,6 +20,8 @@ interface PostalCode {
   city: string;
   region: string | null;
   country: string;
+  latitude?: number | null;
+  longitude?: number | null;
   is_active: boolean;
   created_at: string;
 }
@@ -140,40 +142,104 @@ const PostalCodeManager = () => {
   const importPostalCodes = useMutation({
     mutationFn: async ({ file, country }: { file: File; country: string }) => {
       const text = await file.text();
+      console.log(`File size: ${text.length} characters`);
+      
       const lines = text.split('\n').filter(line => line.trim());
+      const postalCodes: any[] = [];
       
-      // Skip header if exists
-      const dataLines = lines[0].includes('postal') || lines[0].includes('kod') ? lines.slice(1) : lines;
+      lines.forEach((line, index) => {
+        if (!line.trim()) return;
+        
+        // CRITICAL: Split by TAB character for Swedish format
+        const columns = line.split('\t');
+        
+        if (columns.length < 4) {
+          console.warn(`Row ${index + 1}: Not enough columns (${columns.length})`);
+          return;
+        }
+        
+        // Extract from correct TAB-separated positions for Swedish format:
+        // SE[TAB]624 66[TAB]Fårö[TAB]Gotland[TAB]...[TAB]57.9167[TAB]19.1333
+        const countryCode = columns[0]?.trim(); // SE
+        const postalCodeRaw = columns[1]?.trim(); // "624 66"
+        const city = columns[2]?.trim(); // "Fårö"
+        const region = columns[3]?.trim(); // "Gotland"
+        const latitude = columns[10] ? parseFloat(columns[10].trim()) : null; // 57.9167
+        const longitude = columns[11] ? parseFloat(columns[11].trim()) : null; // 19.1333
+        
+        // Skip invalid rows
+        if (!countryCode || !postalCodeRaw || !city) {
+          console.warn(`Row ${index + 1}: Missing essential data`);
+          return;
+        }
+        
+        // Convert "624 66" to "62466" - remove spaces from postal codes
+        const postalCode = postalCodeRaw.replace(/\s+/g, '');
+        
+        // Validate Swedish postal code (5 digits)
+        if (!/^\d{5}$/.test(postalCode)) {
+          console.warn(`Row ${index + 1}: Invalid postal code: ${postalCodeRaw}`);
+          return;
+        }
+        
+        // Validate Swedish coordinates (optional but recommended)
+        let validLat = latitude;
+        let validLng = longitude;
+        
+        if (latitude && longitude) {
+          if (latitude < 55 || latitude > 70 || longitude < 10 || longitude > 25) {
+            console.warn(`Row ${index + 1}: Coordinates outside Sweden bounds`);
+            validLat = null;
+            validLng = null;
+          }
+        }
+        
+        postalCodes.push({
+          postal_code: postalCode,
+          city: city,
+          region: region || '',
+          country: country,
+          latitude: validLat,
+          longitude: validLng,
+          is_active: true
+        });
+      });
       
-      const postalCodes = dataLines.map(line => {
-        const parts = line.split(/[,;\t]/).map(p => p.trim().replace(/"/g, ''));
-        return {
-          postal_code: parts[0],
-          city: parts[1] || '',
-          region: parts[2] || null,
-          country: country
-        };
-      }).filter(pc => pc.postal_code && pc.city);
-
-      // Insert in batches
-      const batchSize = 100;
-      for (let i = 0; i < postalCodes.length; i += batchSize) {
-        const batch = postalCodes.slice(i, i + batchSize);
-        const { error } = await supabase
-          .from('postal_codes_master')
-          .upsert(batch, { 
-            onConflict: 'postal_code,country',
-            ignoreDuplicates: true 
-          });
-        if (error) throw error;
+      console.log(`Parsed ${postalCodes.length} valid postal codes`);
+      
+      if (postalCodes.length === 0) {
+        throw new Error('Inga giltiga postnummer hittades. Kontrollera att filen är TAB-separerad.');
       }
 
-      return postalCodes.length;
+      // Clear existing data for this country first
+      await supabase
+        .from('postal_codes_master')
+        .delete()
+        .eq('country', country);
+
+      // Insert in batches to avoid timeout
+      const batchSize = 1000;
+      let imported = 0;
+      
+      for (let i = 0; i < postalCodes.length; i += batchSize) {
+        const batch = postalCodes.slice(i, i + batchSize);
+        
+        const { error } = await supabase
+          .from('postal_codes_master')
+          .insert(batch);
+        
+        if (error) throw error;
+        imported += batch.length;
+        
+        console.log(`Imported ${imported}/${postalCodes.length} postal codes`);
+      }
+
+      return { total: imported, withCoords: postalCodes.filter(pc => pc.latitude && pc.longitude).length };
     },
-    onSuccess: (count) => {
+    onSuccess: (result) => {
       toast({
         title: "Import slutförd",
-        description: `${count} postnummer importerade framgångsrikt.`,
+        description: `Importerat ${result.total} postnummer för ${selectedCountry}. ${result.withCoords} har koordinater.`,
       });
       queryClient.invalidateQueries({ queryKey: ['postal-codes-master'] });
     },
@@ -306,6 +372,7 @@ const PostalCodeManager = () => {
                       <TableHead>Stad</TableHead>
                       <TableHead>Region</TableHead>
                       <TableHead>Land</TableHead>
+                      <TableHead>Koordinater</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Åtgärder</TableHead>
                     </TableRow>
@@ -313,13 +380,13 @@ const PostalCodeManager = () => {
                   <TableBody>
                     {loadingPostalCodes ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           Laddar postnummer...
                         </TableCell>
                       </TableRow>
                     ) : postalCodes.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           Inga postnummer funna för {selectedCountry}
                         </TableCell>
                       </TableRow>
@@ -330,6 +397,16 @@ const PostalCodeManager = () => {
                           <TableCell>{pc.city}</TableCell>
                           <TableCell>{pc.region || '-'}</TableCell>
                           <TableCell>{pc.country}</TableCell>
+                          <TableCell className="text-xs">
+                            {pc.latitude && pc.longitude ? (
+                              <div>
+                                <div>Lat: {pc.latitude.toFixed(4)}</div>
+                                <div>Lng: {pc.longitude.toFixed(4)}</div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Ej tillgängligt</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={pc.is_active ? "default" : "secondary"}>
                               {pc.is_active ? 'Aktiv' : 'Inaktiv'}
@@ -465,10 +542,10 @@ const PostalCodeManager = () => {
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
                 <div className="flex flex-col items-center gap-4">
                   <Upload className="h-12 w-12 text-muted-foreground" />
-                  <div className="text-center">
-                    <h3 className="font-medium">Välj CSV-fil att importera</h3>
+                   <div className="text-center">
+                    <h3 className="font-medium">Välj TAB-separerad fil att importera</h3>
                     <p className="text-sm text-muted-foreground">
-                      Fil ska innehålla kolumner: postnummer, stad, region (valfritt)
+                      För svenska postnummer: TAB-separerad fil med koordinater
                     </p>
                   </div>
                   
@@ -490,7 +567,7 @@ const PostalCodeManager = () => {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".csv,.txt,.tsv"
                     className="hidden"
                     onChange={() => {}}
                   />
@@ -514,13 +591,17 @@ const PostalCodeManager = () => {
 
               <div className="bg-muted/50 rounded-lg p-4">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-sm">Filformat</h4>
-                    <p className="text-sm text-muted-foreground">
-                      CSV-filen ska ha följande format:<br />
-                      <code>postnummer,stad,region</code><br />
-                      Exempel: <code>11122,Stockholm,Stockholms län</code>
+                    <h4 className="font-medium text-sm">Filformat för svenska postnummer</h4>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Filen ska vara <strong>TAB-separerad</strong> (inte komma-separerad).
+                    </p>
+                    <div className="bg-background p-2 rounded text-xs font-mono mb-2">
+                      SE[TAB]624 66[TAB]Fårö[TAB]Gotland[TAB]...[TAB]57.9167[TAB]19.1333
+                    </div>
+                    <p className="text-xs text-amber-600">
+                      ⚠️ Viktigt: Använd TAB-tecken mellan kolumner, inte kommatecken!
                     </p>
                   </div>
                 </div>
