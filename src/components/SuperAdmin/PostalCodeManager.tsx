@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Upload, Download, Search, Eye, Trash2, AlertCircle } from 'lucide-react';
+import ImportProgress from './ImportProgress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -39,6 +40,19 @@ const PostalCodeManager = () => {
   const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  
+  // Import progress state
+  const [isImporting, setIsImporting] = useState(false);
+  const [importState, setImportState] = useState<{
+    fileName: string;
+    progress: number;
+    currentStep: number;
+    totalSteps: number;
+    processedRecords: number | null;
+    totalRecords: number | null;
+    estimatedTimeLeft: number | null;
+    errors: string[];
+  } | null>(null);
 
   // Fetch postal codes
   const { data: postalCodes = [], isLoading: loadingPostalCodes } = useQuery({
@@ -138,164 +152,166 @@ const PostalCodeManager = () => {
     },
   });
 
-  // Import postal codes mutation
+  // Enhanced import with progress tracking
   const importPostalCodes = useMutation({
     mutationFn: async ({ file, country }: { file: File; country: string }) => {
-      const text = await file.text();
-      console.log(`File size: ${text.length} characters`);
+      const startTime = Date.now();
       
-      // Debug: test a known-good sample row (should be lat 57.9167, lng 19.1333)
-      const testRow = "SE\t624 66\tFårö\tGotland\t05\t\t\t\t\t\t57.9167\t19.1333\t4";
-      const testCols = testRow.split('\t');
-      console.log('🔍 Test parsing (expected lat 57.9167, lng 19.1333):', {
-        postal: testCols[1], 
-        city: testCols[2], 
-        col10: testCols[10], 
-        col11: testCols[11],
-        parsedLat: parseFloat(testCols[10]),
-        parsedLng: parseFloat(testCols[11])
-      });
-
-      const lines = text.split('\n').filter(line => line.trim());
-      const postalCodes: any[] = [];
-      
-      lines.forEach((line, index) => {
-        if (!line.trim()) return;
+      try {
+        // Step 1: Read file
+        updateProgress(1, "Läser fil...", 10);
+        const text = await file.text();
+        const lines = text.split('\n').filter(line => line.trim());
         
-        // CRITICAL: Split by TAB character for Swedish format
-        const columns = line.split('\t');
-
-        // Debug: Log first few rows to verify column positions
-        if (index < 3) {
-          console.log(`🔍 Row ${index}:`, {
-            totalCols: columns.length,
-            col10: columns[10],
-            col11: columns[11],
-            col12: columns[12],
-            postal: columns[1],
-            city: columns[2]
-          });
-        }
+        updateProgress(1, "Fil inläst", 20, null, lines.length);
         
-        if (columns.length < 4) {
-          console.warn(`Row ${index + 1}: Not enough columns (${columns.length})`);
-          return;
-        }
+        // Step 2: Parse data
+        updateProgress(2, "Analyserar data...", 25);
+        const postalCodes: any[] = [];
+        const errors: string[] = [];
         
-        // Extract from correct TAB-separated positions for Swedish format:
-        // SE[TAB]624 66[TAB]Fårö[TAB]Gotland[TAB]...[TAB]57.9167[TAB]19.1333
-        const countryCode = columns[0]?.trim(); // SE
-        const postalCodeRaw = columns[1]?.trim(); // "624 66"
-        const city = columns[2]?.trim(); // "Fårö"
-        const region = columns[3]?.trim(); // "Gotland"
-        
-        // Skip invalid rows
-        if (!countryCode || !postalCodeRaw || !city) {
-          console.warn(`Row ${index + 1}: Missing essential data`);
-          return;
-        }
-        
-        // Convert "624 66" to "62466" - remove spaces from postal codes
-        const postalCode = postalCodeRaw.replace(/\s+/g, '');
-        
-        // Validate Swedish postal code (5 digits)
-        if (!/^\d{5}$/.test(postalCode)) {
-          console.warn(`Row ${index + 1}: Invalid postal code: ${postalCodeRaw}`);
-          return;
-        }
-
-        // FIXED: Attempt to parse coordinates from expected positions
-        let parsedLat: number | null = null;
-        let parsedLng: number | null = null;
-
-        // Try columns 10 and 11 first (expected positions)
-        const col10Val = columns[10]?.trim();
-        const col11Val = columns[11]?.trim();
-        
-        if (col10Val && !isNaN(parseFloat(col10Val))) {
-          parsedLat = parseFloat(col10Val);
-        }
-        if (col11Val && !isNaN(parseFloat(col11Val))) {
-          parsedLng = parseFloat(col11Val);
-        }
-
-        // Debug coordinate parsing for first few rows
-        if (index < 3) {
-          console.log(`🔍 Coordinates for ${postalCode}:`, {
-            col10Val, col11Val, parsedLat, parsedLng
-          });
-        }
-
-        // Swedish coordinate validation and swap detection
-        if (parsedLat !== null && parsedLng !== null) {
-          // Check if coordinates are swapped (lat should be 55-70, lng should be 10-25)
-          if (parsedLat >= 10 && parsedLat <= 25 && parsedLng >= 55 && parsedLng <= 70) {
-            console.warn(`🔄 Row ${index + 1}: Swapping coordinates for ${postalCode}`);
-            [parsedLat, parsedLng] = [parsedLng, parsedLat];
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          
+          try {
+            if (!line.trim()) continue;
+            
+            // Split by TAB character for Swedish format
+            const columns = line.split('\t');
+            
+            if (columns.length < 4) {
+              errors.push(`Rad ${i + 1}: För få kolumner (${columns.length})`);
+              continue;
+            }
+            
+            const countryCode = columns[0]?.trim();
+            const postalCodeRaw = columns[1]?.trim();
+            const city = columns[2]?.trim();
+            const region = columns[3]?.trim();
+            
+            if (!countryCode || !postalCodeRaw || !city) {
+              errors.push(`Rad ${i + 1}: Saknar väsentlig data`);
+              continue;
+            }
+            
+            const postalCode = postalCodeRaw.replace(/\s+/g, '');
+            
+            if (!/^\d{5}$/.test(postalCode)) {
+              errors.push(`Rad ${i + 1}: Ogiltigt postnummer: ${postalCodeRaw}`);
+              continue;
+            }
+            
+            // Parse coordinates
+            let parsedLat: number | null = null;
+            let parsedLng: number | null = null;
+            
+            const col10Val = columns[10]?.trim();
+            const col11Val = columns[11]?.trim();
+            
+            if (col10Val && !isNaN(parseFloat(col10Val))) {
+              parsedLat = parseFloat(col10Val);
+            }
+            if (col11Val && !isNaN(parseFloat(col11Val))) {
+              parsedLng = parseFloat(col11Val);
+            }
+            
+            // Swedish coordinate validation and swap detection
+            if (parsedLat !== null && parsedLng !== null) {
+              if (parsedLat >= 10 && parsedLat <= 25 && parsedLng >= 55 && parsedLng <= 70) {
+                [parsedLat, parsedLng] = [parsedLng, parsedLat];
+              }
+              
+              if (parsedLat < 55 || parsedLat > 70 || parsedLng < 10 || parsedLng > 25) {
+                parsedLat = null;
+                parsedLng = null;
+              }
+            }
+            
+            postalCodes.push({
+              postal_code: postalCode,
+              city: city,
+              region: region || '',
+              country: country,
+              latitude: parsedLat,
+              longitude: parsedLng,
+              is_active: true
+            });
+            
+          } catch (error) {
+            errors.push(`Rad ${i + 1}: ${error.message}`);
           }
           
-          // Final validation for Swedish coordinates
-          if (parsedLat < 55 || parsedLat > 70 || parsedLng < 10 || parsedLng > 25) {
-            console.warn(`❌ Row ${index + 1}: Invalid coordinates for ${postalCode}: lat=${parsedLat}, lng=${parsedLng}`);
-            parsedLat = null;
-            parsedLng = null;
-          } else if (index < 3) {
-            console.log(`✅ Valid coordinates for ${postalCode}: lat=${parsedLat}, lng=${parsedLng}`);
+          // Update progress every 1000 records
+          if (i % 1000 === 0) {
+            const progress = 25 + (i / lines.length) * 25;
+            const elapsed = Date.now() - startTime;
+            const estimated = i > 0 ? (elapsed / i) * (lines.length - i) : null;
+            
+            updateProgress(2, "Analyserar data...", progress, i, lines.length, estimated, errors);
           }
         }
-
-        // Store final coordinates
-        const finalLat = parsedLat;
-        const finalLng = parsedLng;
         
-        postalCodes.push({
-          postal_code: postalCode,
-          city: city,
-          region: region || '',
-          country: country,
-          latitude: finalLat,
-          longitude: finalLng,
-          is_active: true
-        });
-      });
-      
-      console.log(`Parsed ${postalCodes.length} valid postal codes`);
-      
-      if (postalCodes.length === 0) {
-        throw new Error('Inga giltiga postnummer hittades. Kontrollera att filen är TAB-separerad.');
-      }
-
-      // Clear existing data for this country first
-      await supabase
-        .from('postal_codes_master')
-        .delete()
-        .eq('country', country);
-
-      // Insert in batches to avoid timeout
-      const batchSize = 1000;
-      let imported = 0;
-      
-      for (let i = 0; i < postalCodes.length; i += batchSize) {
-        const batch = postalCodes.slice(i, i + batchSize);
+        if (postalCodes.length === 0) {
+          throw new Error('Inga giltiga postnummer hittades');
+        }
         
-        const { error } = await supabase
+        // Step 3: Clear existing data
+        updateProgress(3, "Rensar befintlig data...", 60);
+        const { error: deleteError } = await supabase
           .from('postal_codes_master')
-          .insert(batch);
+          .delete()
+          .eq('country', country);
         
-        if (error) throw error;
-        imported += batch.length;
+        if (deleteError) {
+          console.warn('Error clearing existing data:', deleteError);
+        }
         
-        console.log(`Imported ${imported}/${postalCodes.length} postal codes`);
+        // Step 4: Insert new data in batches
+        updateProgress(4, "Importerar data...", 70);
+        
+        const batchSize = 1000;
+        let totalImported = 0;
+        
+        for (let i = 0; i < postalCodes.length; i += batchSize) {
+          const batch = postalCodes.slice(i, i + batchSize);
+          
+          const { error: insertError } = await supabase
+            .from('postal_codes_master')
+            .insert(batch);
+          
+          if (insertError) {
+            throw new Error(`Databasfel vid batch ${Math.floor(i/batchSize) + 1}: ${insertError.message}`);
+          }
+          
+          totalImported += batch.length;
+          
+          // Update progress
+          const progress = 70 + ((totalImported / postalCodes.length) * 30);
+          const elapsed = Date.now() - startTime;
+          const estimated = totalImported > 0 ? (elapsed / totalImported) * (postalCodes.length - totalImported) : null;
+          
+          updateProgress(4, "Importerar data...", progress, totalImported, postalCodes.length, estimated, errors);
+          
+          // Small delay to prevent overwhelming the database
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        const withCoords = postalCodes.filter(pc => pc.latitude && pc.longitude).length;
+        return { total: totalImported, withCoords, errors: errors.length };
+        
+      } catch (error) {
+        throw error;
       }
-
-      return { total: imported, withCoords: postalCodes.filter(pc => pc.latitude && pc.longitude).length };
     },
     onSuccess: (result) => {
+      const importTime = Math.round((Date.now() - Date.now()) / 1000);
       toast({
         title: "Import slutförd",
-        description: `Importerat ${result.total} postnummer för ${selectedCountry}. ${result.withCoords} har koordinater.`,
+        description: `${result.total.toLocaleString('sv-SE')} postnummer importerade. ${result.withCoords.toLocaleString('sv-SE')} har koordinater. ${result.errors} varningar.`,
       });
       queryClient.invalidateQueries({ queryKey: ['postal-codes-master'] });
+      setIsImporting(false);
+      setImportState(null);
     },
     onError: (error) => {
       toast({
@@ -303,8 +319,23 @@ const PostalCodeManager = () => {
         description: error.message,
         variant: "destructive",
       });
+      setIsImporting(false);
+      setImportState(null);
     },
   });
+
+  const updateProgress = (step: number, stepDesc: string, progress: number, processed: number | null = null, total: number | null = null, timeLeft: number | null = null, errors: string[] = []) => {
+    setImportState(prev => ({
+      fileName: prev?.fileName || '',
+      currentStep: step,
+      totalSteps: 4,
+      progress,
+      processedRecords: processed,
+      totalRecords: total,
+      estimatedTimeLeft: timeLeft,
+      errors
+    }));
+  };
 
   // Delete postal code mutation
   const deletePostalCode = useMutation({
@@ -336,13 +367,60 @@ const PostalCodeManager = () => {
     if (!file) {
       toast({
         title: "Ingen fil vald",
-        description: "Välj en CSV-fil att importera.",
+        description: "Välj en TAB-separerad fil att importera.",
         variant: "destructive",
       });
       return;
     }
 
+    setIsImporting(true);
+    setImportState({
+      fileName: file.name,
+      progress: 0,
+      currentStep: 1,
+      totalSteps: 4,
+      processedRecords: 0,
+      totalRecords: 0,
+      estimatedTimeLeft: null,
+      errors: []
+    });
+
     importPostalCodes.mutate({ file, country: selectedCountry });
+  };
+
+  const handleCancelImport = () => {
+    setIsImporting(false);
+    setImportState(null);
+    toast({
+      title: "Import avbruten",
+      description: "Importen har avbrutits av användaren.",
+    });
+  };
+
+  const getStepDescription = (step: number) => {
+    const steps = {
+      1: "Läser fil",
+      2: "Analyserar postnummer", 
+      3: "Rensar gammal data",
+      4: "Sparar ny data"
+    };
+    return steps[step] || "Bearbetar...";
+  };
+
+  const formatTimeRemaining = (milliseconds: number) => {
+    if (!milliseconds) return "Beräknar...";
+    
+    const seconds = Math.ceil(milliseconds / 1000);
+    
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else if (seconds < 3600) {
+      const minutes = Math.ceil(seconds / 60);
+      return `${minutes}min`;
+    } else {
+      const hours = Math.ceil(seconds / 3600);
+      return `${hours}h`;
+    }
   };
 
   const handleExport = async () => {
@@ -635,9 +713,10 @@ const PostalCodeManager = () => {
                     </Button>
                     <Button 
                       onClick={handleFileImport}
-                      disabled={importPostalCodes.isPending}
+                      disabled={isImporting}
                     >
-                      {importPostalCodes.isPending ? 'Importerar...' : 'Importera'}
+                      <Upload className="h-4 w-4 mr-2" />
+                      {isImporting ? 'Importerar...' : 'Importera postnummer'}
                     </Button>
                   </div>
                 </div>
@@ -662,10 +741,26 @@ const PostalCodeManager = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
+          </TabsContent>
+        </Tabs>
+
+        {/* Import Progress Modal */}
+        {importState && (
+          <ImportProgress
+            isImporting={isImporting}
+            fileName={importState.fileName}
+            progress={importState.progress}
+            currentStep={importState.currentStep}
+            totalSteps={importState.totalSteps}
+            processedRecords={importState.processedRecords}
+            totalRecords={importState.totalRecords}
+            estimatedTimeLeft={importState.estimatedTimeLeft}
+            errors={importState.errors}
+            onCancel={handleCancelImport}
+          />
+        )}
+      </div>
+    );
+  };
 
 export default PostalCodeManager;
