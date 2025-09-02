@@ -993,32 +993,32 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                  <CardTitle className="text-tenant-primary">SMS-inställningar</CardTitle>
                  <CardDescription>Konfigurera SMS-leverans och testfunktioner</CardDescription>
                </CardHeader>
-               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="test-phone">Testtelefonnummer</Label>
-                    <Input
-                      id="test-phone"
-                      placeholder="+46701234567"
-                      value={testPhoneNumber}
-                      onChange={(e) => setTestPhoneNumber(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Ange telefonnummer för att testa SMS-mallar
-                    </p>
-                  </div>
-                </div>
-
+                <CardContent className="space-y-6">
                 {user?.role === 'super_admin' ? (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <Settings className="h-5 w-5 text-yellow-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-800">SMS-leverans kräver konfiguration</h4>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          För att skicka riktiga SMS-meddelanden behöver du integrera med en SMS-leverantör som Twilio. 
-                          Detta kräver backend-funktionalitet som kan aktiveras genom att ansluta till Supabase.
-                        </p>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="test-phone">Testtelefonnummer</Label>
+                      <Input
+                        id="test-phone"
+                        placeholder="+46701234567"
+                        value={testPhoneNumber}
+                        onChange={(e) => setTestPhoneNumber(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ange telefonnummer för att testa SMS-mallar
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <Settings className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800">SMS-leverans kräver konfiguration</h4>
+                          <p className="text-sm text-yellow-700 mt-1">
+                            För att skicka riktiga SMS-meddelanden behöver du integrera med en SMS-leverantör som Twilio. 
+                            Detta kräver backend-funktionalitet som kan aktiveras genom att ansluta till Supabase.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1027,9 +1027,9 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                     <div className="flex items-start gap-3">
                       <Eye className="h-5 w-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h4 className="font-medium text-blue-800">SMS-inställningar</h4>
+                        <h4 className="font-medium text-blue-800">SMS-översikt</h4>
                         <p className="text-sm text-blue-700 mt-1">
-                          SMS-inställningar hanteras av systemadministratören. Du kan se användning och hantera mallar nedan.
+                          SMS-inställningar hanteras av systemadministratören. Du kan se användningsstatistik och hantera mallar.
                         </p>
                       </div>
                     </div>
