@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { AddressTestComponent } from "@/components/Common/AddressTestComponent";
 import { MapVerificationModal } from "./MapVerificationModal";
+import PostalCodeSelector from "./PostalCodeSelector";
+import PricingManagement from "./PricingManagement";
 
 interface ServiceZoneManagementProps {
   onBack: () => void;
@@ -613,176 +615,20 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="zones">Hämtningszoner</TabsTrigger>
+          <TabsTrigger value="zones">Postnummer & Täckning</TabsTrigger>
           <TabsTrigger value="address">Basadress</TabsTrigger>
-          <TabsTrigger value="statistics">Statistik</TabsTrigger>
+          <TabsTrigger value="pricing">Prissättning</TabsTrigger>
           <TabsTrigger value="test">Test</TabsTrigger>
         </TabsList>
 
-        {/* Hämtningszoner Tab */}
+        {/* Postnummer & Täckning Tab - Now uses new PostalCodeSelector */}
         <TabsContent value="zones" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Postnummerdatabas & Täckningsområden</CardTitle>
-                  <CardDescription>Konfigurera vilka postnummer som omfattas av era hämtningstjänster</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Dialog open={isImportingPostal} onOpenChange={setIsImportingPostal}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="gap-2">
-                        <Upload className="h-4 w-4" />
-                        Importera postnummer
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Importera postnummerdatabas</DialogTitle>
-                        <DialogDescription>
-                          Ladda upp en CSV-fil med svenska postnummer (SE.txt format)
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <Alert>
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Om SE.txt filen</AlertTitle>
-                          <AlertDescription>
-                            SE.txt filen kan laddas ner från GeoNames.org gratis. Alternativt kan du manuellt lägga till postnummer nedan.
-                          </AlertDescription>
-                        </Alert>
-                        <Input 
-                          type="file" 
-                          accept=".csv,.txt" 
-                          onChange={handleFileSelect}
-                        />
-                        {selectedFile && (
-                          <div className="text-sm text-muted-foreground">
-                            Vald fil: {selectedFile.name}
-                          </div>
-                        )}
-                      </div>
-                      <DialogFooter>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => {
-                            setIsImportingPostal(false);
-                            setSelectedFile(null);
-                          }}
-                        >
-                          Avbryt
-                        </Button>
-                        <Button 
-                          onClick={handleImportPostalCodes}
-                          disabled={!selectedFile}
-                        >
-                          Importera
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  <Dialog open={isAddingPostal} onOpenChange={setIsAddingPostal}>
-                    <DialogTrigger asChild>
-                      <Button className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Lägg till postnummer
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Lägg till nytt postnummer</DialogTitle>
-                        <DialogDescription>Aktivera ett nytt postnummer för hämtningstjänster</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="postal">Postnummer</Label>
-                          <Input 
-                            id="postal" 
-                            placeholder="12345" 
-                            value={newPostalCode}
-                            onChange={(e) => setNewPostalCode(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="city">Ort</Label>
-                          <Input id="city" placeholder="Stockholm" />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddingPostal(false)}>Avbryt</Button>
-                        <Button onClick={() => setIsAddingPostal(false)}>Lägg till</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Sök postnummer eller ort..." 
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filtrera status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alla</SelectItem>
-                    <SelectItem value="active">Aktiva</SelectItem>
-                    <SelectItem value="inactive">Inaktiva</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <PostalCodeSelector />
+        </TabsContent>
 
-              <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Postnummer</TableHead>
-                        <TableHead>Ort</TableHead>
-                        <TableHead>Adress</TableHead>
-                        <TableHead>Koordinater</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Åtgärder</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                  <TableBody>
-                    {filteredPostalCodes.map((postal, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{postal.code}</TableCell>
-                        <TableCell>{postal.city}</TableCell>
-                        <TableCell>{postal.address}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {postal.lat.toFixed(4)}, {postal.lng.toFixed(4)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={postal.active ? "default" : "secondary"}>
-                            {postal.active ? "Aktiv" : "Inaktiv"}
-                          </Badge>
-                        </TableCell>
-                         <TableCell className="text-right">
-                           <div className="flex justify-end gap-2">
-                             <Button variant="ghost" size="sm" onClick={() => handleEditPostal(postal)}>
-                               <Edit className="h-4 w-4" />
-                             </Button>
-                             <Button variant="ghost" size="sm" className="text-destructive">
-                               <Trash2 className="h-4 w-4" />
-                             </Button>
-                           </div>
-                         </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Prissättning Tab - Uses PricingManagement component */}
+        <TabsContent value="pricing" className="space-y-6">
+          <PricingManagement />
         </TabsContent>
 
         {/* Basadress Tab */}

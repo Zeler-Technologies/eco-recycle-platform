@@ -1971,6 +1971,39 @@ export type Database = {
           },
         ]
       }
+      postal_codes_master: {
+        Row: {
+          city: string
+          country: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          postal_code: string
+          region: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          city: string
+          country?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          postal_code: string
+          region?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          postal_code?: string
+          region?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       price_viewing_payments: {
         Row: {
           created_at: string
@@ -2534,7 +2567,7 @@ export type Database = {
           id: string
           is_enabled: boolean | null
           template_id: string | null
-          template_type: string
+          template_type: string | null
           tenant_id: number
           trigger_event: string
           trigger_sequence: number | null
@@ -2547,7 +2580,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean | null
           template_id?: string | null
-          template_type: string
+          template_type?: string | null
           tenant_id: number
           trigger_event: string
           trigger_sequence?: number | null
@@ -2560,7 +2593,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean | null
           template_id?: string | null
-          template_type?: string
+          template_type?: string | null
           tenant_id?: number
           trigger_event?: string
           trigger_sequence?: number | null
@@ -2738,6 +2771,55 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scrapyards"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_coverage_areas: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          postal_code_id: string | null
+          tenant_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          postal_code_id?: string | null
+          tenant_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          postal_code_id?: string | null
+          tenant_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_coverage_areas_postal_code_id_fkey"
+            columns: ["postal_code_id"]
+            isOneToOne: false
+            referencedRelation: "postal_codes_master"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_coverage_areas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_coverage_areas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
           },
         ]
       }
