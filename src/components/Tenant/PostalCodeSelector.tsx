@@ -152,25 +152,37 @@ const PostalCodeSelector = () => {
         throw new Error(`Inga postnummer hittades för regionen ${region}`);
       }
       
-      if (isSelected) {
-        // Add all postal codes in region
-        const inserts = regionPostalCodes.map(pc => ({
-          tenant_id: userTenant.tenant_id,
-          postal_code_id: pc.id
-        }));
-        const { error } = await supabase
-          .from('tenant_coverage_areas')
-          .upsert(inserts, { onConflict: 'tenant_id,postal_code_id' });
-        if (error) throw error;
-      } else {
-        // Remove all postal codes in region
-        const postalCodeIds = regionPostalCodes.map(pc => pc.id);
-        const { error } = await supabase
-          .from('tenant_coverage_areas')
-          .delete()
-          .eq('tenant_id', userTenant.tenant_id)
-          .in('postal_code_id', postalCodeIds);
-        if (error) throw error;
+      try {
+        if (isSelected) {
+          // Add all postal codes in region
+          const inserts = regionPostalCodes.map(pc => ({
+            tenant_id: userTenant.tenant_id,
+            postal_code_id: pc.id
+          }));
+          
+          // Use smaller batches to avoid URL length issues
+          const batchSize = 100;
+          for (let i = 0; i < inserts.length; i += batchSize) {
+            const batch = inserts.slice(i, i + batchSize);
+            const { error } = await supabase
+              .from('tenant_coverage_areas')
+              .upsert(batch, { onConflict: 'tenant_id,postal_code_id' });
+            if (error) throw error;
+          }
+        } else {
+          // Remove all postal codes in region - use individual deletes to avoid .in() issues
+          for (const pc of regionPostalCodes) {
+            const { error } = await supabase
+              .from('tenant_coverage_areas')
+              .delete()
+              .eq('tenant_id', userTenant.tenant_id)
+              .eq('postal_code_id', pc.id);
+            if (error) throw error;
+          }
+        }
+      } catch (error) {
+        console.error('Database operation failed:', error);
+        throw new Error(`Databasoperation misslyckades: ${error.message}`);
       }
     },
     onSuccess: (_, { region, isSelected }) => {
