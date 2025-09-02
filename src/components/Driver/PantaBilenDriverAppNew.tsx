@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDriverIntegration } from '@/hooks/useDriverIntegration';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSMSAutomation } from '@/hooks/useSMSAutomation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const PantaBilenDriverAppNew = () => {
   const { user, logout } = useAuth();
+  const { triggerSMSAutomation } = useSMSAutomation();
   
   const { 
     availablePickups,
@@ -502,6 +504,15 @@ const PantaBilenDriverAppNew = () => {
       // Refresh pickup data and stats to reflect status changes
       await refreshAllPickupData();
       loadDriverStats();
+      
+      // Trigger SMS automation for status change
+      if (user?.tenant_id) {
+        await triggerSMSAutomation({
+          pickupOrderId,
+          newStatus,
+          tenantId: user.tenant_id
+        });
+      }
       
       // AUTO-MANAGE DRIVER STATUS
       await handleAutoDriverStatusUpdate(newStatus, pickupOrderId);
