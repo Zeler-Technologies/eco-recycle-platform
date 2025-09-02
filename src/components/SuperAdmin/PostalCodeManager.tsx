@@ -147,8 +147,13 @@ const PostalCodeManager = () => {
       // Debug: test a known-good sample row (should be lat 57.9167, lng 19.1333)
       const testRow = "SE\t624 66\tFårö\tGotland\t05\t\t\t\t\t\t57.9167\t19.1333\t4";
       const testCols = testRow.split('\t');
-      console.log('Test parsing (expected lat 57.9167, lng 19.1333):', {
-        postal: testCols[1], city: testCols[2], col10: testCols[10], col11: testCols[11]
+      console.log('🔍 Test parsing (expected lat 57.9167, lng 19.1333):', {
+        postal: testCols[1], 
+        city: testCols[2], 
+        col10: testCols[10], 
+        col11: testCols[11],
+        parsedLat: parseFloat(testCols[10]),
+        parsedLng: parseFloat(testCols[11])
       });
 
       const lines = text.split('\n').filter(line => line.trim());
@@ -161,11 +166,14 @@ const PostalCodeManager = () => {
         const columns = line.split('\t');
 
         // Debug: Log first few rows to verify column positions
-        if (index < 5) {
-          console.log(`Row ${index}: Columns 10-12:`, {
+        if (index < 3) {
+          console.log(`🔍 Row ${index}:`, {
+            totalCols: columns.length,
             col10: columns[10],
             col11: columns[11],
-            col12: columns[12]
+            col12: columns[12],
+            postal: columns[1],
+            city: columns[2]
           });
         }
         
@@ -196,48 +204,49 @@ const PostalCodeManager = () => {
           return;
         }
 
-        // Attempt to parse coordinates from expected positions
-        let parsedLat: number | null = columns[10]?.trim() ? parseFloat(columns[10].trim()) : null;
-        let parsedLng: number | null = columns[11]?.trim() ? parseFloat(columns[11].trim()) : null;
+        // FIXED: Attempt to parse coordinates from expected positions
+        let parsedLat: number | null = null;
+        let parsedLng: number | null = null;
 
-        // Swap detection: if lat looks like 10-25 and lng like 55-70, swap them
+        // Try columns 10 and 11 first (expected positions)
+        const col10Val = columns[10]?.trim();
+        const col11Val = columns[11]?.trim();
+        
+        if (col10Val && !isNaN(parseFloat(col10Val))) {
+          parsedLat = parseFloat(col10Val);
+        }
+        if (col11Val && !isNaN(parseFloat(col11Val))) {
+          parsedLng = parseFloat(col11Val);
+        }
+
+        // Debug coordinate parsing for first few rows
+        if (index < 3) {
+          console.log(`🔍 Coordinates for ${postalCode}:`, {
+            col10Val, col11Val, parsedLat, parsedLng
+          });
+        }
+
+        // Swedish coordinate validation and swap detection
         if (parsedLat !== null && parsedLng !== null) {
+          // Check if coordinates are swapped (lat should be 55-70, lng should be 10-25)
           if (parsedLat >= 10 && parsedLat <= 25 && parsedLng >= 55 && parsedLng <= 70) {
-            console.warn(`Row ${index + 1}: Coordinates appear swapped for ${postalCode}, fixing...`);
+            console.warn(`🔄 Row ${index + 1}: Swapping coordinates for ${postalCode}`);
             [parsedLat, parsedLng] = [parsedLng, parsedLat];
           }
-        }
-
-        // Fallback: scan adjacent columns (8..14) to find plausible Swedish lat/lng if missing
-        if ((parsedLat === null || parsedLng === null) && columns.length >= 8) {
-          for (let i = 8; i < Math.min(columns.length, 15); i++) {
-            const raw = columns[i]?.trim();
-            if (!raw) continue;
-            const val = parseFloat(raw);
-            if (Number.isNaN(val)) continue;
-
-            if (val >= 55 && val <= 70 && parsedLat === null) {
-              parsedLat = val;
-              console.log(`Row ${index + 1}: Found latitude ${val} in column ${i}`);
-            } else if (val >= 10 && val <= 25 && parsedLng === null) {
-              parsedLng = val;
-              console.log(`Row ${index + 1}: Found longitude ${val} in column ${i}`);
-            }
-
-            if (parsedLat !== null && parsedLng !== null) break;
+          
+          // Final validation for Swedish coordinates
+          if (parsedLat < 55 || parsedLat > 70 || parsedLng < 10 || parsedLng > 25) {
+            console.warn(`❌ Row ${index + 1}: Invalid coordinates for ${postalCode}: lat=${parsedLat}, lng=${parsedLng}`);
+            parsedLat = null;
+            parsedLng = null;
+          } else if (index < 3) {
+            console.log(`✅ Valid coordinates for ${postalCode}: lat=${parsedLat}, lng=${parsedLng}`);
           }
         }
 
-        // Final validation: ensure both coordinates are in Swedish ranges
-        let finalLat = parsedLat;
-        let finalLng = parsedLng;
-        if (finalLat !== null && finalLng !== null) {
-          if (finalLat < 55 || finalLat > 70 || finalLng < 10 || finalLng > 25) {
-            console.warn(`Row ${index + 1}: Invalid coordinates for ${postalCode}: lat=${finalLat}, lng=${finalLng}`);
-            finalLat = null;
-            finalLng = null;
-          }
-        }
+        // Store final coordinates
+        const finalLat = parsedLat;
+        const finalLng = parsedLng;
         
         postalCodes.push({
           postal_code: postalCode,
