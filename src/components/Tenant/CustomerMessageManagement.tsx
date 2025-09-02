@@ -171,13 +171,38 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
   // Use tenant_id directly from user
   const tenantId = user?.tenant_id || null;
 
-  const handleSaveTemplate = (template: MessageTemplate) => {
+  const handleSaveTemplate = async (template: MessageTemplate) => {
+    // Save to memory for UI
     setTemplates(prev => prev.map(t => t.id === template.id ? template : t));
-    setEditingTemplate(null);
-    toast({
-      title: "Mall sparad",
-      description: "SMS-mallen har uppdaterats framgångsrikt.",
-    });
+    
+    // Save to database
+    try {
+      const { error } = await supabase
+        .from('custom_message_templates')
+        .upsert({
+          tenant_id: tenantId,
+          template_type: template.stage,
+          template_name: template.name,
+          content: template.content,
+          is_active: template.enabled,
+          estimated_sms_count: Math.ceil(template.content.length / 160),
+          estimated_cost_sek: Math.ceil(template.content.length / 160) * 0.35
+        });
+
+      if (error) throw error;
+
+      setEditingTemplate(null);
+      toast({
+        title: "Mall sparad",
+        description: "SMS-mallen har uppdaterats i databasen.",
+      });
+    } catch (error) {
+      toast({
+        title: "Fel vid sparande",
+        description: "Kunde inte spara mallen till databasen.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleToggleTemplate = (templateId: string, enabled: boolean) => {
@@ -220,9 +245,12 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     }
   };
 
-  // Load custom templates on component mount
+  // Load custom templates and message history on component mount
   useEffect(() => {
-    loadCustomTemplates();
+    if (tenantId) {
+      loadCustomTemplates();
+      loadMessageHistory();
+    }
   }, [tenantId]);
 
   const loadCustomTemplates = async () => {
@@ -238,9 +266,49 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       if (error) throw error;
       setCustomTemplates((data || []) as CustomMessageTemplate[]);
     } catch (error) {
+      console.error('Error loading templates:', error);
       toast({
         title: "Fel vid laddning",
         description: "Kunde inte ladda anpassade mallar.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load message history from database
+  const [messageHistory, setMessageHistory] = useState<MessageLog[]>([]);
+
+  const loadMessageHistory = async () => {
+    if (!tenantId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('sms_logs')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      
+      // Transform database data to match MessageLog interface
+      const transformedData = (data || []).map(record => ({
+        id: record.id.toString(),
+        customer: record.recipient_name || 'Okänd',
+        phone: record.recipient_phone || 'Okänt',
+        message: record.message_content,
+        timestamp: record.created_at,
+        status: (['sent', 'failed', 'pending'].includes(record.status) ? record.status : 'pending') as 'sent' | 'failed' | 'pending',
+        template: record.message_type || 'Okänd mall',
+        pickupId: record.pickup_order_id || 'N/A'
+      }));
+      
+      setMessageHistory(transformedData);
+    } catch (error) {
+      console.error('Error loading message history:', error);
+      toast({
+        title: "Fel vid laddning",
+        description: "Kunde inte ladda meddelandehistorik.",
         variant: "destructive",
       });
     }
@@ -314,6 +382,9 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     }
 
     try {
+      const estimatedSMSCount = Math.ceil(newCustomTemplate.content.length / 160);
+      const estimatedCost = estimatedSMSCount * 0.35;
+
       const { error } = await supabase
         .from('custom_message_templates')
         .insert({
@@ -321,7 +392,9 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           template_type: newCustomTemplate.template_type!,
           template_name: newCustomTemplate.template_name,
           content: newCustomTemplate.content,
-          is_active: newCustomTemplate.is_active ?? true
+          is_active: newCustomTemplate.is_active ?? true,
+          estimated_sms_count: estimatedSMSCount,
+          estimated_cost_sek: estimatedCost
         });
 
       if (error) throw error;
@@ -339,12 +412,81 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         description: "Ny anpassad mall har skapats framgångsrikt.",
       });
     } catch (error) {
+      console.error('Error creating template:', error);
       toast({
         title: "Fel vid skapande",
         description: "Kunde inte skapa mallen.",
         variant: "destructive",
       });
     }
+  };
+
+  // SMS Cost Calculator Component
+  const SMSCostPreview = ({ content }: { content: string }) => {
+    const smsCount = Math.ceil(content.length / 160);
+    const cost = smsCount * 0.35;
+    
+    return (
+      <div className="flex justify-between items-center text-sm p-2 bg-tenant-accent/10 rounded">
+        <span>Tecken: {content.length}/160</span>
+        <span>SMS: {smsCount} st</span>
+        <span className="font-semibold text-tenant-primary">Kostnad: {cost.toFixed(2)} SEK</span>
+      </div>
+    );
+  };
+
+  // Monthly SMS Usage Widget
+  const MonthlySMSUsage = () => {
+    const [monthlyUsage, setMonthlyUsage] = useState({ count: 0, cost: 0 });
+
+    useEffect(() => {
+      const loadMonthlyUsage = async () => {
+        if (!tenantId) return;
+
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        try {
+          const { data, error } = await supabase
+            .from('sms_logs')
+            .select('cost_amount')
+            .eq('tenant_id', tenantId)
+            .gte('created_at', startOfMonth.toISOString());
+
+          if (error) throw error;
+
+          if (data) {
+            const totalCost = data.reduce((sum, msg) => sum + (msg.cost_amount || 0), 0);
+            setMonthlyUsage({ count: data.length, cost: totalCost });
+          }
+        } catch (error) {
+          console.error('Error loading monthly usage:', error);
+        }
+      };
+
+      loadMonthlyUsage();
+    }, [tenantId]);
+
+    return (
+      <Card className="bg-tenant-accent/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-tenant-primary">Månatlig SMS-användning</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Skickade meddelanden:</span>
+              <span className="font-semibold">{monthlyUsage.count}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Total kostnad:</span>
+              <span className="font-semibold text-tenant-primary">{monthlyUsage.cost.toFixed(2)} SEK</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   const handleTestMessageLook = (message: string) => {
@@ -508,15 +650,16 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                                     Tillgängliga variabler: {template.variables.join(', ')}
                                   </p>
                                 )}
-                              </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => editingTemplate && handleSaveTemplate(editingTemplate)}
-                                  className="bg-tenant-primary hover:bg-tenant-primary/90"
-                                >
-                                  <Save className="h-4 w-4 mr-2" />
-                                  Spara ändringar
-                                </Button>
+                               </div>
+                               {editingTemplate && <SMSCostPreview content={editingTemplate.content} />}
+                               <div className="flex gap-2">
+                                 <Button
+                                   onClick={() => editingTemplate && handleSaveTemplate(editingTemplate)}
+                                   className="bg-tenant-primary hover:bg-tenant-primary/90"
+                                 >
+                                   <Save className="h-4 w-4 mr-2" />
+                                   Spara ändringar
+                                 </Button>
                                 <Button
                                   variant="outline"
                                   onClick={() => handleResetTemplate(template.id)}
@@ -557,27 +700,29 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Kund</TableHead>
-                        <TableHead>Telefon</TableHead>
-                        <TableHead>Mall</TableHead>
-                        <TableHead>Tidpunkt</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Ärende-ID</TableHead>
+                         <TableHead>Telefon</TableHead>
+                         <TableHead>Mall</TableHead>
+                         <TableHead>Tidpunkt</TableHead>
+                         <TableHead>Status</TableHead>
+                         <TableHead>Kostnad</TableHead>
+                         <TableHead>Ärende-ID</TableHead>
                         <TableHead className="text-right">Åtgärder</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {messageLogs.map((log) => (
+                      {messageHistory.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell className="font-medium">{log.customer}</TableCell>
                           <TableCell>{log.phone}</TableCell>
                           <TableCell>{log.template}</TableCell>
                           <TableCell className="text-muted-foreground">{log.timestamp}</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(log.status)}>
-                              {getStatusText(log.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{log.pickupId}</TableCell>
+                           <TableCell>
+                             <Badge className={getStatusColor(log.status)}>
+                               {getStatusText(log.status)}
+                             </Badge>
+                           </TableCell>
+                           <TableCell className="text-muted-foreground">0.35 SEK</TableCell>
+                           <TableCell>{log.pickupId}</TableCell>
                           <TableCell className="text-right">
                             <Dialog>
                               <DialogTrigger asChild>
@@ -623,14 +768,17 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
             </Card>
           </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <Card className="bg-white shadow-custom-sm">
-              <CardHeader>
-                <CardTitle className="text-tenant-primary">SMS-inställningar</CardTitle>
-                <CardDescription>Konfigurera SMS-leverans och testfunktioner</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+           {/* Settings Tab */}
+           <TabsContent value="settings" className="space-y-6">
+             {/* Monthly SMS Usage Widget */}
+             <MonthlySMSUsage />
+             
+             <Card className="bg-white shadow-custom-sm">
+               <CardHeader>
+                 <CardTitle className="text-tenant-primary">SMS-inställningar</CardTitle>
+                 <CardDescription>Konfigurera SMS-leverans och testfunktioner</CardDescription>
+               </CardHeader>
+               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="test-phone">Testtelefonnummer</Label>
@@ -781,13 +929,14 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                   <p className="text-xs text-muted-foreground mt-1">
                     Obligatoriska variabler: [namn], [registreringsnummer], [kontrollnummer], [datum]
                   </p>
-                </div>
-                {newCustomTemplate.content && (
-                  <div className="p-3 bg-muted/50 rounded-md">
-                    <p className="text-sm font-medium mb-2">Förhandsgranskning:</p>
-                    <p className="text-sm italic">{generatePreview(newCustomTemplate.content)}</p>
-                  </div>
-                )}
+                 </div>
+                 {newCustomTemplate.content && <SMSCostPreview content={newCustomTemplate.content} />}
+                 {newCustomTemplate.content && (
+                   <div className="p-3 bg-muted/50 rounded-md">
+                     <p className="text-sm font-medium mb-2">Förhandsgranskning:</p>
+                     <p className="text-sm italic">{generatePreview(newCustomTemplate.content)}</p>
+                   </div>
+                 )}
                 <div className="flex gap-2">
                   <Button
                     onClick={handleCreateNewTemplate}
