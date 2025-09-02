@@ -576,8 +576,11 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          estimated_cost_sek: number | null
+          estimated_sms_count: number | null
           id: string
           is_active: boolean
+          required_variables: string[] | null
           template_name: string
           template_type: string
           tenant_id: number
@@ -586,8 +589,11 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          estimated_cost_sek?: number | null
+          estimated_sms_count?: number | null
           id?: string
           is_active?: boolean
+          required_variables?: string[] | null
           template_name: string
           template_type: string
           tenant_id: number
@@ -596,8 +602,11 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          estimated_cost_sek?: number | null
+          estimated_sms_count?: number | null
           id?: string
           is_active?: boolean
+          required_variables?: string[] | null
           template_name?: string
           template_type?: string
           tenant_id?: number
@@ -2373,6 +2382,45 @@ export type Database = {
           },
         ]
       }
+      sms_billing_summary: {
+        Row: {
+          billing_month: string
+          breakdown_by_type: Json | null
+          created_at: string | null
+          id: string
+          invoice_id: string | null
+          is_invoiced: boolean | null
+          tenant_id: number
+          total_cost_amount: number
+          total_sms_count: number
+          updated_at: string | null
+        }
+        Insert: {
+          billing_month: string
+          breakdown_by_type?: Json | null
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          is_invoiced?: boolean | null
+          tenant_id: number
+          total_cost_amount?: number
+          total_sms_count?: number
+          updated_at?: string | null
+        }
+        Update: {
+          billing_month?: string
+          breakdown_by_type?: Json | null
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          is_invoiced?: boolean | null
+          tenant_id?: number
+          total_cost_amount?: number
+          total_sms_count?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sms_logs: {
         Row: {
           cost_amount: number
@@ -2382,6 +2430,7 @@ export type Database = {
           id: number
           message_content: string | null
           message_type: string
+          message_variables: Json | null
           pickup_log_id: number | null
           pickup_order_id: string | null
           provider: string | null
@@ -2389,8 +2438,10 @@ export type Database = {
           provider_response: Json | null
           recipient_name: string | null
           recipient_phone: string
+          scheduled_at: string | null
           sent_at: string | null
           status: string | null
+          template_used: string | null
           tenant_id: number | null
         }
         Insert: {
@@ -2401,6 +2452,7 @@ export type Database = {
           id?: number
           message_content?: string | null
           message_type: string
+          message_variables?: Json | null
           pickup_log_id?: number | null
           pickup_order_id?: string | null
           provider?: string | null
@@ -2408,8 +2460,10 @@ export type Database = {
           provider_response?: Json | null
           recipient_name?: string | null
           recipient_phone: string
+          scheduled_at?: string | null
           sent_at?: string | null
           status?: string | null
+          template_used?: string | null
           tenant_id?: number | null
         }
         Update: {
@@ -2420,6 +2474,7 @@ export type Database = {
           id?: number
           message_content?: string | null
           message_type?: string
+          message_variables?: Json | null
           pickup_log_id?: number | null
           pickup_order_id?: string | null
           provider?: string | null
@@ -2427,8 +2482,10 @@ export type Database = {
           provider_response?: Json | null
           recipient_name?: string | null
           recipient_phone?: string
+          scheduled_at?: string | null
           sent_at?: string | null
           status?: string | null
+          template_used?: string | null
           tenant_id?: number | null
         }
         Relationships: [
@@ -2466,6 +2523,56 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_unified_pickup_status"
             referencedColumns: ["pickup_order_id"]
+          },
+        ]
+      }
+      sms_trigger_rules: {
+        Row: {
+          created_at: string | null
+          delay_minutes: number | null
+          description: string | null
+          id: string
+          is_enabled: boolean | null
+          template_id: string | null
+          template_type: string
+          tenant_id: number
+          trigger_event: string
+          trigger_sequence: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          template_id?: string | null
+          template_type: string
+          tenant_id: number
+          trigger_event: string
+          trigger_sequence?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          template_id?: string | null
+          template_type?: string
+          tenant_id?: number
+          trigger_event?: string
+          trigger_sequence?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_trigger_rules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "custom_message_templates"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3637,6 +3744,20 @@ export type Database = {
         Args: { "": unknown } | { "": unknown }
         Returns: string
       }
+      calculate_car_price_with_bonuses: {
+        Args: {
+          p_car_brand?: string
+          p_car_year: number
+          p_fuel_type?: string
+          p_pickup_distance_km?: number
+          p_postal_code?: string
+          p_service_type?: string
+          p_tenant_id: number
+          p_valuable_parts?: string[]
+          p_vehicle_condition?: string
+        }
+        Returns: Json
+      }
       calculate_distance: {
         Args:
           | { lat1: number; lat2: number; lon1: number; lon2: number }
@@ -3653,6 +3774,10 @@ export type Database = {
           tax_amount: number
           total_amount: number
         }[]
+      }
+      calculate_sms_cost: {
+        Args: { message_content: string }
+        Returns: number
       }
       can_cancel_invoice: {
         Args: { p_invoice_id: number }
@@ -4395,6 +4520,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_pricing_settings: {
+        Args: { p_tenant_id: number }
+        Returns: Json
+      }
       get_proj4_from_srid: {
         Args: { "": number }
         Returns: string
@@ -4877,6 +5006,28 @@ export type Database = {
           p_restored_by?: string
         }
         Returns: boolean
+      }
+      save_pricing_settings: {
+        Args: { p_pricing_settings: Json; p_tenant_id: number }
+        Returns: Json
+      }
+      send_test_sms: {
+        Args: {
+          p_customer_name?: string
+          p_phone?: string
+          p_tenant_id: number
+          p_trigger_event: string
+        }
+        Returns: Json
+      }
+      send_test_sms_working: {
+        Args: {
+          p_customer_name?: string
+          p_phone?: string
+          p_tenant_id: number
+          p_trigger_event: string
+        }
+        Returns: Json
       }
       spheroid_in: {
         Args: { "": unknown }
