@@ -142,12 +142,20 @@ const PostalCodeSelector = () => {
   // Bulk operations
   const toggleRegion = useMutation({
     mutationFn: async ({ region, isSelected }: { region: string; isSelected: boolean }) => {
+      if (!userTenant?.tenant_id) {
+        throw new Error('Tenant ID saknas');
+      }
+
       const regionPostalCodes = availablePostalCodes.filter(pc => pc.region === region);
+      
+      if (regionPostalCodes.length === 0) {
+        throw new Error(`Inga postnummer hittades för regionen ${region}`);
+      }
       
       if (isSelected) {
         // Add all postal codes in region
         const inserts = regionPostalCodes.map(pc => ({
-          tenant_id: userTenant?.tenant_id,
+          tenant_id: userTenant.tenant_id,
           postal_code_id: pc.id
         }));
         const { error } = await supabase
@@ -160,7 +168,7 @@ const PostalCodeSelector = () => {
         const { error } = await supabase
           .from('tenant_coverage_areas')
           .delete()
-          .eq('tenant_id', userTenant?.tenant_id)
+          .eq('tenant_id', userTenant.tenant_id)
           .in('postal_code_id', postalCodeIds);
         if (error) throw error;
       }
@@ -173,9 +181,10 @@ const PostalCodeSelector = () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
     },
     onError: (error) => {
+      console.error('toggleRegion error:', error);
       toast({
         title: "Fel vid regionuppdatering",
-        description: error.message,
+        description: error.message || "Ett oväntat fel inträffade",
         variant: "destructive",
       });
     },
