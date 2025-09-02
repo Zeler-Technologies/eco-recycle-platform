@@ -323,17 +323,21 @@ const DistanceRulesManager: React.FC<DistanceRulesManagerProps> = ({ tenantId })
                   </div>
                   <div>
                     <Label htmlFor="deduction">Avdrag (SEK)</Label>
-                    <Input
-                      id="deduction"
-                      type="number"
-                      value={newRule.deduction_sek}
-                      onChange={(e) => setNewRule(prev => ({
-                        ...prev,
-                        deduction_sek: parseInt(e.target.value) || 0
-                      }))}
-                      max="0"
-                      placeholder="Negativt värde för avdrag"
-                    />
+                    <div className="flex items-center">
+                      <span className="px-3 py-2 border border-r-0 rounded-l-md bg-muted text-muted-foreground">-</span>
+                      <Input
+                        id="deduction"
+                        type="number"
+                        value={Math.abs(newRule.deduction_sek)}
+                        onChange={(e) => setNewRule(prev => ({
+                          ...prev,
+                          deduction_sek: -(parseInt(e.target.value) || 0)
+                        }))}
+                        min="0"
+                        placeholder="Avdrag i SEK"
+                        className="rounded-l-none"
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -424,17 +428,21 @@ const DistanceRulesManager: React.FC<DistanceRulesManagerProps> = ({ tenantId })
                             </div>
                             <div>
                               <Label htmlFor="edit-deduction">Avdrag (SEK)</Label>
-                              <Input
-                                id="edit-deduction"
-                                type="number"
-                                value={editingRule.deduction_sek}
-                                onChange={(e) => setEditingRule(prev => prev ? ({
-                                  ...prev,
-                                  deduction_sek: parseInt(e.target.value) || 0
-                                }) : null)}
-                                max="0"
-                                placeholder="Negativt värde för avdrag"
-                              />
+                              <div className="flex items-center">
+                                <span className="px-3 py-2 border border-r-0 rounded-l-md bg-muted text-muted-foreground">-</span>
+                                <Input
+                                  id="edit-deduction"
+                                  type="number"
+                                  value={Math.abs(editingRule.deduction_sek)}
+                                  onChange={(e) => setEditingRule(prev => prev ? ({
+                                    ...prev,
+                                    deduction_sek: -(parseInt(e.target.value) || 0)
+                                  }) : null)}
+                                  min="0"
+                                  placeholder="Avdrag i SEK"
+                                  className="rounded-l-none"
+                                />
+                              </div>
                             </div>
                           </div>
                         )}
