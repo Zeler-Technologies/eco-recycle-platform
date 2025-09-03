@@ -310,42 +310,6 @@ const PostalCodeSelector = () => {
     }
   }, [paginatedCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
 
-  // Deselect all selected postal codes
-  const deselectAllSelected = useCallback(async () => {
-    if (!userTenant?.tenant_id || selectedPostalCodes.length === 0) return;
-    
-    try {
-      console.log(`🗑️ Removing ${selectedPostalCodes.length} postal codes for tenant ${userTenant.tenant_id}`);
-      
-      // Bulk delete all selected postal codes for this tenant
-      const { error } = await supabase
-        .from('tenant_coverage_areas')
-        .delete()
-        .eq('tenant_id', userTenant.tenant_id);
-      
-      if (error) {
-        console.error('❌ Error removing postal codes:', error);
-        throw error;
-      }
-      
-      console.log('✅ Successfully removed all postal codes');
-      
-      toast({
-        title: "Alla postnummer borttagna",
-        description: `${selectedPostalCodes.length} postnummer har tagits bort från täckningsområdet.`,
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
-    } catch (error: any) {
-      console.error('❌ Deselect all failed:', error);
-      toast({
-        title: "Fel vid borttagning",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [selectedPostalCodes, userTenant?.tenant_id, queryClient]);
-
   // Select entire region
   const selectRegion = useCallback(async (region: string) => {
     if (!userTenant?.tenant_id) return;
@@ -542,15 +506,17 @@ const PostalCodeSelector = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Postal Codes List */}
+        {/* Main List */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-lg">Postnummer</CardTitle>
+                  <CardTitle className="text-lg">
+                    {viewMode === 'regions' ? 'Regioner' : 'Postnummer'}
+                  </CardTitle>
                   <CardDescription>
-                    Visar {paginatedCodes.length} av {filteredAndSortedCodes.length} postnummer
+                    Visar {paginatedItems.length} av {displayItems.length} {viewMode === 'regions' ? 'regioner' : 'postnummer'}
                   </CardDescription>
                 </div>
                 {totalPages > 1 && (
@@ -584,45 +550,57 @@ const PostalCodeSelector = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   <p className="text-muted-foreground mt-2">Laddar postnummer...</p>
                 </div>
-              ) : paginatedCodes.length === 0 ? (
+              ) : paginatedItems.length === 0 ? (
                 <div className="text-center py-8">
                   <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-muted-foreground">Inga postnummer matchar dina filter</p>
+                  <p className="text-muted-foreground">Inga {viewMode === 'regions' ? 'regioner' : 'postnummer'} matchar dina filter</p>
                 </div>
               ) : (
                 <ScrollArea className="h-96">
                   <div className="space-y-2">
-                    {paginatedCodes.map((pc) => {
-                      const isSelected = selectedCodesSet.has(pc.id);
+                    {paginatedItems.map((item) => {
                       return (
                         <div
-                          key={pc.id}
+                          key={item.id}
                           className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-                            isSelected 
+                            item.isSelected 
                               ? 'bg-primary/5 border-primary' 
+                              : item.isPartial
+                              ? 'bg-yellow-50 border-yellow-200'
                               : 'bg-background hover:bg-muted/50'
                           }`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{pc.postal_code}</span>
-                              {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                              <span className="font-medium">{item.display}</span>
+                              {item.isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                              {item.isPartial && <div className="h-4 w-4 rounded-full bg-yellow-400 flex items-center justify-center">
+                                <div className="h-2 w-2 rounded-full bg-white"></div>
+                              </div>}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">{pc.city}</p>
-                            {pc.region && (
-                              <p className="text-xs text-muted-foreground">{pc.region}</p>
+                            <p className="text-sm text-muted-foreground truncate">{item.subtitle}</p>
+                            {item.region && item.type === 'postal_code' && (
+                              <p className="text-xs text-muted-foreground">{item.region}</p>
                             )}
                           </div>
                           <Button
-                            variant={isSelected ? "secondary" : "outline"}
+                            variant={item.isSelected ? "secondary" : item.isPartial ? "outline" : "outline"}
                             size="sm"
-                            onClick={() => handleTogglePostalCode(pc.id, !isSelected)}
+                            onClick={() => handleToggleItem(item)}
                             disabled={togglePostalCode.isPending}
                           >
-                            {isSelected ? (
-                              <Minus className="h-4 w-4" />
+                            {item.type === 'region' ? (
+                              item.isSelected ? (
+                                <Minus className="h-4 w-4" />
+                              ) : (
+                                <Plus className="h-4 w-4" />
+                              )
                             ) : (
-                              <Plus className="h-4 w-4" />
+                              item.isSelected ? (
+                                <Minus className="h-4 w-4" />
+                              ) : (
+                                <Plus className="h-4 w-4" />
+                              )
                             )}
                           </Button>
                         </div>
@@ -639,25 +617,10 @@ const PostalCodeSelector = () => {
         <div>
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-lg">Valda områden</CardTitle>
-                  <CardDescription>
-                    {selectedPostalCodes.length} postnummer i täckningsområdet
-                  </CardDescription>
-                </div>
-                {selectedPostalCodes.length > 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={deselectAllSelected}
-                    className="gap-2"
-                  >
-                    <Minus className="h-4 w-4" />
-                    Avmarkera alla
-                  </Button>
-                )}
-              </div>
+              <CardTitle className="text-lg">Valda områden</CardTitle>
+              <CardDescription>
+                {selectedPostalCodes.length} postnummer i täckningsområdet
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {selectedPostalCodes.length === 0 ? (
