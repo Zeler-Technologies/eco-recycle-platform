@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter, X, MapPin, Square, Check } from 'lucide-react';
+import { RegionMultiSelect } from './RegionMultiSelect';
+import { CityDropdown } from './CityDropdown';
+import { PostalRangeSelector } from './PostalRangeSelector';
+import { ActiveFilterDisplay } from './ActiveFilterDisplay';
 
 interface PostalCode {
   id: string;
@@ -18,7 +22,7 @@ interface PostalCode {
 
 interface FilterState {
   search: string;
-  region: string;
+  regions: string[];
   city: string;
   postalCodeRange: { start: string; end: string };
   hasCoordinates: boolean | null;
@@ -38,7 +42,7 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
 }) => {
   const [filters, setFilters] = useState<FilterState>({
     search: '',
-    region: '',
+    regions: [],
     city: '',
     postalCodeRange: { start: '', end: '' },
     hasCoordinates: null,
@@ -74,9 +78,9 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
       );
     }
 
-    // Region filter
-    if (filters.region) {
-      filtered = filtered.filter(code => code.region === filters.region);
+    // Regions filter
+    if (filters.regions.length > 0) {
+      filtered = filtered.filter(code => filters.regions.includes(code.region || ''));
     }
 
     // City filter
@@ -126,12 +130,50 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
   const clearAllFilters = () => {
     setFilters({
       search: '',
-      region: '',
+      regions: [],
       city: '',
       postalCodeRange: { start: '', end: '' },
       hasCoordinates: null,
       isSelected: null
     });
+  };
+
+  const removeFilter = (filterKey: string) => {
+    setFilters(prev => {
+      switch (filterKey) {
+        case 'search':
+          return { ...prev, search: '' };
+        case 'regions':
+          return { ...prev, regions: [] };
+        case 'city':
+          return { ...prev, city: '' };
+        case 'postalRange':
+          return { ...prev, postalCodeRange: { start: '', end: '' } };
+        case 'hasCoordinates':
+          return { ...prev, hasCoordinates: null };
+        case 'isSelected':
+          return { ...prev, isSelected: null };
+        default:
+          return prev;
+      }
+    });
+  };
+
+  const getActiveFilters = () => {
+    const active = [];
+    if (filters.search) active.push({ key: 'search', label: `Sök: "${filters.search}"` });
+    if (filters.regions.length > 0) active.push({ key: 'regions', label: `Regioner: ${filters.regions.join(', ')}` });
+    if (filters.city) active.push({ key: 'city', label: `Stad: ${filters.city}` });
+    if (filters.postalCodeRange.start || filters.postalCodeRange.end) {
+      active.push({ key: 'postalRange', label: `Intervall: ${filters.postalCodeRange.start}-${filters.postalCodeRange.end}` });
+    }
+    if (filters.hasCoordinates !== null) {
+      active.push({ key: 'hasCoordinates', label: filters.hasCoordinates ? 'Med koordinater' : 'Utan koordinater' });
+    }
+    if (filters.isSelected !== null) {
+      active.push({ key: 'isSelected', label: filters.isSelected ? 'Endast valda' : 'Endast ej valda' });
+    }
+    return active;
   };
 
   const hasActiveFilters = Object.values(filters).some(value => {
@@ -142,13 +184,13 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
   });
 
   return (
-    <div className="bg-background border rounded-lg p-4 mb-4 space-y-4">
+    <div className="bg-background border rounded-lg p-6 mb-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4" />
-          <h3 className="font-medium">Filtrera postnummer</h3>
-          <Badge variant="outline">
+          <Filter className="h-5 w-5" />
+          <h3 className="text-lg font-medium">Filtrera postnummer</h3>
+          <Badge variant="outline" className="ml-2">
             {filteredCodes.length.toLocaleString('sv-SE')} resultat
           </Badge>
         </div>
@@ -158,18 +200,85 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
             onClick={clearAllFilters}
             variant="outline"
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-destructive hover:text-destructive"
           >
-            <X className="h-3 w-3" />
-            Rensa filter
+            <X className="h-4 w-4" />
+            Rensa alla filter
           </Button>
         )}
       </div>
 
+      {/* Active Filters Display */}
+      <ActiveFilterDisplay 
+        activeFilters={getActiveFilters()}
+        onRemoveFilter={removeFilter}
+      />
+
+      {/* Main Filter Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Region Multi-Select */}
+        <div>
+          <Label className="text-sm font-medium text-foreground">Region/Län</Label>
+          <RegionMultiSelect
+            selectedRegions={filters.regions}
+            availableRegions={regions}
+            onRegionChange={(regions) => setFilters(prev => ({ ...prev, regions }))}
+          />
+        </div>
+
+        {/* City Dropdown */}
+        <div>
+          <Label className="text-sm font-medium text-foreground">Stad</Label>
+          <CityDropdown
+            selectedCity={filters.city}
+            onCityChange={(city) => setFilters(prev => ({ ...prev, city }))}
+            regions={filters.regions}
+            availableCities={cities}
+          />
+        </div>
+
+        {/* Postal Range Selector */}
+        <div>
+          <Label className="text-sm font-medium text-foreground">Postnummer-intervall</Label>
+          <PostalRangeSelector
+            range={filters.postalCodeRange}
+            onRangeChange={(postalCodeRange) => setFilters(prev => ({ ...prev, postalCodeRange }))}
+          />
+        </div>
+
+        {/* Quick Filters */}
+        <div>
+          <Label className="text-sm font-medium text-foreground">Snabbfilter</Label>
+          <div className="space-y-2 mt-2">
+            <Button
+              onClick={() => setFilters(prev => ({ ...prev, isSelected: filters.isSelected === true ? null : true }))}
+              variant={filters.isSelected === true ? "default" : "outline"}
+              size="sm"
+              className="w-full justify-start"
+            >
+              <Check className="h-3 w-3 mr-2" />
+              Endast valda
+            </Button>
+            
+            <Button
+              onClick={() => setFilters(prev => ({ ...prev, hasCoordinates: filters.hasCoordinates === true ? null : true }))}
+              variant={filters.hasCoordinates === true ? "default" : "outline"}
+              size="sm"
+              className="w-full justify-start"
+            >
+              <MapPin className="h-3 w-3 mr-2" />
+              Med koordinater
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Search Input */}
       <div>
-        <Label htmlFor="filter-search">Sök postnummer eller stad</Label>
-        <div className="relative">
+        <Label htmlFor="filter-search" className="text-sm font-medium text-foreground">
+          Sök postnummer eller stad
+        </Label>
+        <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             id="filter-search"
@@ -179,134 +288,17 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
             placeholder="t.ex. 12345, Stockholm..."
             className="pl-10"
           />
+          {filters.search && (
+            <Button
+              onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+              variant="ghost"
+              size="sm"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
-      </div>
-
-      {/* Filter Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Region Filter */}
-        <div>
-          <Label>Region/Län</Label>
-          <Select 
-            value={filters.region || "all"} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, region: value === "all" ? "" : value }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Välj region..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alla regioner</SelectItem>
-              {regions.map(region => (
-                <SelectItem key={region} value={region}>{region}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* City Filter */}
-        <div>
-          <Label>Stad</Label>
-          <Select 
-            value={filters.city || "all"} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, city: value === "all" ? "" : value }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Välj stad..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alla städer</SelectItem>
-              {cities.map(city => (
-                <SelectItem key={city} value={city}>{city}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Postal Code Range */}
-        <div>
-          <Label>Postnummer-intervall</Label>
-          <div className="flex space-x-2">
-            <Input
-              type="text"
-              value={filters.postalCodeRange.start}
-              onChange={(e) => setFilters(prev => ({
-                ...prev, 
-                postalCodeRange: { ...prev.postalCodeRange, start: e.target.value }
-              }))}
-              placeholder="10000"
-              className="text-sm"
-            />
-            <span className="self-center text-muted-foreground">–</span>
-            <Input
-              type="text"
-              value={filters.postalCodeRange.end}
-              onChange={(e) => setFilters(prev => ({
-                ...prev, 
-                postalCodeRange: { ...prev.postalCodeRange, end: e.target.value }
-              }))}
-              placeholder="19999"
-              className="text-sm"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Filter Buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, isSelected: true }))}
-          variant={filters.isSelected === true ? "default" : "outline"}
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <Check className="h-3 w-3" />
-          Endast valda
-        </Button>
-        
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, isSelected: false }))}
-          variant={filters.isSelected === false ? "default" : "outline"}
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <Square className="h-3 w-3" />
-          Endast ej valda
-        </Button>
-        
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, hasCoordinates: true }))}
-          variant={filters.hasCoordinates === true ? "default" : "outline"}
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <MapPin className="h-3 w-3" />
-          Med koordinater
-        </Button>
-
-        {/* Quick Region Buttons */}
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, region: 'Stockholm' }))}
-          variant={filters.region === 'Stockholm' ? "default" : "outline"}
-          size="sm"
-        >
-          Stockholm
-        </Button>
-        
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, region: 'Västra Götaland' }))}
-          variant={filters.region === 'Västra Götaland' ? "default" : "outline"}
-          size="sm"
-        >
-          Västra Götaland
-        </Button>
-        
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, region: 'Skåne' }))}
-          variant={filters.region === 'Skåne' ? "default" : "outline"}
-          size="sm"
-        >
-          Skåne
-        </Button>
       </div>
     </div>
   );
