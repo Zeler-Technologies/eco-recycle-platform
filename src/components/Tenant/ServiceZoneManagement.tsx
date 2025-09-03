@@ -47,7 +47,9 @@ const distanceTiers = [
 
 export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [baseAddress, setBaseAddress] = useState('');
+  const [address, setAddress] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
   const [currentScrapyard, setCurrentScrapyard] = useState<any>(null);
   const [allScrapyards, setAllScrapyards] = useState<any[]>([]);
@@ -113,10 +115,10 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       const selectedScrapyard = allScrapyards.find(s => s.id.toString() === selectedScrapyardId);
       if (selectedScrapyard) {
         setCurrentScrapyard(selectedScrapyard);
-        const fullAddress = [selectedScrapyard.address, selectedScrapyard.postal_code, selectedScrapyard.city]
-          .filter(Boolean)
-          .join(', ');
-        setBaseAddress(fullAddress || '');
+        // Set individual fields from scrapyard data
+        setAddress(selectedScrapyard.address || '');
+        setPostalCode(selectedScrapyard.postal_code || '');
+        setCity(selectedScrapyard.city || '');
       }
     }
   }, [selectedScrapyardId, allScrapyards]);
@@ -206,12 +208,16 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         setSelectedScrapyardId(primaryScrapyard.id.toString());
         setCurrentScrapyard(primaryScrapyard);
         
-        const fullAddress = [primaryScrapyard.address, primaryScrapyard.postal_code, primaryScrapyard.city]
-          .filter(Boolean)
-          .join(', ');
+        // Set individual fields from primary scrapyard data
+        setAddress(primaryScrapyard.address || '');
+        setPostalCode(primaryScrapyard.postal_code || '');
+        setCity(primaryScrapyard.city || '');
         
-        console.log('🏠 Setting base address:', fullAddress);
-        setBaseAddress(fullAddress || '');
+        console.log('🏠 Setting address fields:', { 
+          address: primaryScrapyard.address, 
+          postalCode: primaryScrapyard.postal_code, 
+          city: primaryScrapyard.city 
+        });
       } else {
         // Create default scrapyard if none exists
         console.log('🏗️ No scrapyards found, creating default...');
@@ -242,7 +248,10 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
             setAllScrapyards([newScrapyard]);
             setSelectedScrapyardId(newScrapyard.id.toString());
             setCurrentScrapyard(newScrapyard);
-            setBaseAddress(newScrapyard.address || '');
+            // Set individual fields from new scrapyard data
+            setAddress(newScrapyard.address || '');
+            setPostalCode('');
+            setCity('');
           }
         }
       }
@@ -265,11 +274,8 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     try {
       setAddressLoading(true);
       
-      // Parse the address into components
-      const addressParts = baseAddress.split(',').map(part => part.trim());
-      const address = addressParts[0] || '';
-      const postalCode = addressParts[1] || '';
-      const city = addressParts[2] || '';
+      // Use the separate field values directly
+      const fullAddress = [address, postalCode, city].filter(Boolean).join(', ');
       
       console.log('Saving address:', { 
         scrapyardId: currentScrapyard.id, 
@@ -277,7 +283,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         address, 
         postalCode, 
         city, 
-        fullAddress: baseAddress 
+        fullAddress 
       });
       
       // Update the primary scrapyard (first created)
@@ -296,7 +302,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       const { error: tenantError } = await supabase
         .from('tenants')
         .update({
-          base_address: baseAddress
+          base_address: fullAddress
         })
         .eq('tenants_id', tenantId);
       
@@ -675,20 +681,38 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                 </div>
               ) : (
                 <>
-                  <div>
-                    <Label htmlFor="base-address">Basadress</Label>
-                    <Textarea 
-                      id="base-address"
-                      value={baseAddress}
-                      onChange={(e) => setBaseAddress(e.target.value)}
-                      className="mt-2"
-                      rows={3}
-                      placeholder="Ange fullständig adress: Gatunavn 123, 12345 Stad"
-                    />
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Denna adress används för att beräkna avstånd till hämtningsplatser. Format: Gata, Postnummer, Stad
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="address">Gatuadress</Label>
+                      <Input 
+                        id="address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Gatunavn 123"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="postal-code">Postnummer</Label>
+                      <Input 
+                        id="postal-code"
+                        value={postalCode}
+                        onChange={(e) => setPostalCode(e.target.value)}
+                        placeholder="12345"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="city">Stad</Label>
+                      <Input 
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Stockholm"
+                      />
+                    </div>
                   </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Denna adress används för att beräkna avstånd till hämtningsplatser.
+                  </p>
                   
                   {currentScrapyard && (
                     <Alert>
@@ -701,12 +725,13 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
                   )}
 
                   <div className="flex gap-2">
-                    <Button onClick={saveBaseAddress} disabled={addressLoading || !baseAddress.trim()}>
+                    <Button onClick={saveBaseAddress} disabled={addressLoading || !address.trim()}>
                       {addressLoading ? 'Sparar...' : 'Spara adress'}
                     </Button>
                     <Button variant="outline" onClick={() => {
+                      const fullAddress = [address, postalCode, city].filter(Boolean).join(', ');
                       console.log('DEBUG: Verifiera på karta clicked, setting showMapModal to true');
-                      console.log('DEBUG: Current baseAddress:', baseAddress);
+                      console.log('DEBUG: Current fullAddress:', fullAddress);
                       console.log('DEBUG: Google Maps available:', !!window.google?.maps);
                       setShowMapModal(true);
                     }}>Verifiera på karta</Button>
@@ -806,7 +831,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       <MapVerificationModal
         isOpen={showMapModal}
         onClose={() => setShowMapModal(false)}
-        address={baseAddress}
+        address={[address, postalCode, city].filter(Boolean).join(', ')}
       />
 
       {/* Edit Postal Code Modal */}
