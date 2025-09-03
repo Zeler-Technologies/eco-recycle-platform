@@ -20,8 +20,6 @@ interface PostalCode {
   city: string;
   region: string | null;
   country: string;
-  latitude?: number;
-  longitude?: number;
 }
 
 interface SelectedPostalCode {
@@ -80,7 +78,7 @@ const PostalCodeSelector = () => {
       for (let offset = 0; offset < (count || 0); offset += batchSize) {
         const { data, error } = await supabase
           .from('postal_codes_master')
-          .select('id, postal_code, city, region, country, latitude, longitude')
+          .select('id, postal_code, city, region, country')
           .eq('country', countryFilter)
           .eq('is_active', true)
           .range(offset, offset + batchSize - 1)
@@ -92,12 +90,20 @@ const PostalCodeSelector = () => {
         }
         
         if (data) {
-          allData = [...allData, ...data];
+          // Ensure proper typing
+          const typedData: PostalCode[] = data.map(item => ({
+            id: item.id,
+            postal_code: item.postal_code,
+            city: item.city,
+            region: item.region,
+            country: item.country
+          }));
+          allData = [...allData, ...typedData];
         }
       }
       
       console.log(`✅ Loaded ${allData.length} postal codes for ${countryFilter}`);
-      return allData as PostalCode[];
+      return allData;
     },
   });
 
@@ -215,7 +221,7 @@ const PostalCodeSelector = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Fel vid uppdatering",
         description: error.message,
@@ -256,7 +262,7 @@ const PostalCodeSelector = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Fel vid bulk-val",
         description: error.message,
@@ -295,7 +301,7 @@ const PostalCodeSelector = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Fel vid borttagning",
         description: error.message,
@@ -342,7 +348,7 @@ const PostalCodeSelector = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Fel vid regionval",
         description: error.message,
@@ -450,7 +456,7 @@ const PostalCodeSelector = () => {
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center gap-2">
               <Label htmlFor="sort-select">Sortera efter:</Label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+              <Select value={sortBy} onValueChange={(value: string) => setSortBy(value as 'postal_code' | 'city' | 'region')}>
                 <SelectTrigger className="w-40" id="sort-select">
                   <SelectValue />
                 </SelectTrigger>
