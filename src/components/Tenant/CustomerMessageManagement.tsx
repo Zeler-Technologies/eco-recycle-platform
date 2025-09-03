@@ -468,28 +468,6 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     const saveTriggerRule = async (rule: any) => {
       if (!tenantId) return;
 
-      // Optimistic update for immediate UI feedback
-      setTriggerRules(prev => {
-        const existingIndex = prev.findIndex(r => r.trigger_event === rule.event);
-        const updatedRule = {
-          tenant_id: tenantId,
-          trigger_event: rule.event,
-          template_id: rule.templateId,
-          delay_minutes: rule.delayMinutes || 0,
-          trigger_sequence: rule.sequence || 1,
-          is_enabled: rule.enabled,
-          description: rule.description
-        };
-
-        if (existingIndex >= 0) {
-          const newRules = [...prev];
-          newRules[existingIndex] = { ...prev[existingIndex], ...updatedRule };
-          return newRules;
-        } else {
-          return [...prev, updatedRule];
-        }
-      });
-
       try {
         const { error } = await supabase
           .from('sms_trigger_rules' as any)
@@ -510,16 +488,17 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           description: "Automatisk SMS-regel har uppdaterats.",
         });
         
-        // Refresh from database to ensure consistency
-        loadTriggerRules();
+        // Immediately reload to ensure UI reflects database state
+        await loadTriggerRules();
       } catch (error) {
-        // Revert optimistic update on error
-        loadTriggerRules();
+        console.error('Error saving trigger rule:', error);
         toast({
           title: "Fel vid sparande",
           description: "Kunde inte spara trigger-regel.",
           variant: "destructive",
         });
+        // Reload on error to ensure consistency
+        await loadTriggerRules();
       }
     };
 
