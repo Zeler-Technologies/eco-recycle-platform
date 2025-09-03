@@ -644,15 +644,37 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                                   existingRule: existingRule
                                 });
                                 
-                                saveTriggerRule({
-                                  ...existingRule,
-                                  templateId: templateId,
-                                  event: event.key,
-                                  enabled: existingRule?.is_enabled || false,
-                                  delayMinutes: existingRule?.delay_minutes || 0,
-                                  sequence: existingRule?.trigger_sequence || 1,
-                                  description: event.description
-                                });
+                                // Only save custom template UUIDs, not default template string IDs
+                                const isCustomTemplate = customTemplates.find(t => t.id === templateId);
+                                
+                                if (isCustomTemplate) {
+                                  saveTriggerRule({
+                                    ...existingRule,
+                                    templateId: templateId, // UUID for custom templates
+                                    event: event.key,
+                                    enabled: existingRule?.is_enabled || false,
+                                    delayMinutes: existingRule?.delay_minutes || 0,
+                                    sequence: existingRule?.trigger_sequence || 1,
+                                    description: event.description
+                                  });
+                                } else {
+                                  // For default templates, save null since we can't store string IDs in UUID field
+                                  saveTriggerRule({
+                                    ...existingRule,
+                                    templateId: null,
+                                    event: event.key,
+                                    enabled: existingRule?.is_enabled || false,
+                                    delayMinutes: existingRule?.delay_minutes || 0,
+                                    sequence: existingRule?.trigger_sequence || 1,
+                                    description: event.description
+                                  });
+                                  
+                                  toast({
+                                    title: "Observera",
+                                    description: "Standardmallar kan inte sparas i trigger-regler ännu. Använd anpassade mallar istället.",
+                                    variant: "destructive"
+                                  });
+                                }
                               }}
                               disabled={!existingRule?.is_enabled}
                             >
@@ -660,18 +682,17 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                                 <SelectValue placeholder="Välj SMS-mall" />
                               </SelectTrigger>
                               <SelectContent>
-                                {/* Show default templates first */}
-                                {templates.map(template => (
-                                  <SelectItem key={template.id} value={template.id}>
-                                    {template.name} (Standard)
-                                  </SelectItem>
-                                ))}
-                                {/* Then show custom templates */}
-                                {customTemplates.map(template => (
+                                {/* Show custom templates only (since only these work with UUID field) */}
+                                {customTemplates.filter(t => t.is_active).map(template => (
                                   <SelectItem key={template.id} value={template.id}>
                                     {template.template_name}
                                   </SelectItem>
                                 ))}
+                                {customTemplates.length === 0 && (
+                                  <SelectItem value="" disabled>
+                                    Inga anpassade mallar skapade ännu
+                                  </SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                             {!existingRule?.is_enabled && (
