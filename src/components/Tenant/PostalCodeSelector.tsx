@@ -44,7 +44,7 @@ const PostalCodeSelector = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
-  const [viewMode, setViewMode] = useState<'mixed' | 'regions' | 'cities' | 'postal_codes'>('mixed');
+  const [viewMode, setViewMode] = useState<'mixed' | 'regions' | 'cities' | 'postal_codes'>('regions');
   const [sortBy, setSortBy] = useState<'postal_code' | 'city' | 'region'>('postal_code');
   const [itemsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
