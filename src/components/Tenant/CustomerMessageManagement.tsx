@@ -605,9 +605,11 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                             <Select 
                               value={existingRule?.template_id || ''}
                               onValueChange={(templateId) => {
+                                // Handle both default templates (string IDs) and custom templates (UUIDs)
+                                const finalTemplateId = templates.find(t => t.id === templateId) ? null : templateId;
                                 saveTriggerRule({
                                   ...existingRule,
-                                  templateId,
+                                  templateId: finalTemplateId,
                                   event: event.key
                                 });
                               }}
