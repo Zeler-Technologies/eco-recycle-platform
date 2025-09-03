@@ -32,7 +32,7 @@ const BulkSelectionControls: React.FC<BulkSelectionControlsProps> = ({
 }) => {
   const selectedCount = selectedCodes.size;
   const totalVisible = filteredPostalCodes.length;
-  const allSelected = selectedCount > 0 && filteredPostalCodes.every(pc => selectedCodes.has(pc.id));
+  const allVisibleSelected = totalVisible > 0 && filteredPostalCodes.every(pc => selectedCodes.has(pc.id));
   
   // Get unique regions from filtered codes
   const regions = React.useMemo(() => {
@@ -54,20 +54,20 @@ const BulkSelectionControls: React.FC<BulkSelectionControlsProps> = ({
         
         {/* Primary Actions */}
         <Button
-          onClick={() => allSelected ? onDeselectAll() : onSelectAll()}
-          variant={allSelected ? "destructive" : "default"}
+          onClick={() => allVisibleSelected ? onDeselectAll() : onSelectAll()}
+          variant={allVisibleSelected ? "destructive" : "default"}
           size="sm"
           className="flex items-center gap-2"
         >
-          {allSelected ? (
+          {allVisibleSelected ? (
             <>
               <Square className="h-4 w-4" />
-              Avmarkera alla
+              Avmarkera alla synliga
             </>
           ) : (
             <>
             <CheckSquare className="h-4 w-4" />
-            Markera alla
+            Markera alla synliga
             </>
           )}
         </Button>
