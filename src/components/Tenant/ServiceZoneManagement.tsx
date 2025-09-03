@@ -210,19 +210,11 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         setCurrentScrapyard(primaryScrapyard);
         
         // Set individual fields from primary scrapyard data
-        // If scrapyard has separate fields, use those; otherwise parse the combined address
-        if (primaryScrapyard.postal_code && primaryScrapyard.city) {
-          // New format: separate fields already exist
-          setAddress(primaryScrapyard.address || '');
-          setPostalCode(primaryScrapyard.postal_code || '');
-          setCity(primaryScrapyard.city || '');
-        } else {
-          // Legacy format: parse combined address into separate fields
-          const parsedAddress = parseAddress(primaryScrapyard.address);
-          setAddress(parsedAddress.streetAddress || '');
-          setPostalCode(parsedAddress.postalCode || '');
-          setCity(parsedAddress.city || '');
-        }
+        // Always parse the combined address to separate fields for consistent display
+        const parsedAddress = parseAddress(primaryScrapyard.address);
+        setAddress(parsedAddress.streetAddress || '');
+        setPostalCode(parsedAddress.postalCode || '');
+        setCity(parsedAddress.city || '');
         
         console.log('🏠 Setting address fields:', { 
           address: primaryScrapyard.address, 
