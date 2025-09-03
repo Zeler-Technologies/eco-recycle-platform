@@ -466,7 +466,7 @@ const PostalCodeSelector = () => {
               <Checkbox
                 id="show-selected"
                 checked={showOnlySelected}
-                onCheckedChange={setShowOnlySelected}
+                onCheckedChange={(checked) => setShowOnlySelected(checked === true)}
               />
               <Label htmlFor="show-selected">Visa endast valda</Label>
             </div>
