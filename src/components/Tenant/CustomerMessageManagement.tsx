@@ -635,14 +635,18 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                             <Select 
                               value={existingRule?.template_id || ''}
                               onValueChange={(templateId) => {
-                                // For default templates (found in templates array), save the template ID as-is
-                                // For custom templates (found in customTemplates array), save the UUID
-                                const isDefaultTemplate = templates.find(t => t.id === templateId);
-                                const finalTemplateId = isDefaultTemplate ? templateId : templateId;
+                                console.log('🔵 Template selection DEBUG:', {
+                                  selectedTemplateId: templateId,
+                                  currentTemplateId: existingRule?.template_id,
+                                  event: event.key,
+                                  availableTemplates: templates.map(t => ({ id: t.id, name: t.name })),
+                                  availableCustomTemplates: customTemplates.map(t => ({ id: t.id, name: t.template_name })),
+                                  existingRule: existingRule
+                                });
                                 
                                 saveTriggerRule({
                                   ...existingRule,
-                                  templateId: finalTemplateId,
+                                  templateId: templateId,
                                   event: event.key,
                                   enabled: existingRule?.is_enabled || false,
                                   delayMinutes: existingRule?.delay_minutes || 0,
