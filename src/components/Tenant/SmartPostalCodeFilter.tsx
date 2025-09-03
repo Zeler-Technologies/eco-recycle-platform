@@ -55,13 +55,16 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
     const citySet = new Set<string>();
     
     allPostalCodes.forEach(pc => {
-      if (pc.region) regionSet.add(pc.region);
-      if (pc.city) citySet.add(pc.city);
+      if (pc.region && pc.region.trim()) regionSet.add(pc.region.trim());
+      if (pc.city && pc.city.trim()) citySet.add(pc.city.trim());
     });
+    
+    console.log('Available regions from postal codes:', Array.from(regionSet));
+    console.log('Available cities from postal codes:', Array.from(citySet));
     
     return {
       regions: Array.from(regionSet).sort(),
-      cities: Array.from(citySet).sort().slice(0, 100) // Limit for performance
+      cities: Array.from(citySet).sort() // Remove limit to show all cities
     };
   }, [allPostalCodes]);
 
