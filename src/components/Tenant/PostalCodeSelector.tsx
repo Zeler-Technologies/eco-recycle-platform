@@ -64,12 +64,15 @@ const PostalCodeSelector = () => {
       
       const { data, error } = await supabase
         .from('postal_codes_master')
-        .select('id, postal_code, city, region, country, latitude, longitude')
+        .select('id, postal_code, city, region, country')
         .eq('country', countryFilter)
         .eq('is_active', true)
         .order('postal_code');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading postal codes:', error);
+        throw error;
+      }
       
       console.log('Loaded postal codes:', data?.length, 'for country:', countryFilter);
       console.log('Available regions:', [...new Set(data?.map(pc => pc.region).filter(Boolean))].slice(0, 10));
