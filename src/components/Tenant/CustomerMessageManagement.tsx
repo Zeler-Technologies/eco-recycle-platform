@@ -521,31 +521,6 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         
         console.log('🟢 DATABASE SAVE SUCCESSFUL for event:', rule.event);
         
-        // Only update the specific rule in state, don't reload everything
-        setTriggerRules(prev => {
-          console.log('🔄 UPDATING TRIGGER RULES STATE for event:', rule.event);
-          const existingIndex = prev.findIndex(r => r.trigger_event === rule.event);
-          const updatedRule = {
-            tenant_id: tenantId,
-            trigger_event: rule.event,
-            template_id: rule.templateId,
-            delay_minutes: rule.delayMinutes || 0,
-            trigger_sequence: rule.sequence || 1,
-            is_enabled: rule.enabled,
-            description: rule.description
-          };
-
-          if (existingIndex >= 0) {
-            const newRules = [...prev];
-            newRules[existingIndex] = { ...prev[existingIndex], ...updatedRule };
-            console.log('🔄 UPDATED EXISTING RULE at index:', existingIndex);
-            return newRules;
-          } else {
-            console.log('🔄 ADDED NEW RULE for event:', rule.event);
-            return [...prev, updatedRule];
-          }
-        });
-        
         toast({
           title: "Trigger-regel sparad",
           description: "Automatisk SMS-regel har uppdaterats.",
