@@ -310,6 +310,35 @@ const PostalCodeSelector = () => {
     }
   }, [paginatedCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
 
+  // Deselect all selected postal codes
+  const deselectAllSelected = useCallback(async () => {
+    if (!userTenant?.tenant_id || selectedPostalCodes.length === 0) return;
+    
+    try {
+      for (const spc of selectedPostalCodes) {
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .delete()
+          .eq('tenant_id', userTenant.tenant_id)
+          .eq('postal_code_id', spc.postal_code_id);
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Alla postnummer borttagna",
+        description: `${selectedPostalCodes.length} postnummer har tagits bort från täckningsområdet.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error: any) {
+      toast({
+        title: "Fel vid borttagning",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [selectedPostalCodes, userTenant?.tenant_id, queryClient]);
+
   // Select entire region
   const selectRegion = useCallback(async (region: string) => {
     if (!userTenant?.tenant_id) return;
@@ -603,10 +632,25 @@ const PostalCodeSelector = () => {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Valda områden</CardTitle>
-              <CardDescription>
-                {selectedPostalCodes.length} postnummer i täckningsområdet
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-lg">Valda områden</CardTitle>
+                  <CardDescription>
+                    {selectedPostalCodes.length} postnummer i täckningsområdet
+                  </CardDescription>
+                </div>
+                {selectedPostalCodes.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={deselectAllSelected}
+                    className="gap-2"
+                  >
+                    <Minus className="h-4 w-4" />
+                    Avmarkera alla
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {selectedPostalCodes.length === 0 ? (
