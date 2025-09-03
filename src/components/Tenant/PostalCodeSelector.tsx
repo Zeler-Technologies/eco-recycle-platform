@@ -59,14 +59,21 @@ const PostalCodeSelector = () => {
     queryKey: ['available-postal-codes', userTenant?.tenants?.country],
     enabled: !!userTenant?.tenants?.country,
     queryFn: async () => {
+      // Handle both "Sweden" and "Sverige" country values
+      const countryFilter = userTenant.tenants.country === 'Sverige' ? 'Sweden' : userTenant.tenants.country;
+      
       const { data, error } = await supabase
         .from('postal_codes_master')
-        .select('id, postal_code, city, region, country')
-        .eq('country', userTenant.tenants.country)
+        .select('id, postal_code, city, region, country, latitude, longitude')
+        .eq('country', countryFilter)
         .eq('is_active', true)
         .order('postal_code');
 
       if (error) throw error;
+      
+      console.log('Loaded postal codes:', data?.length, 'for country:', countryFilter);
+      console.log('Available regions:', [...new Set(data?.map(pc => pc.region).filter(Boolean))].slice(0, 10));
+      
       return data as PostalCode[];
     },
   });
