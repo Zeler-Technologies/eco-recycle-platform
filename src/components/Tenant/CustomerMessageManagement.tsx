@@ -617,6 +617,13 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                                 <SelectValue placeholder="Välj SMS-mall" />
                               </SelectTrigger>
                               <SelectContent>
+                                {/* Show default templates first */}
+                                {templates.map(template => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name} (Standard)
+                                  </SelectItem>
+                                ))}
+                                {/* Then show custom templates */}
                                 {customTemplates.map(template => (
                                   <SelectItem key={template.id} value={template.id}>
                                     {template.template_name}
