@@ -54,17 +54,26 @@ const SmartPostalCodeFilter: React.FC<SmartPostalCodeFilterProps> = ({
     const regionSet = new Set<string>();
     const citySet = new Set<string>();
     
+    console.log('🔍 Processing postal codes for regions/cities:', allPostalCodes.length);
+    
     allPostalCodes.forEach(pc => {
-      if (pc.region && pc.region.trim()) regionSet.add(pc.region.trim());
-      if (pc.city && pc.city.trim()) citySet.add(pc.city.trim());
+      if (pc.region && pc.region.trim()) {
+        regionSet.add(pc.region.trim());
+      }
+      if (pc.city && pc.city.trim()) {
+        citySet.add(pc.city.trim());
+      }
     });
     
-    console.log('Available regions from postal codes:', Array.from(regionSet));
-    console.log('Available cities from postal codes:', Array.from(citySet));
+    const regionsArray = Array.from(regionSet).sort();
+    const citiesArray = Array.from(citySet).sort();
+    
+    console.log('🌍 Found regions from postal codes:', regionsArray.length, regionsArray);
+    console.log('🏙️ Found cities from postal codes:', citiesArray.length, citiesArray.slice(0, 10), '...');
     
     return {
-      regions: Array.from(regionSet).sort(),
-      cities: Array.from(citySet).sort() // Remove limit to show all cities
+      regions: regionsArray,
+      cities: citiesArray
     };
   }, [allPostalCodes]);
 

@@ -56,12 +56,16 @@ export const RegionMultiSelect: React.FC<RegionMultiSelectProps> = ({
           value="" 
           onValueChange={(value) => value && toggleRegion(value)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="bg-background border-border">
             <SelectValue placeholder="Välj region..." />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-background border-border z-50 shadow-lg">
             {availableToSelect.map(region => (
-              <SelectItem key={region} value={region}>
+              <SelectItem 
+                key={region} 
+                value={region}
+                className="cursor-pointer hover:bg-muted"
+              >
                 {region}
               </SelectItem>
             ))}
