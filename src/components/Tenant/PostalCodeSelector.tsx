@@ -437,14 +437,17 @@ const PostalCodeSelector = () => {
     }
     
     try {
-      for (const pc of codesToDeselect) {
-        const { error } = await supabase
-          .from('tenant_coverage_areas')
-          .delete()
-          .eq('tenant_id', userTenant.tenant_id)
-          .eq('postal_code_id', pc.id);
-        if (error) throw error;
-      }
+      console.log('🗑️ Deselecting postal codes:', codesToDeselect.map(pc => pc.postal_code));
+      
+      // Use single bulk delete operation
+      const postalCodeIds = codesToDeselect.map(pc => pc.id);
+      const { error } = await supabase
+        .from('tenant_coverage_areas')
+        .delete()
+        .eq('tenant_id', userTenant.tenant_id)
+        .in('postal_code_id', postalCodeIds);
+      
+      if (error) throw error;
       
       toast({
         title: "Synliga områden borttagna",
@@ -460,6 +463,36 @@ const PostalCodeSelector = () => {
       });
     }
   }, [viewMode, paginatedItems, availablePostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
+
+  // Deselect ALL selected postal codes
+  const deselectAllSelected = useCallback(async () => {
+    if (!userTenant?.tenant_id || selectedPostalCodes.length === 0) return;
+    
+    try {
+      console.log('🗑️ Deselecting ALL postal codes:', selectedPostalCodes.length);
+      
+      // Use single bulk delete operation for all selected postal codes
+      const { error } = await supabase
+        .from('tenant_coverage_areas')
+        .delete()
+        .eq('tenant_id', userTenant.tenant_id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Alla områden borttagna",
+        description: `${selectedPostalCodes.length} postnummer har tagits bort från täckningsområdet.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error: any) {
+      toast({
+        title: "Fel vid borttagning",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [selectedPostalCodes.length, userTenant?.tenant_id, queryClient]);
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -735,10 +768,25 @@ const PostalCodeSelector = () => {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Valda områden</CardTitle>
-              <CardDescription>
-                {selectedPostalCodes.length} postnummer i täckningsområdet
-              </CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg">Valda områden</CardTitle>
+                  <CardDescription>
+                    {selectedPostalCodes.length} postnummer i täckningsområdet
+                  </CardDescription>
+                </div>
+                {selectedPostalCodes.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={deselectAllSelected}
+                    className="gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Avmarkera alla
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {selectedPostalCodes.length === 0 ? (
