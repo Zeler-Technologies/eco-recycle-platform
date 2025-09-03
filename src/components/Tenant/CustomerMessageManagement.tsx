@@ -476,6 +476,28 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       { key: 'pickup_completed', label: 'Hämtning slutförd', description: 'Skickas när bilen har hämtats' }
     ];
 
+    // Function to get template name by ID
+    const getTemplateName = (templateId: string | null, templateType?: string) => {
+      if (!templateId) return "Ingen mall vald";
+      
+      // Handle standard templates
+      if (templateType === 'standard' || templateId.startsWith('standard_')) {
+        const actualId = templateId.replace('standard_', '');
+        const standardTemplate = templates.find(t => t.id === actualId);
+        if (standardTemplate) {
+          return `${standardTemplate.name} (Standard)`;
+        }
+      }
+      
+      // Handle custom templates
+      const customTemplate = customTemplates.find(t => t.id === templateId);
+      if (customTemplate) {
+        return `${customTemplate.template_name} (Anpassad)`;
+      }
+      
+      return "Mall ej hittad";
+    };
+
     const loadTriggerRules = async () => {
       if (!tenantId) return;
 
