@@ -779,7 +779,7 @@ const PostalCodeSelector = () => {
                 <>
                   <Separator className="my-4" />
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span>Täckning:</span>
                       <Badge>
                         {((selectedPostalCodes.length / availablePostalCodes.length) * 100).toFixed(1)}%
