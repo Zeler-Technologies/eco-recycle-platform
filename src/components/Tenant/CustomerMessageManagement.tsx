@@ -452,6 +452,8 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     const loadTriggerRules = async () => {
       if (!tenantId) return;
 
+      console.log('🔄 LOADING TRIGGER RULES...');
+
       try {
         // Using direct SQL query instead of typed client
         const { data, error } = await supabase
@@ -461,7 +463,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           .order('created_at', { ascending: false }); // Get newest first
 
         if (error) throw error;
-        console.log('Loaded trigger rules:', data);
+        console.log('🔄 RAW TRIGGER RULES LOADED:', data?.length, 'rules');
         
         // Remove duplicates, keeping the newest rule for each trigger_event
         const uniqueRules = data?.reduce((acc: any[], rule: any) => {
@@ -472,15 +474,35 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           return acc;
         }, []) || [];
         
-        console.log('Unique trigger rules after deduplication:', uniqueRules);
+        console.log('🔄 UNIQUE TRIGGER RULES AFTER DEDUPLICATION:', uniqueRules.map(r => ({
+          event: r.trigger_event,
+          enabled: r.is_enabled,
+          id: r.id
+        })));
+        
         setTriggerRules(uniqueRules);
+        console.log('🔄 TRIGGER RULES STATE UPDATED');
       } catch (error) {
-        console.error('Error loading trigger rules:', error);
+        console.error('🔴 Error loading trigger rules:', error);
       }
     };
 
     const saveTriggerRule = async (rule: any) => {
       if (!tenantId) return;
+
+      console.log('🔵 SAVE TRIGGER RULE CALLED:', {
+        event: rule.event,
+        enabled: rule.enabled,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log current state of all buttons before save
+      console.log('🔵 CURRENT LOCAL STATES BEFORE SAVE:', { ...localStates });
+      console.log('🔵 CURRENT TRIGGER RULES BEFORE SAVE:', triggerRules.map(r => ({
+        event: r.trigger_event,
+        enabled: r.is_enabled,
+        id: r.id
+      })));
 
       try {
         const { error } = await supabase
@@ -497,8 +519,11 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 
         if (error) throw error;
         
+        console.log('🟢 DATABASE SAVE SUCCESSFUL for event:', rule.event);
+        
         // Only update the specific rule in state, don't reload everything
         setTriggerRules(prev => {
+          console.log('🔄 UPDATING TRIGGER RULES STATE for event:', rule.event);
           const existingIndex = prev.findIndex(r => r.trigger_event === rule.event);
           const updatedRule = {
             tenant_id: tenantId,
@@ -513,8 +538,10 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           if (existingIndex >= 0) {
             const newRules = [...prev];
             newRules[existingIndex] = { ...prev[existingIndex], ...updatedRule };
+            console.log('🔄 UPDATED EXISTING RULE at index:', existingIndex);
             return newRules;
           } else {
+            console.log('🔄 ADDED NEW RULE for event:', rule.event);
             return [...prev, updatedRule];
           }
         });
@@ -524,7 +551,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           description: "Automatisk SMS-regel har uppdaterats.",
         });
       } catch (error) {
-        console.error('Error saving trigger rule:', error);
+        console.error('🔴 Error saving trigger rule:', error);
         // Only revert the specific button's local state on error
         setLocalStates(prev => ({ ...prev, [rule.event]: !rule.enabled }));
         toast({
@@ -559,13 +586,25 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                       <Switch
                         checked={localStates[event.key] ?? existingRule?.is_enabled ?? false}
                         onCheckedChange={(enabled) => {
-                          console.log('Switch toggled:', { event: event.key, enabled, existingRule, localState: localStates[event.key] });
+                          console.log('🟡 SWITCH TOGGLED START:', { 
+                            event: event.key, 
+                            enabled, 
+                            existingRule: existingRule?.id,
+                            currentLocalState: localStates[event.key],
+                            allLocalStates: { ...localStates }
+                          });
+                          
                           // Update local state immediately for visual feedback
                           setLocalStates(prev => {
                             const newState = { ...prev, [event.key]: enabled };
-                            console.log('Updated local states:', newState);
+                            console.log('🟡 LOCAL STATE UPDATED:', { 
+                              event: event.key, 
+                              newEnabled: enabled,
+                              allStates: newState 
+                            });
                             return newState;
                           });
+                          
                           saveTriggerRule({
                             event: event.key,
                             enabled,
