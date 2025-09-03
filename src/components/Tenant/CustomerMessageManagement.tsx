@@ -261,8 +261,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
       const { data, error } = await supabase
         .from('custom_message_templates')
         .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true);
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
       setCustomTemplates((data || []) as CustomMessageTemplate[]);
@@ -272,6 +271,34 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         title: "Fel vid laddning",
         description: "Kunde inte ladda anpassade mallar.",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleCustomTemplate = async (templateId: string, isActive: boolean) => {
+    if (!tenantId) return;
+    try {
+      const { error } = await supabase
+        .from('custom_message_templates')
+        .update({ is_active: isActive })
+        .eq('id', templateId)
+        .eq('tenant_id', tenantId);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setCustomTemplates(prev => prev.map(t => t.id === templateId ? { ...t, is_active: isActive } : t));
+
+      toast({
+        title: isActive ? 'Mall aktiverad' : 'Mall inaktiverad',
+        description: `Mallen är nu ${isActive ? 'aktiv' : 'inaktiv'}.`,
+      });
+    } catch (err) {
+      console.error('Error toggling template status:', err);
+      toast({
+        title: 'Fel vid uppdatering',
+        description: 'Kunde inte ändra mallens status.',
+        variant: 'destructive',
       });
     }
   };
@@ -1292,6 +1319,10 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Switch
+                            checked={template.is_active}
+                            onCheckedChange={(isActive) => handleToggleCustomTemplate(template.id, isActive)}
+                          />
                           <Badge variant={template.is_active ? "default" : "secondary"}>
                             {template.is_active ? 'Aktiv' : 'Inaktiv'}
                           </Badge>
