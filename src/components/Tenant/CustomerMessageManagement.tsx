@@ -546,10 +546,11 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                       <Switch
                         checked={existingRule?.is_enabled || false}
                         onCheckedChange={(enabled) => {
+                          console.log('Switch toggled:', { event: event.key, enabled, existingRule });
                           saveTriggerRule({
                             event: event.key,
                             enabled,
-                            templateId: existingRule?.template_id,
+                            templateId: existingRule?.template_id || null,
                             delayMinutes: existingRule?.delay_minutes || 0,
                             sequence: 1,
                             description: event.description
