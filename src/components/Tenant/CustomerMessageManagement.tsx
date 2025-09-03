@@ -457,10 +457,23 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         const { data, error } = await supabase
           .from('sms_trigger_rules' as any)
           .select('*')
-          .eq('tenant_id', tenantId);
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false }); // Get newest first
 
         if (error) throw error;
-        setTriggerRules(data || []);
+        console.log('Loaded trigger rules:', data);
+        
+        // Remove duplicates, keeping the newest rule for each trigger_event
+        const uniqueRules = data?.reduce((acc: any[], rule: any) => {
+          const existingIndex = acc.findIndex(r => r.trigger_event === rule.trigger_event);
+          if (existingIndex === -1) {
+            acc.push(rule);
+          }
+          return acc;
+        }, []) || [];
+        
+        console.log('Unique trigger rules after deduplication:', uniqueRules);
+        setTriggerRules(uniqueRules);
       } catch (error) {
         console.error('Error loading trigger rules:', error);
       }
@@ -518,6 +531,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         
         {triggerEvents.map(event => {
           const existingRule = triggerRules.find(r => r.trigger_event === event.key);
+          console.log('Rendering event:', event.key, 'Found rules:', triggerRules.filter(r => r.trigger_event === event.key), 'Selected rule:', existingRule);
           
           return (
             <Card key={event.key} className="border border-tenant-accent/20">
@@ -528,9 +542,13 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                       <Switch
                         checked={localStates[event.key] ?? existingRule?.is_enabled ?? false}
                         onCheckedChange={(enabled) => {
-                          console.log('Switch toggled:', { event: event.key, enabled, existingRule });
+                          console.log('Switch toggled:', { event: event.key, enabled, existingRule, localState: localStates[event.key] });
                           // Update local state immediately for visual feedback
-                          setLocalStates(prev => ({ ...prev, [event.key]: enabled }));
+                          setLocalStates(prev => {
+                            const newState = { ...prev, [event.key]: enabled };
+                            console.log('Updated local states:', newState);
+                            return newState;
+                          });
                           saveTriggerRule({
                             event: event.key,
                             enabled,
