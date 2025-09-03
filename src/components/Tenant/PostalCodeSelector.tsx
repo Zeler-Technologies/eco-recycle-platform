@@ -203,27 +203,79 @@ const PostalCodeSelector = () => {
     }
   }, [userTenant?.tenant_id, queryClient]);
 
-  const selectAll = useCallback(() => {
+  const selectAll = useCallback(async () => {
+    if (!userTenant?.tenant_id) return;
+    
     const unselectedCodes = filteredPostalCodes.filter(pc => !selectedCodesSet.has(pc.id));
-    if (unselectedCodes.length > 0) {
-      bulkSelect('filtered');
+    
+    if (unselectedCodes.length === 0) {
+      toast({
+        title: "Alla synliga postnummer redan valda",
+        description: "Det finns inga fler postnummer att välja i den aktuella vyn.",
+      });
+      return;
     }
-  }, [filteredPostalCodes, selectedCodesSet, bulkSelect]);
+    
+    try {
+      const inserts = unselectedCodes.map(pc => ({
+        tenant_id: userTenant.tenant_id,
+        postal_code_id: pc.id
+      }));
+      
+      // Batch insert
+      const batchSize = 100;
+      for (let i = 0; i < inserts.length; i += batchSize) {
+        const batch = inserts.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .upsert(batch, { onConflict: 'tenant_id,postal_code_id' });
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Alla synliga postnummer valda",
+        description: `${inserts.length} postnummer har lagts till i ditt täckningsområde.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error) {
+      toast({
+        title: "Fel vid val av alla",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [filteredPostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
 
   const deselectAll = useCallback(async () => {
     if (!userTenant?.tenant_id) return;
     
+    // Get only the filtered postal codes that are currently selected
+    const visibleSelectedCodes = filteredPostalCodes.filter(pc => selectedCodesSet.has(pc.id));
+    
+    if (visibleSelectedCodes.length === 0) {
+      toast({
+        title: "Inga postnummer att ta bort",
+        description: "Det finns inga valda postnummer i den aktuella vyn.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      const { error } = await supabase
-        .from('tenant_coverage_areas')
-        .delete()
-        .eq('tenant_id', userTenant.tenant_id);
-      
-      if (error) throw error;
+      // Remove only the visible selected postal codes
+      for (const pc of visibleSelectedCodes) {
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .delete()
+          .eq('tenant_id', userTenant.tenant_id)
+          .eq('postal_code_id', pc.id);
+        if (error) throw error;
+      }
       
       toast({
-        title: "Alla postnummer borttagna",
-        description: "Alla valda postnummer har tagits bort från ditt täckningsområde.",
+        title: "Synliga postnummer borttagna",
+        description: `${visibleSelectedCodes.length} postnummer har tagits bort från ditt täckningsområde.`,
       });
       
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
@@ -234,7 +286,7 @@ const PostalCodeSelector = () => {
         variant: "destructive",
       });
     }
-  }, [userTenant?.tenant_id, queryClient]);
+  }, [filteredPostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
 
   // Toggle postal code selection
   const togglePostalCode = useMutation({
