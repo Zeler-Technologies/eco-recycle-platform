@@ -548,6 +548,9 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
         
         console.log('🟢 DATABASE SAVE SUCCESSFUL for event:', rule.event);
         
+        // Reload trigger rules to get updated data
+        await loadTriggerRules();
+        
         toast({
           title: "Trigger-regel sparad",
           description: "Automatisk SMS-regel har uppdaterats.",
