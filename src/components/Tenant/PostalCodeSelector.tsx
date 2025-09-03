@@ -62,9 +62,9 @@ const PostalCodeSelector = () => {
       // Handle both "Sweden" and "Sverige" country values
       const countryFilter = userTenant.tenants.country === 'Sverige' ? 'Sweden' : userTenant.tenants.country;
       
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('postal_codes_master')
-        .select('id, postal_code, city, region, country')
+        .select('id, postal_code, city, region, country', { count: 'exact' })
         .eq('country', countryFilter)
         .eq('is_active', true)
         .order('postal_code');
@@ -74,7 +74,10 @@ const PostalCodeSelector = () => {
         throw error;
       }
       
-      console.log('Loaded postal codes:', data?.length, 'for country:', countryFilter);
+      console.log('🔥 LOADED POSTAL CODES:', data?.length, 'for country:', countryFilter);
+      console.log('🔥 TOTAL COUNT FROM DB:', count);
+      console.log('🔥 First few postal codes:', data?.slice(0, 5));
+      console.log('🔥 Last few postal codes:', data?.slice(-5));
       console.log('Available regions:', [...new Set(data?.map(pc => pc.region).filter(Boolean))].slice(0, 10));
       
       return data as PostalCode[];
