@@ -18,6 +18,7 @@ import { AddressTestComponent } from "@/components/Common/AddressTestComponent";
 import { MapVerificationModal } from "./MapVerificationModal";
 import PostalCodeSelector from "./PostalCodeSelector";
 import PricingManagement from "./PricingManagement";
+import { parseAddress } from "@/utils/addressTestUtils";
 
 interface ServiceZoneManagementProps {
   onBack: () => void;
@@ -209,9 +210,19 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         setCurrentScrapyard(primaryScrapyard);
         
         // Set individual fields from primary scrapyard data
-        setAddress(primaryScrapyard.address || '');
-        setPostalCode(primaryScrapyard.postal_code || '');
-        setCity(primaryScrapyard.city || '');
+        // If scrapyard has separate fields, use those; otherwise parse the combined address
+        if (primaryScrapyard.postal_code && primaryScrapyard.city) {
+          // New format: separate fields already exist
+          setAddress(primaryScrapyard.address || '');
+          setPostalCode(primaryScrapyard.postal_code || '');
+          setCity(primaryScrapyard.city || '');
+        } else {
+          // Legacy format: parse combined address into separate fields
+          const parsedAddress = parseAddress(primaryScrapyard.address);
+          setAddress(parsedAddress.streetAddress || '');
+          setPostalCode(parsedAddress.postalCode || '');
+          setCity(parsedAddress.city || '');
+        }
         
         console.log('🏠 Setting address fields:', { 
           address: primaryScrapyard.address, 
@@ -286,23 +297,27 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         fullAddress 
       });
       
-      // Update the primary scrapyard (first created)
+      // Update the primary scrapyard with separate fields
       const { error: scrapyardError } = await supabase
         .from('scrapyards')
         .update({
-          address,
+          address,           // Store street address only
           postal_code: postalCode,
-          city
+          city,
+          updated_at: new Date().toISOString()
         })
         .eq('id', currentScrapyard.id);
       
       if (scrapyardError) throw scrapyardError;
       
-      // Also update tenant base_address for consistency
+      // Also update tenant with separate address fields AND base_address for backward compatibility
       const { error: tenantError } = await supabase
         .from('tenants')
         .update({
-          base_address: fullAddress
+          street_address: address,
+          postal_code: postalCode,
+          city: city,
+          base_address: fullAddress  // Keep for backward compatibility
         })
         .eq('tenants_id', tenantId);
       
