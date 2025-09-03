@@ -439,15 +439,18 @@ const PostalCodeSelector = () => {
     try {
       console.log('🗑️ Deselecting postal codes:', codesToDeselect.map(pc => pc.postal_code));
       
-      // Use single bulk delete operation
+      // Batch delete to avoid long URL / payload limits
       const postalCodeIds = codesToDeselect.map(pc => pc.id);
-      const { error } = await supabase
-        .from('tenant_coverage_areas')
-        .delete()
-        .eq('tenant_id', userTenant.tenant_id)
-        .in('postal_code_id', postalCodeIds);
-      
-      if (error) throw error;
+      const batchSize = 200;
+      for (let i = 0; i < postalCodeIds.length; i += batchSize) {
+        const batch = postalCodeIds.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .delete()
+          .eq('tenant_id', userTenant.tenant_id)
+          .in('postal_code_id', batch);
+        if (error) throw error;
+      }
       
       toast({
         title: "Synliga områden borttagna",
