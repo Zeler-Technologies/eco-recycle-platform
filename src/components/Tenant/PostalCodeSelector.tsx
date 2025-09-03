@@ -315,14 +315,20 @@ const PostalCodeSelector = () => {
     if (!userTenant?.tenant_id || selectedPostalCodes.length === 0) return;
     
     try {
-      for (const spc of selectedPostalCodes) {
-        const { error } = await supabase
-          .from('tenant_coverage_areas')
-          .delete()
-          .eq('tenant_id', userTenant.tenant_id)
-          .eq('postal_code_id', spc.postal_code_id);
-        if (error) throw error;
+      console.log(`🗑️ Removing ${selectedPostalCodes.length} postal codes for tenant ${userTenant.tenant_id}`);
+      
+      // Bulk delete all selected postal codes for this tenant
+      const { error } = await supabase
+        .from('tenant_coverage_areas')
+        .delete()
+        .eq('tenant_id', userTenant.tenant_id);
+      
+      if (error) {
+        console.error('❌ Error removing postal codes:', error);
+        throw error;
       }
+      
+      console.log('✅ Successfully removed all postal codes');
       
       toast({
         title: "Alla postnummer borttagna",
@@ -331,6 +337,7 @@ const PostalCodeSelector = () => {
       
       queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
     } catch (error: any) {
+      console.error('❌ Deselect all failed:', error);
       toast({
         title: "Fel vid borttagning",
         description: error.message,
