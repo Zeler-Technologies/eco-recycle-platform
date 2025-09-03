@@ -797,7 +797,7 @@ const PostalCodeSelector = () => {
               ) : (
                 <ScrollArea className="h-96">
                   <div className="space-y-2">
-                    {selectedPostalCodes.slice(0, 50).map((spc) => {
+                    {selectedPostalCodes.map((spc) => {
                       const pc = spc.postal_codes_master;
                       return (
                         <div
@@ -814,11 +814,6 @@ const PostalCodeSelector = () => {
                         </div>
                       );
                     })}
-                    {selectedPostalCodes.length > 50 && (
-                      <div className="text-center py-2 text-sm text-muted-foreground">
-                        ... och {selectedPostalCodes.length - 50} till
-                      </div>
-                    )}
                   </div>
                 </ScrollArea>
               )}
