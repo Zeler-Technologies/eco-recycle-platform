@@ -27,11 +27,24 @@ interface SelectedPostalCode {
   postal_codes_master: PostalCode;
 }
 
+interface DisplayItem {
+  id: string;
+  type: 'region' | 'postal_code';
+  display: string;
+  subtitle: string;
+  isSelected: boolean;
+  isPartial: boolean;
+  region?: string;
+  postal_code?: string;
+  city?: string;
+}
+
 const PostalCodeSelector = () => {
   // State management
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
+  const [viewMode, setViewMode] = useState<'mixed' | 'regions' | 'cities' | 'postal_codes'>('mixed');
   const [sortBy, setSortBy] = useState<'postal_code' | 'city' | 'region'>('postal_code');
   const [itemsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
@@ -131,66 +144,118 @@ const PostalCodeSelector = () => {
     return new Set(selectedPostalCodes.map(spc => spc.postal_code_id));
   }, [selectedPostalCodes]);
 
-  // Get unique regions
-  const regions = useMemo(() => {
-    const regionSet = new Set<string>();
+  // Get unique regions with postal code counts
+  const regionsWithCounts = useMemo(() => {
+    const regionMap = new Map<string, { total: number; selected: number }>();
+    
     availablePostalCodes.forEach(pc => {
-      if (pc.region) regionSet.add(pc.region);
-    });
-    return Array.from(regionSet).sort();
-  }, [availablePostalCodes]);
-
-  // Optimized filtering and sorting
-  const filteredAndSortedCodes = useMemo(() => {
-    let filtered = availablePostalCodes;
-
-    // Apply search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(pc => 
-        pc.postal_code.includes(searchTerm) ||
-        pc.city.toLowerCase().includes(searchLower) ||
-        (pc.region && pc.region.toLowerCase().includes(searchLower))
-      );
-    }
-
-    // Apply region filter
-    if (selectedRegion !== 'all') {
-      filtered = filtered.filter(pc => pc.region === selectedRegion);
-    }
-
-    // Apply selection filter
-    if (showOnlySelected) {
-      filtered = filtered.filter(pc => selectedCodesSet.has(pc.id));
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'city':
-          return a.city.localeCompare(b.city, 'sv-SE');
-        case 'region':
-          return (a.region || '').localeCompare(b.region || '', 'sv-SE');
-        default:
-          return a.postal_code.localeCompare(b.postal_code);
+      if (pc.region) {
+        const current = regionMap.get(pc.region) || { total: 0, selected: 0 };
+        current.total += 1;
+        if (selectedCodesSet.has(pc.id)) {
+          current.selected += 1;
+        }
+        regionMap.set(pc.region, current);
       }
     });
+    
+    return Array.from(regionMap.entries())
+      .map(([region, counts]) => ({ region, ...counts }))
+      .sort((a, b) => a.region.localeCompare(b.region, 'sv-SE'));
+  }, [availablePostalCodes, selectedCodesSet]);
 
-    return filtered;
-  }, [availablePostalCodes, searchTerm, selectedRegion, showOnlySelected, sortBy, selectedCodesSet]);
+  const regions = useMemo(() => {
+    return regionsWithCounts.map(r => r.region);
+  }, [regionsWithCounts]);
+
+  // Generate display items based on view mode
+  const displayItems = useMemo(() => {
+    if (viewMode === 'regions') {
+      // Show regions as items
+      let filteredRegions = regionsWithCounts;
+      
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filteredRegions = filteredRegions.filter(r => 
+          r.region.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      if (showOnlySelected) {
+        filteredRegions = filteredRegions.filter(r => r.selected > 0);
+      }
+      
+      return filteredRegions.map(r => ({
+        id: `region-${r.region}`,
+        type: 'region' as const,
+        region: r.region,
+        display: r.region,
+        subtitle: `${r.selected}/${r.total} postnummer valda`,
+        isSelected: r.selected === r.total && r.total > 0,
+        isPartial: r.selected > 0 && r.selected < r.total
+      }));
+    } else {
+      // Show postal codes (mixed, cities, or postal_codes view)
+      let filtered = availablePostalCodes;
+
+      // Apply search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filtered = filtered.filter(pc => 
+          pc.postal_code.includes(searchTerm) ||
+          pc.city.toLowerCase().includes(searchLower) ||
+          (pc.region && pc.region.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Apply region filter
+      if (selectedRegion !== 'all') {
+        filtered = filtered.filter(pc => pc.region === selectedRegion);
+      }
+
+      // Apply selection filter
+      if (showOnlySelected) {
+        filtered = filtered.filter(pc => selectedCodesSet.has(pc.id));
+      }
+
+      // Apply sorting
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'city':
+            return a.city.localeCompare(b.city, 'sv-SE');
+          case 'region':
+            return (a.region || '').localeCompare(b.region || '', 'sv-SE');
+          default:
+            return a.postal_code.localeCompare(b.postal_code);
+        }
+      });
+
+      return filtered.map(pc => ({
+        id: pc.id,
+        type: 'postal_code' as const,
+        postal_code: pc.postal_code,
+        city: pc.city,
+        region: pc.region,
+        display: pc.postal_code,
+        subtitle: pc.city,
+        isSelected: selectedCodesSet.has(pc.id),
+        isPartial: false
+      }));
+    }
+  }, [availablePostalCodes, regionsWithCounts, searchTerm, selectedRegion, showOnlySelected, sortBy, viewMode, selectedCodesSet]);
 
   // Pagination
-  const paginatedCodes = useMemo(() => {
+  const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredAndSortedCodes.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredAndSortedCodes, currentPage, itemsPerPage]);
+    return displayItems.slice(startIndex, startIndex + itemsPerPage);
+  }, [displayItems, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredAndSortedCodes.length / itemsPerPage);
+  const totalPages = Math.ceil(displayItems.length / itemsPerPage);
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedRegion, showOnlySelected, sortBy]);
+  }, [searchTerm, selectedRegion, showOnlySelected, sortBy, viewMode]);
 
   // Toggle individual postal code
   const togglePostalCode = useMutation({
@@ -229,86 +294,6 @@ const PostalCodeSelector = () => {
       });
     },
   });
-
-  // Bulk select all visible
-  const selectAllVisible = useCallback(async () => {
-    if (!userTenant?.tenant_id) return;
-    
-    const unselectedCodes = paginatedCodes.filter(pc => !selectedCodesSet.has(pc.id));
-    
-    if (unselectedCodes.length === 0) {
-      toast({
-        title: "Alla synliga postnummer redan valda",
-        description: "Det finns inga fler postnummer att välja på denna sida.",
-      });
-      return;
-    }
-    
-    try {
-      const inserts = unselectedCodes.map(pc => ({
-        tenant_id: userTenant.tenant_id,
-        postal_code_id: pc.id
-      }));
-      
-      const { error } = await supabase
-        .from('tenant_coverage_areas')
-        .upsert(inserts, { onConflict: 'tenant_id,postal_code_id' });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Synliga postnummer valda",
-        description: `${inserts.length} postnummer har lagts till.`,
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
-    } catch (error: any) {
-      toast({
-        title: "Fel vid bulk-val",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [paginatedCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
-
-  // Bulk deselect all visible
-  const deselectAllVisible = useCallback(async () => {
-    if (!userTenant?.tenant_id) return;
-    
-    const selectedVisibleCodes = paginatedCodes.filter(pc => selectedCodesSet.has(pc.id));
-    
-    if (selectedVisibleCodes.length === 0) {
-      toast({
-        title: "Inga valda postnummer att ta bort",
-        description: "Det finns inga valda postnummer på denna sida.",
-      });
-      return;
-    }
-    
-    try {
-      for (const pc of selectedVisibleCodes) {
-        const { error } = await supabase
-          .from('tenant_coverage_areas')
-          .delete()
-          .eq('tenant_id', userTenant.tenant_id)
-          .eq('postal_code_id', pc.id);
-        if (error) throw error;
-      }
-      
-      toast({
-        title: "Synliga postnummer borttagna",
-        description: `${selectedVisibleCodes.length} postnummer har tagits bort.`,
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
-    } catch (error: any) {
-      toast({
-        title: "Fel vid borttagning",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [paginatedCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
 
   // Select entire region
   const selectRegion = useCallback(async (region: string) => {
@@ -357,17 +342,133 @@ const PostalCodeSelector = () => {
     }
   }, [availablePostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
 
+  // Handle item toggle (region or postal code)
+  const handleToggleItem = useCallback(async (item: DisplayItem) => {
+    if (item.type === 'region') {
+      // Toggle entire region
+      await selectRegion(item.region!);
+    } else {
+      // Toggle individual postal code
+      togglePostalCode.mutate({ postalCodeId: item.id, isSelected: !item.isSelected });
+    }
+  }, [selectRegion, togglePostalCode]);
+
+  // Bulk select all visible
+  const selectAllVisible = useCallback(async () => {
+    if (!userTenant?.tenant_id) return;
+    
+    let codesToSelect: PostalCode[] = [];
+    
+    if (viewMode === 'regions') {
+      // Select all postal codes in visible regions
+      const visibleRegions = paginatedItems.filter(item => !item.isSelected).map(item => item.region!);
+      codesToSelect = availablePostalCodes.filter(pc => 
+        visibleRegions.includes(pc.region) && !selectedCodesSet.has(pc.id)
+      );
+    } else {
+      // Select visible postal codes
+      codesToSelect = paginatedItems
+        .filter(item => item.type === 'postal_code' && !item.isSelected)
+        .map(item => availablePostalCodes.find(pc => pc.id === item.id)!)
+        .filter(Boolean);
+    }
+    
+    if (codesToSelect.length === 0) {
+      toast({
+        title: "Alla synliga områden redan valda",
+        description: "Det finns inga fler områden att välja på denna sida.",
+      });
+      return;
+    }
+    
+    try {
+      const inserts = codesToSelect.map(pc => ({
+        tenant_id: userTenant.tenant_id,
+        postal_code_id: pc.id
+      }));
+      
+      const { error } = await supabase
+        .from('tenant_coverage_areas')
+        .upsert(inserts, { onConflict: 'tenant_id,postal_code_id' });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Synliga områden valda",
+        description: `${inserts.length} postnummer har lagts till.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error: any) {
+      toast({
+        title: "Fel vid bulk-val",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [viewMode, paginatedItems, availablePostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
+
+  // Bulk deselect all visible
+  const deselectAllVisible = useCallback(async () => {
+    if (!userTenant?.tenant_id) return;
+    
+    let codesToDeselect: PostalCode[] = [];
+    
+    if (viewMode === 'regions') {
+      // Deselect all postal codes in visible regions that have selections
+      const visibleRegions = paginatedItems.filter(item => item.isSelected || item.isPartial).map(item => item.region!);
+      codesToDeselect = availablePostalCodes.filter(pc => 
+        visibleRegions.includes(pc.region) && selectedCodesSet.has(pc.id)
+      );
+    } else {
+      // Deselect visible postal codes
+      codesToDeselect = paginatedItems
+        .filter(item => item.type === 'postal_code' && item.isSelected)
+        .map(item => availablePostalCodes.find(pc => pc.id === item.id)!)
+        .filter(Boolean);
+    }
+    
+    if (codesToDeselect.length === 0) {
+      toast({
+        title: "Inga valda områden att ta bort",
+        description: "Det finns inga valda områden på denna sida.",
+      });
+      return;
+    }
+    
+    try {
+      for (const pc of codesToDeselect) {
+        const { error } = await supabase
+          .from('tenant_coverage_areas')
+          .delete()
+          .eq('tenant_id', userTenant.tenant_id)
+          .eq('postal_code_id', pc.id);
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Synliga områden borttagna",
+        description: `${codesToDeselect.length} postnummer har tagits bort.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['tenant-selected-postal-codes'] });
+    } catch (error: any) {
+      toast({
+        title: "Fel vid borttagning",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [viewMode, paginatedItems, availablePostalCodes, selectedCodesSet, userTenant?.tenant_id, queryClient]);
+
   // Clear all filters
   const clearFilters = useCallback(() => {
     setSearchTerm('');
     setSelectedRegion('all');
     setShowOnlySelected(false);
     setSortBy('postal_code');
+    setViewMode('mixed');
   }, []);
-
-  const handleTogglePostalCode = useCallback((postalCodeId: string, isSelected: boolean) => {
-    togglePostalCode.mutate({ postalCodeId, isSelected });
-  }, [togglePostalCode]);
 
   if (!userTenant) {
     return (
@@ -405,7 +506,7 @@ const PostalCodeSelector = () => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{filteredAndSortedCodes.length}</div>
+            <div className="text-2xl font-bold">{displayItems.length}</div>
             <p className="text-sm text-muted-foreground">Matchande filter</p>
           </CardContent>
         </Card>
@@ -452,21 +553,38 @@ const PostalCodeSelector = () => {
             </Select>
           </div>
 
-          {/* Sort and View Options */}
+          {/* View Mode and Sort Options */}
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center gap-2">
-              <Label htmlFor="sort-select">Sortera efter:</Label>
-              <Select value={sortBy} onValueChange={(value: string) => setSortBy(value as 'postal_code' | 'city' | 'region')}>
-                <SelectTrigger className="w-40" id="sort-select">
+              <Label htmlFor="view-select">Visa som:</Label>
+              <Select value={viewMode} onValueChange={(value: string) => setViewMode(value as any)}>
+                <SelectTrigger className="w-48" id="view-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="postal_code">Postnummer</SelectItem>
-                  <SelectItem value="city">Ort</SelectItem>
-                  <SelectItem value="region">Region</SelectItem>
+                  <SelectItem value="mixed">Blandad vy</SelectItem>
+                  <SelectItem value="regions">Endast regioner</SelectItem>
+                  <SelectItem value="cities">Gruppera efter städer</SelectItem>
+                  <SelectItem value="postal_codes">Endast postnummer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {viewMode !== 'regions' && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sort-select">Sortera efter:</Label>
+                <Select value={sortBy} onValueChange={(value: string) => setSortBy(value as 'postal_code' | 'city' | 'region')}>
+                  <SelectTrigger className="w-40" id="sort-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="postal_code">Postnummer</SelectItem>
+                    <SelectItem value="city">Ort</SelectItem>
+                    <SelectItem value="region">Region</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -489,13 +607,13 @@ const PostalCodeSelector = () => {
           <div className="flex flex-wrap gap-2">
             <Button onClick={selectAllVisible} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Välj synliga ({paginatedCodes.filter(pc => !selectedCodesSet.has(pc.id)).length})
+              Välj synliga ({paginatedItems.filter(item => !item.isSelected).length})
             </Button>
             <Button onClick={deselectAllVisible} variant="outline" size="sm">
               <Minus className="h-4 w-4 mr-1" />
-              Ta bort synliga ({paginatedCodes.filter(pc => selectedCodesSet.has(pc.id)).length})
+              Ta bort synliga ({paginatedItems.filter(item => item.isSelected || item.isPartial).length})
             </Button>
-            {selectedRegion !== 'all' && (
+            {selectedRegion !== 'all' && viewMode !== 'regions' && (
               <Button onClick={() => selectRegion(selectedRegion)} variant="outline" size="sm">
                 Välj hela {selectedRegion}
               </Button>
