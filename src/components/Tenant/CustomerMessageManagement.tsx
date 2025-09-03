@@ -537,47 +537,63 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                       </div>
                     </div>
                     
-                    {existingRule?.is_enabled && (
                       <div className="mt-3 ml-8 space-y-2">
-                        <div className="flex gap-2">
-                          <Select 
-                            value={existingRule?.template_id || ''}
-                            onValueChange={(templateId) => {
-                              saveTriggerRule({
-                                ...existingRule,
-                                templateId,
-                                event: event.key
-                              });
-                            }}
-                          >
-                            <SelectTrigger className="w-64">
-                              <SelectValue placeholder="Välj SMS-mall" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customTemplates.map(template => (
-                                <SelectItem key={template.id} value={template.id}>
-                                  {template.template_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <div className="flex gap-3 items-end flex-wrap">
+                          <div className="flex flex-col">
+                            <label className="text-sm font-medium mb-1">SMS‑mall</label>
+                            <Select 
+                              value={existingRule?.template_id || ''}
+                              onValueChange={(templateId) => {
+                                saveTriggerRule({
+                                  ...existingRule,
+                                  templateId,
+                                  event: event.key
+                                });
+                              }}
+                              disabled={!existingRule?.is_enabled}
+                            >
+                              <SelectTrigger className="w-64">
+                                <SelectValue placeholder="Välj SMS-mall" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {customTemplates.map(template => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.template_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {!existingRule?.is_enabled && (
+                              <span className="text-xs text-muted-foreground mt-1">Aktivera regeln för att ändra mall.</span>
+                            )}
+                          </div>
                           
-                          <Input
-                            type="number"
-                            placeholder="Fördröjning (min)"
-                            value={existingRule?.delay_minutes || 0}
-                            onChange={(e) => {
-                              saveTriggerRule({
-                                ...existingRule,
-                                delayMinutes: parseInt(e.target.value) || 0,
-                                event: event.key
-                              });
-                            }}
-                            className="w-32"
-                          />
+                          <div className="flex flex-col">
+                            <label className="text-sm font-medium mb-1">Fördröjning (minuter)</label>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="Fördröjning (min)"
+                              value={existingRule?.delay_minutes ?? 0}
+                              onChange={(e) => {
+                                // Save immediately but keep input responsive
+                                const delay = parseInt(e.target.value || '0');
+                                saveTriggerRule({
+                                  ...existingRule,
+                                  delayMinutes: isNaN(delay) ? 0 : delay,
+                                  event: event.key
+                                });
+                              }}
+                              aria-label="Fördröjning i minuter"
+                              title="Antal minuter att vänta efter händelsen innan SMS skickas"
+                              className="w-40"
+                              disabled={!existingRule?.is_enabled}
+                            />
+                            <span className="text-xs text-muted-foreground mt-1">Hur många minuter efter händelsen SMS:et ska skickas.</span>
+                          </div>
                         </div>
                       </div>
-                    )}
                   </div>
                 </div>
               </CardContent>
