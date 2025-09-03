@@ -86,6 +86,7 @@ const TenantPostalCodeSelector = () => {
         .eq('country', userTenant.tenants.country)
         .eq('is_active', true)
         .not('region', 'is', null)
+        .range(0, 19999) // Fetch beyond default 1,000 limit
         .order('region');
       
       if (error) throw error;
@@ -111,7 +112,7 @@ const TenantPostalCodeSelector = () => {
         query = query.in('region', selectedRegions);
       }
 
-      const { data, error } = await query.order('city');
+      const { data, error } = await query.limit(25000).order('city');
       if (error) throw error;
       
       // Get unique cities with their regions
@@ -267,7 +268,8 @@ const TenantPostalCodeSelector = () => {
         .select('id')
         .eq('country', userTenant?.tenants?.country)
         .eq('region', region)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .limit(25000);
 
       if (fetchError) throw fetchError;
 

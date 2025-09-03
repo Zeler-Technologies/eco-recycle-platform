@@ -68,7 +68,7 @@ const PostalCodeManager = () => {
         query = query.or(`postal_code.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.range(0, 19999);
       if (error) throw error;
       return data as PostalCode[];
     },

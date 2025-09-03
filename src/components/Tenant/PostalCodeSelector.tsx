@@ -67,6 +67,7 @@ const PostalCodeSelector = () => {
         .select('id, postal_code, city, region, country', { count: 'exact' })
         .eq('country', countryFilter)
         .eq('is_active', true)
+        .range(0, 19999) // Explicitly request up to 20,000 rows to bypass 1,000 default limit
         .order('postal_code');
 
       if (error) {

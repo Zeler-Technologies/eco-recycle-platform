@@ -56,7 +56,7 @@ const BulkSelectionTools = ({ tenantId, country, onSuccess }: BulkSelectionTools
           break;
       }
 
-      const { data: postalCodes, error: fetchError } = await query;
+      const { data: postalCodes, error: fetchError } = await query.limit(25000);
       if (fetchError) throw fetchError;
 
       if (postalCodes.length === 0) {
