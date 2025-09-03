@@ -563,8 +563,10 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
     };
 
     useEffect(() => {
-      loadTriggerRules();
-    }, [tenantId]);
+      if (tenantId) {
+        loadTriggerRules();
+      }
+    }, [tenantId]); // Only reload when tenantId changes, not on every state update
 
     return (
       <div className="space-y-4">
