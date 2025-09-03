@@ -440,6 +440,7 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 // Trigger Rules Manager Component
   const TriggerRulesManager = () => {
     const [triggerRules, setTriggerRules] = useState<any[]>([]);
+    const [localStates, setLocalStates] = useState<Record<string, boolean>>({});
 
     const triggerEvents = [
       { key: 'booking_confirmed', label: 'Bokning bekräftad', description: 'Skickas när hämtning bekräftas av admin' },
@@ -488,16 +489,18 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
           description: "Automatisk SMS-regel har uppdaterats.",
         });
         
-        // Immediately reload to ensure UI reflects database state
+        // Reload and sync local states
         await loadTriggerRules();
+        setLocalStates(prev => ({ ...prev, [rule.event]: rule.enabled }));
       } catch (error) {
         console.error('Error saving trigger rule:', error);
+        // Revert local state on error
+        setLocalStates(prev => ({ ...prev, [rule.event]: !rule.enabled }));
         toast({
           title: "Fel vid sparande",
           description: "Kunde inte spara trigger-regel.",
           variant: "destructive",
         });
-        // Reload on error to ensure consistency
         await loadTriggerRules();
       }
     };
@@ -523,9 +526,11 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
                       <Switch
-                        checked={existingRule?.is_enabled || false}
+                        checked={localStates[event.key] ?? existingRule?.is_enabled ?? false}
                         onCheckedChange={(enabled) => {
                           console.log('Switch toggled:', { event: event.key, enabled, existingRule });
+                          // Update local state immediately for visual feedback
+                          setLocalStates(prev => ({ ...prev, [event.key]: enabled }));
                           saveTriggerRule({
                             event: event.key,
                             enabled,
