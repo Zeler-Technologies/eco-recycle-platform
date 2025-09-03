@@ -497,24 +497,41 @@ export const CustomerMessageManagement: React.FC<CustomerMessageManagementProps>
 
         if (error) throw error;
         
+        // Only update the specific rule in state, don't reload everything
+        setTriggerRules(prev => {
+          const existingIndex = prev.findIndex(r => r.trigger_event === rule.event);
+          const updatedRule = {
+            tenant_id: tenantId,
+            trigger_event: rule.event,
+            template_id: rule.templateId,
+            delay_minutes: rule.delayMinutes || 0,
+            trigger_sequence: rule.sequence || 1,
+            is_enabled: rule.enabled,
+            description: rule.description
+          };
+
+          if (existingIndex >= 0) {
+            const newRules = [...prev];
+            newRules[existingIndex] = { ...prev[existingIndex], ...updatedRule };
+            return newRules;
+          } else {
+            return [...prev, updatedRule];
+          }
+        });
+        
         toast({
           title: "Trigger-regel sparad",
           description: "Automatisk SMS-regel har uppdaterats.",
         });
-        
-        // Reload and sync local states
-        await loadTriggerRules();
-        setLocalStates(prev => ({ ...prev, [rule.event]: rule.enabled }));
       } catch (error) {
         console.error('Error saving trigger rule:', error);
-        // Revert local state on error
+        // Only revert the specific button's local state on error
         setLocalStates(prev => ({ ...prev, [rule.event]: !rule.enabled }));
         toast({
           title: "Fel vid sparande",
           description: "Kunde inte spara trigger-regel.",
           variant: "destructive",
         });
-        await loadTriggerRules();
       }
     };
 
