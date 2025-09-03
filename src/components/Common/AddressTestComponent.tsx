@@ -16,7 +16,11 @@ interface AddressTestComponentProps {
 export const AddressTestComponent: React.FC<AddressTestComponentProps> = ({ tenantId }) => {
   const [testResult, setTestResult] = useState<AddressTestResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [testAddress, setTestAddress] = useState('Testgatan 123, 12345, Stockholm');
+  const [testAddress, setTestAddress] = useState({
+    streetAddress: 'Testgatan 123',
+    postalCode: '12345',
+    city: 'Stockholm'
+  });
   const { toast } = useToast();
 
   const runConsistencyTest = async () => {
@@ -53,7 +57,12 @@ export const AddressTestComponent: React.FC<AddressTestComponentProps> = ({ tena
   const runUpdateTest = async () => {
     setLoading(true);
     try {
-      const result = await updateAddressAndTest(tenantId, testAddress);
+      const result = await updateAddressAndTest(
+        tenantId, 
+        testAddress.streetAddress, 
+        testAddress.postalCode, 
+        testAddress.city
+      );
       setTestResult(result);
       
       if (result.success && result.isConsistent) {
@@ -107,16 +116,27 @@ export const AddressTestComponent: React.FC<AddressTestComponentProps> = ({ tena
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="test-address">Test Address (for update test)</Label>
-            <Input
-              id="test-address"
-              value={testAddress}
-              onChange={(e) => setTestAddress(e.target.value)}
-              placeholder="Gatunavn 123, 12345, Stad"
-            />
+            <Label>Test Address (for update test)</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Input
+                value={testAddress.streetAddress}
+                onChange={(e) => setTestAddress(prev => ({ ...prev, streetAddress: e.target.value }))}
+                placeholder="Gatugatan 123"
+              />
+              <Input
+                value={testAddress.postalCode}
+                onChange={(e) => setTestAddress(prev => ({ ...prev, postalCode: e.target.value }))}
+                placeholder="12345"
+              />
+              <Input
+                value={testAddress.city}
+                onChange={(e) => setTestAddress(prev => ({ ...prev, city: e.target.value }))}
+                placeholder="Stockholm"
+              />
+            </div>
             <Button 
               onClick={runUpdateTest} 
-              disabled={loading || !testAddress.trim()}
+              disabled={loading || !testAddress.streetAddress.trim()}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <TestTube className="h-4 w-4" />}
               Test Address Update
@@ -167,7 +187,7 @@ export const AddressTestComponent: React.FC<AddressTestComponentProps> = ({ tena
                     {testResult.scrapyardAddress || 'NULL'}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Parts: {testResult.scrapyardParts.address || 'NULL'} | {testResult.scrapyardParts.postalCode || 'NULL'} | {testResult.scrapyardParts.city || 'NULL'}
+                    Parts: {testResult.scrapyardParts.streetAddress || 'NULL'} | {testResult.scrapyardParts.postalCode || 'NULL'} | {testResult.scrapyardParts.city || 'NULL'}
                   </div>
                 </CardContent>
               </Card>

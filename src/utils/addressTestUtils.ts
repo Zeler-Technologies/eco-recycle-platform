@@ -5,7 +5,7 @@ export interface AddressTestResult {
   tenantAddress: string | null;
   scrapyardAddress: string | null;
   scrapyardParts: {
-    address: string | null;
+    streetAddress: string | null;
     postalCode: string | null;
     city: string | null;
   };
@@ -19,6 +19,46 @@ export interface AddressTestResult {
     matchMethod: string;
   };
 }
+
+// Utility function to format full address from separate components
+export const formatFullAddress = (streetAddress: string | null, postalCode: string | null, city: string | null): string => {
+  const parts = [streetAddress, postalCode, city].filter(part => part && part.trim());
+  return parts.join(', ');
+};
+
+// Utility function to parse combined address into components
+export const parseAddress = (combinedAddress: string | null): { streetAddress: string | null; postalCode: string | null; city: string | null } => {
+  if (!combinedAddress || !combinedAddress.trim()) {
+    return { streetAddress: null, postalCode: null, city: null };
+  }
+
+  const parts = combinedAddress.split(',').map(part => part.trim());
+  const postalPattern = /\d{3}\s?\d{2}/;
+  const postalMatch = combinedAddress.match(postalPattern)?.[0] || null;
+
+  if (parts.length >= 3) {
+    // Format: street, postal, city
+    return {
+      streetAddress: parts[0] || null,
+      postalCode: postalMatch || parts[1] || null,
+      city: parts[2] || null
+    };
+  } else if (parts.length === 2) {
+    // Format: street, postal+city
+    return {
+      streetAddress: parts[0] || null,
+      postalCode: postalMatch,
+      city: parts[1]?.replace(postalPattern, '').trim() || null
+    };
+  } else {
+    // Single field - try to extract components
+    return {
+      streetAddress: combinedAddress.replace(postalPattern, '').replace(/,.*$/, '').trim() || null,
+      postalCode: postalMatch,
+      city: combinedAddress.replace(/^.*\d{3}\s?\d{2}\s*,?\s*/, '').trim() || null
+    };
+  }
+};
 
 // Helper function to normalize addresses for comparison
 const normalizeAddress = (addr: string | null): string => {
@@ -36,10 +76,10 @@ export const testAddressConsistency = async (tenantId: number): Promise<AddressT
   const errors: string[] = [];
   
   try {
-    // Get tenant data
+    // Get tenant data - try new separate fields first, fallback to base_address
     const { data: tenantData, error: tenantError } = await supabase
       .from('tenants')
-      .select('base_address')
+      .select('base_address, street_address, postal_code, city')
       .eq('tenants_id', tenantId)
       .maybeSingle();
     
@@ -63,9 +103,16 @@ export const testAddressConsistency = async (tenantId: number): Promise<AddressT
       errors.push('No primary scrapyard found for this tenant');
     }
     
-    const tenantAddress = tenantData?.base_address || null;
+    // Get tenant address - prefer separate fields, fallback to base_address
+    let tenantAddress: string | null = null;
+    if (tenantData?.street_address || tenantData?.postal_code || tenantData?.city) {
+      tenantAddress = formatFullAddress(tenantData.street_address, tenantData.postal_code, tenantData.city);
+    } else {
+      tenantAddress = tenantData?.base_address || null;
+    }
+    
     const scrapyardParts = {
-      address: scrapyardData?.address || null,
+      streetAddress: scrapyardData?.address || null,
       postalCode: scrapyardData?.postal_code || null,
       city: scrapyardData?.city || null
     };
@@ -79,9 +126,7 @@ export const testAddressConsistency = async (tenantId: number): Promise<AddressT
     
     // Fallback: construct from parts if direct doesn't match
     const combinedAddr = normalizeAddress(
-      scrapyardData ? [scrapyardData.address, scrapyardData.postal_code, scrapyardData.city]
-        .filter(Boolean)
-        .join(', ') : null
+      scrapyardData ? formatFullAddress(scrapyardData.address, scrapyardData.postal_code, scrapyardData.city) : null
     );
     const isCombinedMatch = tenantAddr === combinedAddr;
     
@@ -109,7 +154,7 @@ export const testAddressConsistency = async (tenantId: number): Promise<AddressT
       success: false,
       tenantAddress: null,
       scrapyardAddress: null,
-      scrapyardParts: { address: null, postalCode: null, city: null },
+      scrapyardParts: { streetAddress: null, postalCode: null, city: null },
       isConsistent: false,
       errors
     };
@@ -118,21 +163,24 @@ export const testAddressConsistency = async (tenantId: number): Promise<AddressT
 
 export const updateAddressAndTest = async (
   tenantId: number, 
-  newAddress: string
+  streetAddress: string,
+  postalCode: string,
+  city: string
 ): Promise<AddressTestResult> => {
   const errors: string[] = [];
   
   try {
-    // Parse the new address
-    const addressParts = newAddress.split(',').map(part => part.trim());
-    const address = addressParts[0] || '';
-    const postalCode = addressParts[1] || '';
-    const city = addressParts[2] || '';
+    const fullAddress = formatFullAddress(streetAddress, postalCode, city);
     
-    // Update tenant base_address
+    // Update tenant with separate address fields AND base_address for backward compatibility
     const { error: tenantError } = await supabase
       .from('tenants')
-      .update({ base_address: newAddress })
+      .update({ 
+        street_address: streetAddress,
+        postal_code: postalCode,
+        city: city,
+        base_address: fullAddress  // Keep for backward compatibility
+      })
       .eq('tenants_id', tenantId);
     
     if (tenantError) {
@@ -143,9 +191,9 @@ export const updateAddressAndTest = async (
     const { error: scrapyardError } = await supabase
       .from('scrapyards')
       .update({
-        address: newAddress,        // Store complete address
+        address: streetAddress,     // Store street address separately
         postal_code: postalCode,
-        city,
+        city: city,
         updated_at: new Date().toISOString()
       })
       .eq('tenant_id', tenantId)
@@ -163,7 +211,7 @@ export const updateAddressAndTest = async (
       success: false,
       tenantAddress: null,
       scrapyardAddress: null,
-      scrapyardParts: { address: null, postalCode: null, city: null },
+      scrapyardParts: { streetAddress: null, postalCode: null, city: null },
       isConsistent: false,
       errors
     };

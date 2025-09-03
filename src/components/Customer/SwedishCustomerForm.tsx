@@ -351,8 +351,12 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
           scrapyard_id: 1, // Default scrapyard for anonymous users
           owner_address: formData.address,
           owner_postal_code: formData.postalCode,
+          owner_street_address: formData.address,
+          owner_city: formData.city,
           pickup_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
           pickup_postal_code: useOwnerAddressForPickup ? formData.postalCode : formData.pickupPostalCode,
+          pickup_street_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
+          pickup_city: useOwnerAddressForPickup ? formData.city : formData.pickupCity,
           contact_phone: formData.phone,
           special_instructions: formData.notes,
           preferred_contact_method: formData.contactMethod,
@@ -435,8 +439,12 @@ export const SwedishCustomerForm: React.FC<CustomerFormProps> = ({
           scrapyard_id: 1, // Default scrapyard for anonymous users
           owner_address: formData.address,
           owner_postal_code: formData.postalCode,
+          owner_street_address: formData.address,
+          owner_city: formData.city,
           pickup_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
           pickup_postal_code: useOwnerAddressForPickup ? formData.postalCode : formData.pickupPostalCode,
+          pickup_street_address: useOwnerAddressForPickup ? formData.address : formData.pickupAddress,
+          pickup_city: useOwnerAddressForPickup ? formData.city : formData.pickupCity,
           status: 'pending'
         });
 

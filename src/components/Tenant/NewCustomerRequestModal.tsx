@@ -24,7 +24,9 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
   const [formData, setFormData] = useState({
     owner_name: '',
     contact_phone: '',
-    pickup_address: '',
+    pickup_street_address: '',
+    pickup_postal_code: '',
+    pickup_city: '',
     car_brand: '',
     car_model: '',
     car_year: '',
@@ -112,7 +114,11 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
           scrapyard_id: 1, // Default scrapyard - should be configurable per tenant
           owner_name: formData.owner_name,
           contact_phone: formData.contact_phone,
-          pickup_address: formData.pickup_address || null,
+          pickup_street_address: formData.pickup_street_address || null,
+          pickup_postal_code: formData.pickup_postal_code || null,
+          pickup_city: formData.pickup_city || null,
+          pickup_address: [formData.pickup_street_address, formData.pickup_postal_code, formData.pickup_city]
+            .filter(Boolean).join(', ') || null,
           car_brand: formData.car_brand,
           car_model: formData.car_model,
           car_year: formData.car_year ? parseInt(formData.car_year) : null,
@@ -180,7 +186,9 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
       setFormData({
         owner_name: '',
         contact_phone: '',
-        pickup_address: '',
+        pickup_street_address: '',
+        pickup_postal_code: '',
+        pickup_city: '',
         car_brand: '',
         car_model: '',
         car_year: '',
@@ -242,25 +250,49 @@ export const NewCustomerRequestModal = ({ open, onOpenChange, onSuccess }: NewCu
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="contact_phone">Telefon *</Label>
+              <Input
+                id="contact_phone"
+                value={formData.contact_phone}
+                onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                placeholder="08-123 45 67"
+              />
+            </div>
+
+            {/* Pickup Address Section */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Hämtadress</h4>
               <div>
-                <Label htmlFor="contact_phone">Telefon *</Label>
+                <Label htmlFor="pickup_street_address">Gatuadress</Label>
                 <Input
-                  id="contact_phone"
-                  value={formData.contact_phone}
-                  onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                  placeholder="08-123 45 67"
+                  id="pickup_street_address"
+                  value={formData.pickup_street_address}
+                  onChange={(e) => handleInputChange('pickup_street_address', e.target.value)}
+                  placeholder="Gatugatan 123"
                 />
               </div>
               
-              <div>
-                <Label htmlFor="pickup_address">Hämtadress</Label>
-                <Input
-                  id="pickup_address"
-                  value={formData.pickup_address}
-                  onChange={(e) => handleInputChange('pickup_address', e.target.value)}
-                  placeholder="Gata, postnummer, ort"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="pickup_postal_code">Postnummer</Label>
+                  <Input
+                    id="pickup_postal_code"
+                    value={formData.pickup_postal_code}
+                    onChange={(e) => handleInputChange('pickup_postal_code', e.target.value)}
+                    placeholder="123 45"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="pickup_city">Ort</Label>
+                  <Input
+                    id="pickup_city"
+                    value={formData.pickup_city}
+                    onChange={(e) => handleInputChange('pickup_city', e.target.value)}
+                    placeholder="Stockholm"
+                  />
+                </div>
               </div>
             </div>
           </div>

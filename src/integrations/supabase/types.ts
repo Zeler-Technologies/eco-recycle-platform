@@ -627,14 +627,18 @@ export type Database = {
           estimated_value: number | null
           id: string
           owner_address: string | null
+          owner_city: string | null
           owner_name: string | null
           owner_postal_code: string | null
+          owner_street_address: string | null
           pickup_address: string | null
+          pickup_city: string | null
           pickup_date: string | null
           pickup_latitude: number | null
           pickup_location: string | null
           pickup_longitude: number | null
           pickup_postal_code: string | null
+          pickup_street_address: string | null
           pnr_num: string | null
           pnr_num_norm: string | null
           preferred_contact_method: string | null
@@ -658,14 +662,18 @@ export type Database = {
           estimated_value?: number | null
           id?: string
           owner_address?: string | null
+          owner_city?: string | null
           owner_name?: string | null
           owner_postal_code?: string | null
+          owner_street_address?: string | null
           pickup_address?: string | null
+          pickup_city?: string | null
           pickup_date?: string | null
           pickup_latitude?: number | null
           pickup_location?: string | null
           pickup_longitude?: number | null
           pickup_postal_code?: string | null
+          pickup_street_address?: string | null
           pnr_num?: string | null
           pnr_num_norm?: string | null
           preferred_contact_method?: string | null
@@ -689,14 +697,18 @@ export type Database = {
           estimated_value?: number | null
           id?: string
           owner_address?: string | null
+          owner_city?: string | null
           owner_name?: string | null
           owner_postal_code?: string | null
+          owner_street_address?: string | null
           pickup_address?: string | null
+          pickup_city?: string | null
           pickup_date?: string | null
           pickup_latitude?: number | null
           pickup_location?: string | null
           pickup_longitude?: number | null
           pickup_postal_code?: string | null
+          pickup_street_address?: string | null
           pnr_num?: string | null
           pnr_num_norm?: string | null
           preferred_contact_method?: string | null
@@ -1978,6 +1990,8 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
           postal_code: string
           region: string | null
           updated_at: string | null
@@ -1988,6 +2002,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           postal_code: string
           region?: string | null
           updated_at?: string | null
@@ -1998,6 +2014,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           postal_code?: string
           region?: string | null
           updated_at?: string | null
@@ -2836,6 +2854,7 @@ export type Database = {
           name: string
           postal_code: string | null
           service_type: string | null
+          street_address: string | null
           tenants_id: number
           updated_at: string | null
         }
@@ -2851,6 +2870,7 @@ export type Database = {
           name: string
           postal_code?: string | null
           service_type?: string | null
+          street_address?: string | null
           tenants_id?: number
           updated_at?: string | null
         }
@@ -2866,6 +2886,7 @@ export type Database = {
           name?: string
           postal_code?: string | null
           service_type?: string | null
+          street_address?: string | null
           tenants_id?: number
           updated_at?: string | null
         }
@@ -4176,6 +4197,14 @@ export type Database = {
           zip_code: string
         }[]
       }
+      format_full_address: {
+        Args: {
+          p_city?: string
+          p_postal_code?: string
+          p_street_address?: string
+        }
+        Returns: string
+      }
       generate_enhanced_quote: {
         Args: {
           p_customer_request_id: string
@@ -4869,6 +4898,14 @@ export type Database = {
       migrate_customer_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      parse_address: {
+        Args: { p_combined_address: string }
+        Returns: {
+          city: string
+          postal_code: string
+          street_address: string
+        }[]
       }
       path: {
         Args: { "": unknown }
