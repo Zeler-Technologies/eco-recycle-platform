@@ -24,30 +24,8 @@ interface ServiceZoneManagementProps {
   onBack: () => void;
 }
 
-// Mock data för svenska postnummer
-const mockPostalCodes = [
-  { code: '11120', city: 'Stockholm', address: 'Drottninggatan 45', lat: 59.3293, lng: 18.0686, active: true },
-  { code: '41118', city: 'Göteborg', address: 'Avenyn 12', lat: 57.7089, lng: 11.9746, active: true },
-  { code: '21147', city: 'Malmö', address: 'Stortorget 8', lat: 55.6050, lng: 13.0038, active: false },
-  { code: '41314', city: 'Göteborg', address: 'Nordstan 1', lat: 57.7089, lng: 11.9746, active: true },
-  { code: '11634', city: 'Stockholm', address: 'Östermalm 23', lat: 59.3293, lng: 18.0686, active: false },
-];
-
-const mockPickupRequests = [
-  { id: 1, address: 'Storgatan 15, 11120 Stockholm', distance: 12, deduction: -250, bonus: 0, total: -250, status: 'completed' },
-  { id: 2, address: 'Kungsgatan 30, 41118 Göteborg', distance: 35, deduction: -750, bonus: 500, total: -250, status: 'confirmed' },
-  { id: 3, address: 'Malmögatan 5, 21147 Malmö', distance: 85, deduction: -1500, bonus: 1000, total: -500, status: 'requested' },
-];
-
-const distanceTiers = [
-  { range: '0-20 km', deduction: -250 },
-  { range: '21-50 km', deduction: -750 },
-  { range: '51-100 km', deduction: -1500 },
-  { range: '100+ km', deduction: -2500 },
-];
 
 export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ onBack }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [address, setAddress] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [city, setCity] = useState('');
@@ -55,8 +33,6 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   const [currentScrapyard, setCurrentScrapyard] = useState<any>(null);
   const [allScrapyards, setAllScrapyards] = useState<any[]>([]);
   const [selectedScrapyardId, setSelectedScrapyardId] = useState<string>('');
-  const [isAddingPostal, setIsAddingPostal] = useState(false);
-  const [newPostalCode, setNewPostalCode] = useState('');
   const [selectedTab, setSelectedTab] = useState('zones');
   
   // Distance rules management
@@ -88,14 +64,6 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
   
   // Map verification modal
   const [showMapModal, setShowMapModal] = useState(false);
-  
-  // Edit postal code modal
-  const [isEditingPostal, setIsEditingPostal] = useState(false);
-  const [editingPostalData, setEditingPostalData] = useState<any>(null);
-
-  // Import postal codes modal and file handling
-  const [isImportingPostal, setIsImportingPostal] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -503,69 +471,6 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     setApplicableBonuses(applicable);
   };
 
-  // File import functions
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const handleImportPostalCodes = async () => {
-    if (!selectedFile) {
-      toast({
-        title: "Fel",
-        description: "Välj en fil att importera",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const text = await selectedFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      // Parse SE.txt format: Country Code, Postal Code, Place Name, Admin Name1, Admin Code1, Admin Name2, Admin Code2, Admin Name3, Admin Code3, Latitude, Longitude, Accuracy
-      const postalCodes = [];
-      
-      for (const line of lines) {
-        const parts = line.split('\t');
-        if (parts.length >= 3 && parts[0] === 'SE') {
-          postalCodes.push({
-            postal_code: parts[1],
-            city: parts[2],
-            address: '', // Will be filled later if needed
-            is_active: true
-          });
-        }
-      }
-
-      if (postalCodes.length === 0) {
-        toast({
-          title: "Fel",
-          description: "Inga giltiga postnummer hittades i filen",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      toast({
-        title: "Framgång",
-        description: `${postalCodes.length} postnummer importerade från fil`,
-      });
-
-      setIsImportingPostal(false);
-      setSelectedFile(null);
-      
-    } catch (error) {
-      console.error('Error importing postal codes:', error);
-      toast({
-        title: "Fel",
-        description: "Kunde inte importera postnummer från fil",
-        variant: "destructive"
-      });
-    }
-  };
 
   const startEditingDistanceRule = (rule: any) => {
     setEditingDistanceRule(rule);
@@ -589,28 +494,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
     setIsAddingBonus(true);
   };
 
-  const handleEditPostal = (postal: any) => {
-    setEditingPostalData({
-      code: postal.code,
-      city: postal.city,
-      address: postal.address,
-      active: postal.active
-    });
-    setIsEditingPostal(true);
-  };
 
-  const handleSavePostalEdit = () => {
-    // Here you would update the postal code in your data source
-    // For now, we'll just close the modal
-    setIsEditingPostal(false);
-    setEditingPostalData(null);
-    // In a real implementation, you would update the mockPostalCodes or make an API call
-  };
-
-  const filteredPostalCodes = mockPostalCodes.filter(code => 
-    code.code.includes(searchTerm) || 
-    code.city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="p-6 space-y-6">
@@ -631,7 +515,7 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
           <TabsTrigger value="zones">Postnummer & Täckning</TabsTrigger>
           <TabsTrigger value="address">Basadress</TabsTrigger>
           <TabsTrigger value="pricing">Prissättning</TabsTrigger>
-          <TabsTrigger value="test">Test</TabsTrigger>
+          <TabsTrigger value="statistics">Statistik</TabsTrigger>
         </TabsList>
 
         {/* Postnummer & Täckning Tab - Now uses new PostalCodeSelector */}
@@ -828,10 +712,6 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
           </Card>
         </TabsContent>
 
-        {/* Test Tab */}
-        <TabsContent value="test" className="space-y-6">
-          {tenantId && <AddressTestComponent tenantId={tenantId} />}
-        </TabsContent>
       </Tabs>
 
       {/* Map Verification Modal */}
@@ -841,78 +721,6 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
         address={[address, postalCode, city].filter(Boolean).join(', ')}
       />
 
-      {/* Edit Postal Code Modal */}
-      <Dialog open={isEditingPostal} onOpenChange={setIsEditingPostal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Redigera postnummer</DialogTitle>
-            <DialogDescription>Uppdatera postnummer, ort, adress och status</DialogDescription>
-          </DialogHeader>
-          {editingPostalData && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-postal">Postnummer</Label>
-                <Input
-                  id="edit-postal"
-                  value={editingPostalData.code}
-                  onChange={(e) => setEditingPostalData({
-                    ...editingPostalData,
-                    code: e.target.value
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-city">Ort</Label>
-                <Input
-                  id="edit-city"
-                  value={editingPostalData.city}
-                  onChange={(e) => setEditingPostalData({
-                    ...editingPostalData,
-                    city: e.target.value
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-address">Adress</Label>
-                <Input
-                  id="edit-address"
-                  value={editingPostalData.address}
-                  onChange={(e) => setEditingPostalData({
-                    ...editingPostalData,
-                    address: e.target.value
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select 
-                  value={editingPostalData.active ? "active" : "inactive"}
-                  onValueChange={(value) => setEditingPostalData({
-                    ...editingPostalData,
-                    active: value === "active"
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Aktiv</SelectItem>
-                    <SelectItem value="inactive">Inaktiv</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditingPostal(false)}>
-              Avbryt
-            </Button>
-            <Button onClick={handleSavePostalEdit}>
-              Spara ändringar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
