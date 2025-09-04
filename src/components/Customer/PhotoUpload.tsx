@@ -78,6 +78,36 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     try {
       setIsUploading(true);
       
+      // First, get the car information from customer_request_id
+      const { data: carData, error: carError } = await supabase
+        .from('car_metadata')
+        .select(`
+          car_registration_number,
+          customer_requests!inner(
+            id,
+            pnr_num
+          )
+        `)
+        .eq('customer_request_id', customerRequestId)
+        .single();
+
+      if (carError || !carData) {
+        console.error('Car data error:', carError);
+        throw new Error('Kunde inte hitta bil information');
+      }
+
+      // Get car_id from cars table using registration number
+      const { data: carRecord, error: carRecordError } = await supabase
+        .from('cars')
+        .select('id')
+        .eq('license_plate', carData.car_registration_number)
+        .single();
+
+      if (carRecordError || !carRecord) {
+        console.error('Car record error:', carRecordError);
+        throw new Error('Kunde inte hitta bil i systemet');
+      }
+
       // Generate unique filename
       const fileExt = file.name.split('.').pop() || 'jpg';
       const fileName = `${customerRequestId}_${currentPhotoType}_${Date.now()}.${fileExt}`;
@@ -101,20 +131,22 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error('Kunde inte få bildens URL');
       }
 
-      // Save to database using the helper function
+      // Save to database using direct insert
       const imageType = currentPhotoType === 'engine' ? 'engine' : 'overall';
       
-      const { error: dbError } = await supabase.rpc(
-        'insert_customer_car_image',
-        {
-          p_customer_request_id: customerRequestId,
-          p_image_url: urlData.publicUrl,
-          p_image_type: imageType,
-          p_file_name: fileName,
-          p_file_size: file.size,
-          p_notes: null
-        }
-      );
+      const { error: dbError } = await supabase
+        .from('car_images')
+        .insert({
+          car_id: carRecord.id,
+          image_url: urlData.publicUrl,
+          image_type: imageType,
+          uploaded_by: 'customer',
+          file_name: fileName,
+          file_size: file.size,
+          notes: null,
+          car_registration_number: carData.car_registration_number,
+          pnr_num: carData.customer_requests.pnr_num || 0
+        });
 
       if (dbError) {
         console.error('Database error:', dbError);
