@@ -511,10 +511,9 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="zones">Postnummer & Täckning</TabsTrigger>
           <TabsTrigger value="address">Basadress</TabsTrigger>
-          <TabsTrigger value="pricing">Prissättning</TabsTrigger>
           <TabsTrigger value="statistics">Statistik</TabsTrigger>
         </TabsList>
 
@@ -523,10 +522,6 @@ export const ServiceZoneManagement: React.FC<ServiceZoneManagementProps> = ({ on
           <PostalCodeSelector />
         </TabsContent>
 
-        {/* Prissättning Tab - Uses PricingManagement component */}
-        <TabsContent value="pricing" className="space-y-6">
-          <PricingManagement />
-        </TabsContent>
 
         {/* Basadress Tab */}
         <TabsContent value="address" className="space-y-6">
