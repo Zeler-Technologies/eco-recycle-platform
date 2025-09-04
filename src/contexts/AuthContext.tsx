@@ -206,21 +206,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // First clear all state immediately
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-      setError(null);
-      
-      // Then sign out from Supabase
+      // Sign out from Supabase first
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('Sign out error:', error);
         setError(error.message);
+        return;
       }
       
-      // Don't force reload, let React Router handle navigation
+      // Clear all state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      setError(null);
+      
+      // Force navigation to login page
+      window.location.href = '/login';
+      
     } catch (error) {
       console.error('Sign out error:', error);
       setError(error.message);
