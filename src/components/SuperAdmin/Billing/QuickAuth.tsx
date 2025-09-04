@@ -3,15 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const QuickAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { session, isAuth } = useSupabaseSession();
+  const { session, isAuthenticated } = useAuth();
 
   // Don't show if already authenticated
-  if (isAuth) {
+  if (isAuthenticated) {
     return null;
   }
 

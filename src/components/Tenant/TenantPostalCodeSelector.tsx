@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { Search, MapPin, Plus, Minus, CheckCircle2, Filter, List, Map } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import BulkSelectionTools from './BulkSelectionTools';
 
@@ -57,7 +57,7 @@ const TenantPostalCodeSelector = () => {
     hasCoordinates: null as boolean | null
   });
   
-  const { session } = useSupabaseSession();
+  const { session } = useAuth();
   const queryClient = useQueryClient();
 
   // Get current user's tenant info

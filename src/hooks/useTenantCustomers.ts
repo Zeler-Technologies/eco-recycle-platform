@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseSession } from './useSupabaseSession';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type TenantCustomer = {
   customer_id: string;
@@ -25,11 +25,11 @@ interface UseTenantCustomersOptions {
 }
 
 export function useTenantCustomers({ search = '', page = 1, pageSize = 10 }: UseTenantCustomersOptions = {}) {
-  const { isAuth } = useSupabaseSession();
+  const { isAuthenticated } = useAuth();
 
   return useQuery({
-    queryKey: ['tenant-customers', { search, page, pageSize, isAuth }],
-    enabled: isAuth, // Require real Supabase session
+    queryKey: ['tenant-customers', { search, page, pageSize, isAuthenticated }],
+    enabled: isAuthenticated, // Require real Supabase session
     queryFn: async () => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;

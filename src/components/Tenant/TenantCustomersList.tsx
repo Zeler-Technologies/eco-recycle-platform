@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Users } from 'lucide-react';
-import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTenantCustomers } from '@/hooks/useTenantCustomers';
 
 interface TenantCustomersListProps {
@@ -16,7 +16,7 @@ interface TenantCustomersListProps {
 const PAGE_SIZE = 10;
 
 const TenantCustomersList: React.FC<TenantCustomersListProps> = ({ title = 'Customers' }) => {
-  const { isAuth } = useSupabaseSession();
+  const { isAuthenticated } = useAuth();
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
 
@@ -57,7 +57,7 @@ const TenantCustomersList: React.FC<TenantCustomersListProps> = ({ title = 'Cust
         </div>
       </CardHeader>
       <CardContent>
-        {!isAuth && (
+        {!isAuthenticated && (
           <Alert className="mb-4">
             <AlertTitle>Not authenticated with Supabase</AlertTitle>
             <AlertDescription>

@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { Search, MapPin, Plus, Minus, CheckCircle2, Filter, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PostalCode {
   id: string;
@@ -49,7 +49,7 @@ const PostalCodeSelector = () => {
   const [itemsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { session } = useSupabaseSession();
+  const { session } = useAuth();
   const queryClient = useQueryClient();
 
   // Get current user's tenant info
