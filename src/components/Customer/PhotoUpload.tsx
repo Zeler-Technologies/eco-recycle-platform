@@ -101,26 +101,24 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error('Kunde inte få bildens URL');
       }
 
-      // Save to database
+      // Save to database using the helper function
       const imageType = currentPhotoType === 'engine' ? 'engine' : 'overall';
       
-      const { error: dbError } = await supabase
-        .from('car_images')
-        .insert({
-          car_id: customerRequestId,
-          image_url: urlData.publicUrl,
-          image_type: imageType,
-          uploaded_by: 'customer',
-          file_name: fileName,
-          file_size: file.size,
-          car_registration_number: '',
-          pnr_num: 0,
-          pnr_num_norm: ''
-        });
+      const { error: dbError } = await supabase.rpc(
+        'insert_customer_car_image',
+        {
+          p_customer_request_id: customerRequestId,
+          p_image_url: urlData.publicUrl,
+          p_image_type: imageType,
+          p_file_name: fileName,
+          p_file_size: file.size,
+          p_notes: null
+        }
+      );
 
       if (dbError) {
         console.error('Database error:', dbError);
-        throw new Error('Fel vid sparning till databas');
+        throw new Error('Fel vid sparning till databas: ' + dbError.message);
       }
 
       // Remove existing photo of same type
@@ -151,12 +149,25 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
     try {
       // Delete from storage
-      await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('car-images')
         .remove([photo.fileName]);
 
-      // For now, just remove from local state
-      // Database cleanup can be handled by a background process
+      if (storageError) {
+        console.error('Storage delete error:', storageError);
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('car_images')
+        .delete()
+        .eq('file_name', photo.fileName);
+
+      if (dbError) {
+        console.error('Database delete error:', dbError);
+      }
+
+      // Remove from local state
       setPhotos(prev => prev.filter(p => p.id !== photoId));
       toast.success('Bild borttagen');
 
