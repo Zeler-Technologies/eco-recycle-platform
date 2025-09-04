@@ -11,6 +11,7 @@ import BankIDSuccess from '@/components/BankID/BankIDSuccess';
 import AddressPickerSimple from '@/components/Common/AddressPickerSimple';
 import { useTransportMessage } from '@/hooks/useTransportMessage';
 import { ScrapyardListScreen } from '@/components/Customer/ScrapyardListScreen';
+import PhotoUpload from '@/components/Customer/PhotoUpload';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,7 +97,7 @@ interface ScrapyardListScreenProps {
   onBack: () => void;
 }
 
-type ViewType = 'login' | 'car-details' | 'scrapyard-list' | 'parts-info' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
+type ViewType = 'login' | 'car-details' | 'scrapyard-list' | 'parts-info' | 'photo-upload' | 'transport' | 'price-value' | 'payment-info' | 'bankid' | 'success';
 
 // Store the customer request ID globally to use in parts saving
 let currentCustomerRequestId: string | null = null;
@@ -1375,7 +1376,15 @@ const CustomerApp = () => {
 
   const handleConfirmPartsNext = () => {
     setShowConfirmDialog(false);
+    setCurrentView('photo-upload');
+  };
+
+  const handlePhotoUploadNext = () => {
     setCurrentView('transport');
+  };
+
+  const handlePhotoUploadBack = () => {
+    setCurrentView('parts-info');
   };
 
   const handlePartsBack = () => {
@@ -1387,7 +1396,7 @@ const CustomerApp = () => {
   };
 
   const handleTransportBack = () => {
-    setCurrentView('parts-info');
+    setCurrentView('photo-upload');
   };
 
   const handlePaymentNext = () => {
@@ -1497,6 +1506,14 @@ const CustomerApp = () => {
                 setPartsInfo={setPartsInfo}
                 onNext={handlePartsNext}
                 onBack={handlePartsBack}
+              />
+            );
+          case 'photo-upload':
+            return (
+              <PhotoUpload
+                customerRequestId={currentCustomerRequestId || ''}
+                onNext={handlePhotoUploadNext}
+                onBack={handlePhotoUploadBack}
               />
             );
           case 'transport':
