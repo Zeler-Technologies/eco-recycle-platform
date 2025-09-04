@@ -122,21 +122,26 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error('Kunde inte få bildens URL');
       }
 
-      // Insert to database
+      // Insert to database - MATCHING EXACT SCHEMA
       const imageType = currentPhotoType === 'engine' ? 'engine' : 'overall';
+      
+      // Convert pnr_num to number (it's numeric in DB)
+      const pnrNumber = requestData.pnr_num ? Number(requestData.pnr_num) : 0;
       
       const { error: dbError } = await supabase
         .from('car_images')
         .insert({
+          // Required fields
           car_id: carData.id,
           image_url: urlData.publicUrl,
+          pnr_num: pnrNumber,
+          // Optional fields
+          car_registration_number: requestData.car_registration_number,
           image_type: imageType,
           uploaded_by: 'customer',
           file_name: fileName,
           file_size: file.size,
-          notes: null,
-          car_registration_number: requestData.car_registration_number,
-          pnr_num: requestData.pnr_num || 0
+          notes: null
         });
 
       if (dbError) {
