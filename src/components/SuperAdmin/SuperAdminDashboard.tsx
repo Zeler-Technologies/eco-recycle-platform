@@ -423,7 +423,7 @@ const SuperAdminDashboard = () => {
                 variant="outline"
                 size="sm"
                 onClick={logout}
-                className="border-admin-primary-foreground/30 text-admin-primary-foreground hover:bg-admin-primary-foreground/10"
+                className="border-muted-foreground/30 text-muted-foreground hover:bg-muted/10"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
