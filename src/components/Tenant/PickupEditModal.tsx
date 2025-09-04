@@ -40,7 +40,9 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
   // Editable customer and car information
   const [ownerName, setOwnerName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
+  const [pickupStreetAddress, setPickupStreetAddress] = useState('');
+  const [pickupPostalCode, setPickupPostalCode] = useState('');
+  const [pickupCity, setPickupCity] = useState('');
   const [carBrand, setCarBrand] = useState('');
   const [carModel, setCarModel] = useState('');
   const [carYear, setCarYear] = useState('');
@@ -61,7 +63,9 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       // Initialize editable fields
       setOwnerName(pickup.owner_name || '');
       setContactPhone(pickup.contact_phone || '');
-      setPickupAddress(pickup.pickup_address || '');
+      setPickupStreetAddress(pickup.pickup_street_address || '');
+      setPickupPostalCode(pickup.pickup_postal_code || '');
+      setPickupCity(pickup.pickup_city || '');
       setCarBrand(pickup.car_brand || '');
       setCarModel(pickup.car_model || '');
       setCarYear(pickup.car_year?.toString() || '');
@@ -86,7 +90,9 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       setPickupStatus('');
       setOwnerName('');
       setContactPhone('');
-      setPickupAddress('');
+      setPickupStreetAddress('');
+      setPickupPostalCode('');
+      setPickupCity('');
       setCarBrand('');
       setCarModel('');
       setCarYear('');
@@ -154,7 +160,10 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
           quote_amount: reimbursement ? parseFloat(reimbursement) : null,
           owner_name: ownerName,
           contact_phone: contactPhone,
-          pickup_address: pickupAddress,
+          pickup_street_address: pickupStreetAddress,
+          pickup_postal_code: pickupPostalCode,
+          pickup_city: pickupCity,
+          pickup_address: `${pickupStreetAddress}, ${pickupPostalCode} ${pickupCity}`.trim(),
           car_brand: carBrand,
           car_model: carModel,
           car_year: carYear ? parseInt(carYear) : null,
@@ -447,15 +456,40 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="pickup_address">Hämtadress</Label>
-              <Input
-                id="pickup_address"
-                value={pickupAddress}
-                onChange={(e) => setPickupAddress(e.target.value)}
-                placeholder="Gata, postnummer, ort"
-                className="bg-white"
-              />
+            <div className="space-y-4">
+              <h4 className="font-medium">Hämtadress</h4>
+              <div className="space-y-2">
+                <Label htmlFor="pickup_street_address">Gatuadress</Label>
+                <Input
+                  id="pickup_street_address"
+                  value={pickupStreetAddress}
+                  onChange={(e) => setPickupStreetAddress(e.target.value)}
+                  placeholder="Gatuadress och nummer"
+                  className="bg-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_postal_code">Postnummer</Label>
+                  <Input
+                    id="pickup_postal_code"
+                    value={pickupPostalCode}
+                    onChange={(e) => setPickupPostalCode(e.target.value)}
+                    placeholder="12345"
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_city">Ort</Label>
+                  <Input
+                    id="pickup_city"
+                    value={pickupCity}
+                    onChange={(e) => setPickupCity(e.target.value)}
+                    placeholder="Stockholm"
+                    className="bg-white"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
