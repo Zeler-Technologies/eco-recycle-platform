@@ -144,8 +144,8 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
           file_name: fileName,
           file_size: file.size,
           notes: null,
-          car_registration_number: carData.car_registration_number,
-          pnr_num: carData.customer_requests.pnr_num || 0
+          car_registration_number: customerData.car_registration_number,
+          pnr_num: customerData.pnr_num || 0
         });
 
       if (dbError) {
