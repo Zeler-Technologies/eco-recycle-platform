@@ -44,7 +44,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Progress calculation
   const completedPhotos = photos.length;
   const totalRequired = 3;
   const progressPercentage = (completedPhotos / totalRequired) * 100;
@@ -57,14 +56,12 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     }
   }, []);
 
-  const handlePhotoCapture = useCallback(async (event: any) => {
+  const handlePhotoCapture = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Reset the input to allow selecting the same file again
     event.target.value = '';
 
-    // Validation
     if (file.size > 10 * 1024 * 1024) {
       toast.error('Bilden är för stor. Max storlek är 10MB.');
       return;
@@ -78,41 +75,35 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     try {
       setIsUploading(true);
       
-      // First, get the car information from customer_request_id
+      // Get customer request info
+      const { data: requestData, error: requestError } = await supabase
+        .from('customer_requests')
+        .select('car_registration_number, pnr_num')
+        .eq('id', customerRequestId)
+        .single();
+
+      if (requestError || !requestData) {
+        console.error('Request data error:', requestError);
+        throw new Error('Kunde inte hitta kundförfrågan');
+      }
+
+      // Get car_id from cars table
       const { data: carData, error: carError } = await supabase
-        .from('car_metadata')
-        .select(`
-          car_registration_number,
-          customer_requests!inner(
-            id,
-            pnr_num
-          )
-        `)
-        .eq('customer_request_id', customerRequestId)
+        .from('cars')
+        .select('id')
+        .eq('license_plate', requestData.car_registration_number)
         .single();
 
       if (carError || !carData) {
         console.error('Car data error:', carError);
-        throw new Error('Kunde inte hitta bil information');
-      }
-
-      // Get car_id from cars table using registration number
-      const { data: carRecord, error: carRecordError } = await supabase
-        .from('cars')
-        .select('id')
-        .eq('license_plate', carData.car_registration_number)
-        .single();
-
-      if (carRecordError || !carRecord) {
-        console.error('Car record error:', carRecordError);
         throw new Error('Kunde inte hitta bil i systemet');
       }
 
-      // Generate unique filename
+      // Generate filename
       const fileExt = file.name.split('.').pop() || 'jpg';
       const fileName = `${customerRequestId}_${currentPhotoType}_${Date.now()}.${fileExt}`;
 
-      // Upload to Supabase Storage
+      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('car-images')
         .upload(fileName, file);
@@ -131,32 +122,29 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error('Kunde inte få bildens URL');
       }
 
-      // Save to database using direct insert
+      // Insert to database
       const imageType = currentPhotoType === 'engine' ? 'engine' : 'overall';
       
       const { error: dbError } = await supabase
         .from('car_images')
         .insert({
-          car_id: carRecord.id,
+          car_id: carData.id,
           image_url: urlData.publicUrl,
           image_type: imageType,
           uploaded_by: 'customer',
           file_name: fileName,
           file_size: file.size,
           notes: null,
-          car_registration_number: customerData.car_registration_number,
-          pnr_num: customerData.pnr_num || 0
+          car_registration_number: requestData.car_registration_number,
+          pnr_num: requestData.pnr_num || 0
         });
 
       if (dbError) {
         console.error('Database error:', dbError);
-        throw new Error('Fel vid sparning till databas: ' + dbError.message);
+        throw new Error('Fel vid sparning till databas');
       }
 
-      // Remove existing photo of same type
       setPhotos(prev => prev.filter(p => p.id !== currentPhotoType));
-
-      // Update local state
       setPhotos(prev => [...prev, {
         id: currentPhotoType,
         url: urlData.publicUrl,
@@ -169,7 +157,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error instanceof Error ? error.message : 'Fel vid uppladdning av bild. Försök igen.');
+      toast.error(error instanceof Error ? error.message : 'Fel vid uppladdning');
     } finally {
       setIsUploading(false);
     }
@@ -180,29 +168,10 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     if (!photo) return;
 
     try {
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('car-images')
-        .remove([photo.fileName]);
-
-      if (storageError) {
-        console.error('Storage delete error:', storageError);
-      }
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('car_images')
-        .delete()
-        .eq('file_name', photo.fileName);
-
-      if (dbError) {
-        console.error('Database delete error:', dbError);
-      }
-
-      // Remove from local state
+      await supabase.storage.from('car-images').remove([photo.fileName]);
+      await supabase.from('car_images').delete().eq('file_name', photo.fileName);
       setPhotos(prev => prev.filter(p => p.id !== photoId));
       toast.success('Bild borttagen');
-
     } catch (error) {
       console.error('Delete error:', error);
       toast.error('Fel vid borttagning av bild');
@@ -211,7 +180,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-400 to-orange-400 flex flex-col relative overflow-hidden">
-      {/* Status Bar */}
       <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
         <span className="font-medium">12:30</span>
         <div className="flex items-center space-x-1">
@@ -228,7 +196,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <div className="flex items-center justify-between text-black text-xs px-4 py-4">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-black rounded-full"></div>
@@ -242,13 +209,10 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 px-4 mobile-container mx-auto">
         <h1 className="text-2xl font-bold text-black mb-6">DOKUMENTERA BILEN</h1>
         
-        {/* White Card */}
         <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
-          {/* Progress Bar */}
           <div className="mb-6">
             <div className="w-full h-2 bg-gray-200 rounded-full mb-2">
               <div 
@@ -261,7 +225,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
             </p>
           </div>
 
-          {/* Guidelines Box */}
           <div className="bg-gray-50 border-l-4 border-green-500 p-4 mb-6 rounded">
             <h3 className="font-semibold text-gray-800 mb-2">Fotoanvisningar:</h3>
             <ul className="text-sm text-gray-600 space-y-1">
@@ -280,10 +243,8 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
             </ul>
           </div>
 
-          {/* Section Title */}
           <h2 className="text-lg font-bold text-gray-800 mb-4">Obligatoriska foton</h2>
 
-          {/* Photo Requirements */}
           <div className="space-y-3">
             {PHOTO_REQUIREMENTS.map((req) => {
               const isCompleted = photos.some(p => p.id === req.id);
@@ -325,7 +286,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
             })}
           </div>
 
-          {/* Photo Preview Grid */}
           {photos.length > 0 && (
             <div className="mt-6">
               <h3 className="font-semibold text-gray-800 mb-3">Uppladdade foton</h3>
@@ -352,7 +312,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
             </div>
           )}
 
-          {/* Hidden file input */}
           <input
             ref={fileInputRef}
             type="file"
@@ -362,7 +321,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
             onChange={handlePhotoCapture}
           />
 
-          {/* Navigation Buttons */}
           <div className="space-y-3 pt-6">
             <button
               onClick={onNext}
@@ -394,7 +352,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         </div>
       </div>
 
-      {/* Bottom Navigation Indicator */}
       <div className="pb-8 flex justify-center">
         <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
       </div>
