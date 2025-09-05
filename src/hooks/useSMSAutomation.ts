@@ -108,6 +108,16 @@ export const useSMSAutomation = () => {
           created_at: new Date().toISOString()
         });
 
+      // Record SMS usage for billing
+      if (!smsLogError) {
+        const { UsageTrackingService } = await import('@/services/UsageTrackingService');
+        await UsageTrackingService.recordSMSUsage(tenantId, smsCount, {
+          pickup_order_id: pickupOrderId,
+          template_id: template.id,
+          trigger_event: (triggerRule as any).trigger_event
+        });
+      }
+
       if (smsLogError) {
         console.error('Error logging SMS:', smsLogError);
         toast({
