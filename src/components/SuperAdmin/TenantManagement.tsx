@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useTenantUsers } from '@/hooks/useTenantUsers';
+import { useTenantConfigurations } from '@/hooks/useTenantConfigurations';
 import UserManagementModal from './UserManagementModal';
 import { 
   Building2, 
@@ -99,6 +100,33 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   
   // Fetch users for the selected tenant
   const { data: tenantUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useTenantUsers(selectedTenant);
+  
+  // Fetch tenant configurations
+  const { tenants: tenantConfigs, fetchTenants: fetchTenantConfigs } = useTenantConfigurations();
+  
+  // Load tenant configurations on mount
+  useEffect(() => {
+    fetchTenantConfigs();
+  }, [fetchTenantConfigs]);
+  
+  // Get current tenant configuration
+  const currentTenantConfig = tenantConfigs.find(t => t.tenant_id === selectedTenant);
+  const currencyConfig = currentTenantConfig?.configurations.find(c => c.config_category === 'general' && c.config_key === 'currency');
+  const currency = currencyConfig?.config_value?.currency || 'EUR';
+  
+  // Currency symbols mapping
+  const getCurrencySymbol = (currencyCode: string) => {
+    const symbols = {
+      'SEK': 'kr',
+      'NOK': 'kr', 
+      'DKK': 'kr',
+      'EUR': '€',
+      'USD': '$'
+    };
+    return symbols[currencyCode] || '€';
+  };
+  
+  const currencySymbol = getCurrencySymbol(currency);
 
   // Set selected tenant when prop changes
   useEffect(() => {
@@ -1682,7 +1710,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             <div className="grid grid-cols-4 gap-4 text-sm">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Internal Cost</Label>
-                                <p className="font-medium">€29.00</p>
+                                <p className="font-medium">{currencySymbol}29.00</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Markup</Label>
@@ -1690,7 +1718,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Final Price</Label>
-                                <p className="font-medium">€34.80</p>
+                                <p className="font-medium">{currencySymbol}34.80</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Margin</Label>
@@ -1716,7 +1744,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             <div className="grid grid-cols-4 gap-4 text-sm">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Internal Cost</Label>
-                                <p className="font-medium">€0.08</p>
+                                <p className="font-medium">{currencySymbol}0.08</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Markup</Label>
@@ -1724,7 +1752,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Final Price</Label>
-                                <p className="font-medium">€0.112</p>
+                                <p className="font-medium">{currencySymbol}0.112</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Margin</Label>
@@ -1750,7 +1778,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             <div className="grid grid-cols-4 gap-4 text-sm">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Internal Cost</Label>
-                                <p className="font-medium">€0.12</p>
+                                <p className="font-medium">{currencySymbol}0.12</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Markup</Label>
@@ -1758,7 +1786,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Final Price</Label>
-                                <p className="font-medium">€0.15</p>
+                                <p className="font-medium">{currencySymbol}0.15</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Margin</Label>
@@ -1784,7 +1812,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                             <div className="grid grid-cols-4 gap-4 text-sm">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Internal Cost</Label>
-                                <p className="font-medium">€0.005</p>
+                                <p className="font-medium">{currencySymbol}0.005</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Markup</Label>
@@ -1792,7 +1820,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Final Price</Label>
-                                <p className="font-medium">€0.020</p>
+                                <p className="font-medium">{currencySymbol}0.020</p>
                               </div>
                               <div>
                                 <Label className="text-xs text-muted-foreground">Margin</Label>
