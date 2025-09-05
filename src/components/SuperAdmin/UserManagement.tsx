@@ -416,7 +416,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-green-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-green-600 text-white shadow-lg">
         <div className="px-6 py-4">
