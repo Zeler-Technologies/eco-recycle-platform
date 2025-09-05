@@ -63,9 +63,52 @@ export const PickupEditModal: React.FC<PickupEditModalProps> = ({
       // Initialize editable fields
       setOwnerName(pickup.owner_name || '');
       setContactPhone(pickup.contact_phone || '');
-      setPickupStreetAddress(pickup.pickup_street_address || '');
-      setPickupPostalCode(pickup.pickup_postal_code || '');
-      setPickupCity(pickup.pickup_city || '');
+      
+      // Parse address data - prioritize individual fields, fallback to parsing pickup_address
+      if (pickup.pickup_street_address) {
+        setPickupStreetAddress(pickup.pickup_street_address);
+      } else if (pickup.pickup_address) {
+        // Parse the full address "sveavägen 22, 12323 Stockholm" to extract street
+        const addressParts = pickup.pickup_address.split(',');
+        if (addressParts.length >= 2) {
+          setPickupStreetAddress(addressParts[0]?.trim() || '');
+        } else {
+          setPickupStreetAddress(pickup.pickup_address);
+        }
+      } else {
+        setPickupStreetAddress('');
+      }
+      
+      if (pickup.pickup_postal_code) {
+        setPickupPostalCode(pickup.pickup_postal_code);
+      } else if (pickup.pickup_address) {
+        // Parse postal code from "sveavägen 22, 12323 Stockholm" 
+        const addressParts = pickup.pickup_address.split(',');
+        if (addressParts.length >= 2) {
+          const postcodeAndCity = addressParts[1]?.trim().split(' ');
+          if (postcodeAndCity && postcodeAndCity.length > 0) {
+            setPickupPostalCode(postcodeAndCity[0] || '');
+          }
+        }
+      } else {
+        setPickupPostalCode('');
+      }
+      
+      if (pickup.pickup_city) {
+        setPickupCity(pickup.pickup_city);
+      } else if (pickup.pickup_address) {
+        // Parse city from "sveavägen 22, 12323 Stockholm"
+        const addressParts = pickup.pickup_address.split(',');
+        if (addressParts.length >= 2) {
+          const postcodeAndCity = addressParts[1]?.trim().split(' ');
+          if (postcodeAndCity && postcodeAndCity.length > 1) {
+            setPickupCity(postcodeAndCity.slice(1).join(' ') || '');
+          }
+        }
+      } else {
+        setPickupCity('');
+      }
+      
       setCarBrand(pickup.car_brand || '');
       setCarModel(pickup.car_model || '');
       setCarYear(pickup.car_year?.toString() || '');
