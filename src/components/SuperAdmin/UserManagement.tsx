@@ -480,19 +480,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   ) : (
               <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
                     <Plus className="h-4 w-4 mr-2" />
                     Add User
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="text-purple-800">Add New User</DialogTitle>
+                    <DialogTitle className="text-green-800">Add New User</DialogTitle>
                     <DialogDescription>Enter details for the new user.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="email" className="text-purple-700">Email Address</Label>
+                      <Label htmlFor="email" className="text-green-700">Email Address</Label>
                       <Input
                         id="email"
                         type="email"
