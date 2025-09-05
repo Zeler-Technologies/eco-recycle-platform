@@ -202,6 +202,37 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     }
   };
 
+  // Determine which roles the current user is allowed to create/update
+  const getAllowedRoles = (role: User['role'] | undefined) => {
+    if (role === 'super_admin') {
+      return [
+        'super_admin',
+        'tenant_admin',
+        'scrapyard_admin',
+        'scrapyard_staff',
+        'driver',
+        'customer',
+        'user',
+      ] as User['role'][];
+    }
+    if (role === 'tenant_admin') {
+      return [
+        'scrapyard_admin',
+        'scrapyard_staff',
+        'driver',
+        'customer',
+        'user',
+      ] as User['role'][];
+    }
+    // scrapyard_admin and others
+    return [
+      'scrapyard_staff',
+      'driver',
+      'customer',
+      'user',
+    ] as User['role'][];
+  };
+
   const handleAddUser = async () => {
     if (!newUser.email || !newUser.password || !newUser.role) {
       toast({
@@ -221,11 +252,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       return;
     }
 
-    // Tenant admins cannot assign super_admin role
-    if (currentUser.role !== 'super_admin' && newUser.role === 'super_admin') {
+    // Enforce role permissions for creator
+    const allowedForCreator = getAllowedRoles(currentUser.role);
+    if (!allowedForCreator.includes(newUser.role as User['role'])) {
       toast({
         title: "Not allowed",
-        description: "Tenant admins cannot assign the Super Admin role.",
+        description: "You don't have permission to assign this role.",
         variant: "destructive",
       });
       return;
@@ -342,11 +374,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     
     if (!editingUser || !currentUser) return;
 
-    // Tenant admins cannot assign super_admin role
-    if (currentUser.role !== 'super_admin' && editForm.role === 'super_admin') {
+    // Enforce role permissions for editor
+    const allowedForEditor = getAllowedRoles(currentUser.role);
+    if (!allowedForEditor.includes(editForm.role as User['role'])) {
       toast({
         title: 'Not allowed',
-        description: 'Tenant admins cannot assign the Super Admin role.',
+        description: "You don't have permission to assign this role.",
         variant: 'destructive',
       });
       return;
@@ -541,17 +574,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         <SelectTrigger className="border-green-200 focus:border-green-500">
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {currentUser?.role === 'super_admin' && (
-                            <SelectItem value="super_admin">Super Admin</SelectItem>
-                          )}
-                          <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
-                          <SelectItem value="scrapyard_admin">Scrapyard Admin</SelectItem>
-                          <SelectItem value="scrapyard_staff">Scrapyard Staff</SelectItem>
-                          <SelectItem value="driver">Driver</SelectItem>
-                          <SelectItem value="customer">Customer</SelectItem>
-                          <SelectItem value="user">User</SelectItem>
-                        </SelectContent>
+                          <SelectContent>
+                            {getAllowedRoles(currentUser?.role).map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {getRoleDisplayName(role)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                       </Select>
                     </div>
                     {/* Only show tenant selection for super admins */}
@@ -796,15 +825,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        {currentUser?.role === 'super_admin' && (
-                          <SelectItem value="super_admin">Super Admin</SelectItem>
-                        )}
-                        <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
-                        <SelectItem value="scrapyard_admin">Scrapyard Admin</SelectItem>
-                        <SelectItem value="scrapyard_staff">Scrapyard Staff</SelectItem>
-                        <SelectItem value="driver">Driver</SelectItem>
-                        <SelectItem value="customer">Customer</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
+                        {getAllowedRoles(currentUser?.role).map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {getRoleDisplayName(role)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

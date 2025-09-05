@@ -81,6 +81,10 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
         // Super admin with specific tenant selected
         query = query.eq('tenant_id', selectedTenant);
       }
+      // If user is scoped to a specific scrapyard, further restrict
+      if (user?.scrapyard_id) {
+        query = query.eq('scrapyard_id', user.scrapyard_id);
+      }
       // If super admin with no selectedTenant, fetch all drivers from all tenants
 
       const { data, error } = await query.order('created_at', { ascending: false });
