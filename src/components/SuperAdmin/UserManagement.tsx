@@ -183,7 +183,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       case 'scrapyard_admin': return 'bg-green-500 text-white hover:bg-green-600';
       case 'driver': return 'bg-yellow-500 text-white hover:bg-yellow-600';
       case 'customer': return 'bg-gray-500 text-white hover:bg-gray-600';
-      case 'user': return 'bg-purple-500 text-white hover:bg-purple-600';
+      case 'user': return 'bg-green-500 text-white hover:bg-green-600';
       case 'scrapyard_staff': return 'bg-orange-500 text-white hover:bg-orange-600';
       default: return 'bg-gray-300';
     }
@@ -416,7 +416,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-purple-50">
+    <div className="min-h-screen bg-green-50">
       {/* Header */}
       <header className="bg-green-600 text-white shadow-lg">
         <div className="px-6 py-4">
@@ -439,11 +439,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
       </header>
 
       <div className="p-6">
-        <Card className="bg-white shadow-lg border-purple-200">
+        <Card className="bg-white shadow-lg border-green-200">
           <CardHeader className="bg-green-100 border-b border-green-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-600 rounded-full">
+                <div className="p-2 bg-green-600 rounded-full">
                   <Users className="h-6 w-6 text-white" />
                 </div>
                 <div>
