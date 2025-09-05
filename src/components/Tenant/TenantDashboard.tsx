@@ -359,7 +359,7 @@ const TenantDashboard = () => {
                 onClick={() => setShowUserManagement(true)}
               >
                 <Users className="h-4 w-4 mr-2" />
-                Hantera förare
+                Hantera Användare
               </Button>
               <Button 
                 variant="outline" 
