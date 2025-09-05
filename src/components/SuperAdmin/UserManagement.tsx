@@ -424,7 +424,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
             <div className="flex items-center gap-3">
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 text-white hover:text-purple-200 transition-colors"
+                className="flex items-center gap-2 text-white hover:text-green-200 transition-colors"
               >
                 <ArrowLeft className="h-6 w-6" />
                 <span>Tillbaka till Dashboard</span>
@@ -499,46 +499,46 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                         placeholder="user@example.com"
-                        className="border-purple-200 focus:border-purple-500"
+                        className="border-green-200 focus:border-green-500"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="first-name" className="text-purple-700">First Name</Label>
+                      <Label htmlFor="first-name" className="text-green-700">First Name</Label>
                       <Input
                         id="first-name"
                         type="text"
                         value={newUser.first_name}
                         onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
                         placeholder="Enter first name"
-                        className="border-purple-200 focus:border-purple-500"
+                        className="border-green-200 focus:border-green-500"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="last-name" className="text-purple-700">Last Name</Label>
+                      <Label htmlFor="last-name" className="text-green-700">Last Name</Label>
                       <Input
                         id="last-name"
                         type="text"
                         value={newUser.last_name}
                         onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
                         placeholder="Enter last name"
-                        className="border-purple-200 focus:border-purple-500"
+                        className="border-green-200 focus:border-green-500"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="password" className="text-purple-700">Password</Label>
+                      <Label htmlFor="password" className="text-green-700">Password</Label>
                       <Input
                         id="password"
                         type="password"
                         value={newUser.password}
                         onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                         placeholder="Enter password"
-                        className="border-purple-200 focus:border-purple-500"
+                        className="border-green-200 focus:border-green-500"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="role" className="text-purple-700">Role</Label>
+                      <Label htmlFor="role" className="text-green-700">Role</Label>
                       <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value as User['role'] })}>
-                        <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                        <SelectTrigger className="border-green-200 focus:border-green-500">
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -557,12 +557,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                     {/* Only show tenant selection for super admins */}
                     {currentUser?.role === 'super_admin' && (
                       <div>
-                        <Label htmlFor="tenant_id" className="text-purple-700">Tenant (optional)</Label>
+                        <Label htmlFor="tenant_id" className="text-green-700">Tenant (optional)</Label>
                         <Select 
                           value={newUser.tenant_id} 
                           onValueChange={(value) => setNewUser({ ...newUser, tenant_id: value })}
                         >
-                          <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                          <SelectTrigger className="border-green-200 focus:border-green-500">
                             <SelectValue placeholder="Select tenant" />
                           </SelectTrigger>
                           <SelectContent>
@@ -579,25 +579,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                     {/* Show readonly tenant for non-super admins */}
                     {currentUser?.role !== 'super_admin' && currentUser?.tenant_id && (
                       <div>
-                        <Label className="text-purple-700">Tenant</Label>
+                        <Label className="text-green-700">Tenant</Label>
                         <Input
                           value={tenants.find(t => t.tenants_id === currentUser.tenant_id)?.name || 'Loading...'}
                           disabled
-                          className="bg-muted cursor-not-allowed border-purple-200"
+                          className="bg-muted cursor-not-allowed border-green-200"
                         />
                       </div>
                     )}
                     <div className="flex gap-2 pt-4">
                       <Button 
                         onClick={handleAddUser}
-                        className="flex-1 bg-purple-600 hover:bg-purple-700"
+                        className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         Add User
                       </Button>
                       <Button 
                         variant="outline" 
                         onClick={() => setIsAddModalOpen(false)}
-                        className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50"
+                        className="flex-1 border-green-200 text-green-700 hover:bg-green-50"
                       >
                         Cancel
                       </Button>
@@ -608,25 +608,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   )}
                 </div>
                 
-                <Card className="border-purple-200">
+                <Card className="border-green-200">
                   <CardContent className="p-0">
                     <Table>
               <TableHeader>
-                <TableRow className="bg-purple-50">
-                  <TableHead className="text-purple-800 font-semibold">Email</TableHead>
-                  <TableHead className="text-purple-800 font-semibold">Role</TableHead>
-                  <TableHead className="text-purple-800 font-semibold">Tenant Name</TableHead>
-                  <TableHead className="text-purple-800 font-semibold">Created</TableHead>
-                  <TableHead className="text-purple-800 font-semibold">Actions</TableHead>
+                <TableRow className="bg-green-50">
+                  <TableHead className="text-green-800 font-semibold">Email</TableHead>
+                  <TableHead className="text-green-800 font-semibold">Role</TableHead>
+                  <TableHead className="text-green-800 font-semibold">Tenant Name</TableHead>
+                  <TableHead className="text-green-800 font-semibold">Created</TableHead>
+                  <TableHead className="text-green-800 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-purple-25">
+                  <TableRow key={user.id} className="hover:bg-green-25">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-purple-200 text-purple-800 font-semibold">
+                          <AvatarFallback className="bg-green-200 text-green-800 font-semibold">
                             {getInitials(user.email)}
                           </AvatarFallback>
                         </Avatar>
@@ -638,10 +638,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                         {getRoleDisplayName(user.role)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-purple-700">
+                    <TableCell className="text-green-700">
                       {user.tenant_name || 'N/A'}
                     </TableCell>
-                    <TableCell className="text-purple-700">
+                    <TableCell className="text-green-700">
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
@@ -650,7 +650,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleStartEdit(user)}
-                          className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                          className="border-green-200 text-green-700 hover:bg-green-50"
                         >
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
@@ -675,7 +675,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel className="border-purple-200 text-purple-700">
+                              <AlertDialogCancel className="border-green-200 text-green-700">
                                 Cancel
                               </AlertDialogCancel>
                               <AlertDialogAction
@@ -698,7 +698,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
 
               {/* User Statistics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          <Card className="bg-white shadow-md border-purple-200">
+          <Card className="bg-white shadow-md border-green-200">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-red-100 rounded-full">
@@ -708,13 +708,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   <p className="text-2xl font-bold text-red-600">
                     {users.filter(u => u.role === 'super_admin').length}
                   </p>
-                  <p className="text-sm text-purple-600">Super Admins</p>
+                  <p className="text-sm text-green-600">Super Admins</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-md border-purple-200">
+          <Card className="bg-white shadow-md border-green-200">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-green-100 rounded-full">
@@ -724,13 +724,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   <p className="text-2xl font-bold text-green-600">
                     {users.filter(u => u.role === 'tenant_admin').length}
                   </p>
-                  <p className="text-sm text-purple-600">Tenant Admins</p>
+                  <p className="text-sm text-green-600">Tenant Admins</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-md border-purple-200">
+          <Card className="bg-white shadow-md border-green-200">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gray-100 rounded-full">
@@ -740,7 +740,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   <p className="text-2xl font-bold text-gray-600">
                     {users.filter(u => u.role === 'driver').length}
                   </p>
-                  <p className="text-sm text-purple-600">Drivers</p>
+                  <p className="text-sm text-green-600">Drivers</p>
                 </div>
               </div>
                 </CardContent>
@@ -752,47 +752,47 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
             <Dialog open={!!editingUser} onOpenChange={(open) => { if (!open) setEditingUser(null); }}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-purple-800">Edit User</DialogTitle>
+                  <DialogTitle className="text-green-800">Edit User</DialogTitle>
                   <DialogDescription>Update user information.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="edit-email" className="text-purple-700">Email Address</Label>
+                    <Label htmlFor="edit-email" className="text-green-700">Email Address</Label>
                     <Input
                       id="edit-email"
                       type="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                       placeholder="user@example.com"
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-green-200 focus:border-green-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-first-name" className="text-purple-700">First Name</Label>
+                    <Label htmlFor="edit-first-name" className="text-green-700">First Name</Label>
                     <Input
                       id="edit-first-name"
                       type="text"
                       value={editForm.first_name}
                       onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
                       placeholder="Enter first name"
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-green-200 focus:border-green-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-last-name" className="text-purple-700">Last Name</Label>
+                    <Label htmlFor="edit-last-name" className="text-green-700">Last Name</Label>
                     <Input
                       id="edit-last-name"
                       type="text"
                       value={editForm.last_name}
                       onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
                       placeholder="Enter last name"
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-green-200 focus:border-green-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-role" className="text-purple-700">Role</Label>
+                    <Label htmlFor="edit-role" className="text-green-700">Role</Label>
                     <Select value={editForm.role} onValueChange={(value) => setEditForm({ ...editForm, role: value as User['role'] })}>
-                      <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                      <SelectTrigger className="border-green-200 focus:border-green-500">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
@@ -811,12 +811,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   {/* Only show tenant selection for super admins */}
                   {currentUser?.role === 'super_admin' && (
                     <div>
-                      <Label htmlFor="edit-tenant-id" className="text-purple-700">Tenant (optional)</Label>
+                      <Label htmlFor="edit-tenant-id" className="text-green-700">Tenant (optional)</Label>
                       <Select 
                         value={editForm.tenant_id} 
                         onValueChange={(value) => setEditForm({ ...editForm, tenant_id: value })}
                       >
-                        <SelectTrigger className="border-purple-200 focus:border-purple-500">
+                        <SelectTrigger className="border-green-200 focus:border-green-500">
                           <SelectValue placeholder="Select tenant" />
                         </SelectTrigger>
                         <SelectContent>
@@ -833,25 +833,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   {/* Show readonly tenant for non-super admins */}
                   {currentUser?.role !== 'super_admin' && currentUser?.tenant_id && (
                     <div>
-                      <Label className="text-purple-700">Tenant</Label>
+                      <Label className="text-green-700">Tenant</Label>
                       <Input
                         value={tenants.find(t => t.tenants_id === currentUser.tenant_id)?.name || 'Loading...'}
                         disabled
-                        className="bg-muted cursor-not-allowed border-purple-200"
+                        className="bg-muted cursor-not-allowed border-green-200"
                       />
                     </div>
                   )}
                   <div className="flex gap-2 pt-4">
                     <Button 
                       onClick={handleSaveEdit}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
                     >
                       Save Changes
                     </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => setEditingUser(null)}
-                      className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50"
+                      className="flex-1 border-green-200 text-green-700 hover:bg-green-50"
                     >
                       Cancel
                     </Button>
