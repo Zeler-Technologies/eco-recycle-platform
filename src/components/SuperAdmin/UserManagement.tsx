@@ -440,7 +440,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
 
       <div className="p-6">
         <Card className="bg-white shadow-lg border-purple-200">
-          <CardHeader className="bg-purple-100 border-b border-purple-200">
+          <CardHeader className="bg-green-100 border-b border-green-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-600 rounded-full">
