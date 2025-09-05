@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const tenantFormSchema = z.object({
   companyName: z.string().min(2, 'Company name must be at least 2 characters'),
   country: z.string().min(1, 'Country is required'),
+  currency: z.string().min(1, 'Currency is required'),
   serviceType: z.string().optional(),
   address: z.string().optional(),
   postalCode: z.string().optional(),
@@ -64,6 +65,35 @@ const countries = [
   'Belgium', 'France', 'United Kingdom', 'Spain', 'Italy', 'Poland'
 ];
 
+// Available currencies
+const currencies = [
+  { code: 'SEK', name: 'Swedish Krona (kr)', symbol: 'kr' },
+  { code: 'NOK', name: 'Norwegian Krone (kr)', symbol: 'kr' },
+  { code: 'DKK', name: 'Danish Krone (kr)', symbol: 'kr' },
+  { code: 'EUR', name: 'Euro (€)', symbol: '€' },
+  { code: 'USD', name: 'US Dollar ($)', symbol: '$' },
+  { code: 'GBP', name: 'British Pound (£)', symbol: '£' },
+];
+
+// Country to currency mapping for auto-selection
+const getDefaultCurrency = (country: string) => {
+  const mapping: { [key: string]: string } = {
+    'Sweden': 'SEK',
+    'Norway': 'NOK', 
+    'Denmark': 'DKK',
+    'Finland': 'EUR',
+    'Germany': 'EUR',
+    'Netherlands': 'EUR',
+    'Belgium': 'EUR',
+    'France': 'EUR',
+    'Spain': 'EUR',
+    'Italy': 'EUR',
+    'United Kingdom': 'GBP',
+    'Poland': 'EUR'
+  };
+  return mapping[country] || 'EUR';
+};
+
 export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }: TenantSetupFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,6 +116,7 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
     defaultValues: {
       companyName: editTenant?.name || '',
       country: editTenant?.country || '',
+      currency: editTenant?.country ? getDefaultCurrency(editTenant.country) : 'EUR',
       serviceType: editTenant?.service_type || '',
       address: editTenant?.base_address || '',
       postalCode: '',
@@ -96,6 +127,14 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
       invoiceEmail: editTenant?.invoice_email || '',
     },
   });
+
+  // Auto-select currency when country changes
+  const watchedCountry = form.watch('country');
+  React.useEffect(() => {
+    if (watchedCountry && !isEditing) {
+      form.setValue('currency', getDefaultCurrency(watchedCountry));
+    }
+  }, [watchedCountry, form, isEditing]);
 
   // Reset form values when editTenant changes and fetch admin data
   React.useEffect(() => {
@@ -116,9 +155,24 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           .eq('tenant_id', editTenant.tenants_id)
           .maybeSingle();
 
+        // Fetch current tenant configuration for currency
+        const { data: currencyConfig } = await supabase
+          .from('billing_configuration')
+          .select('config_value')
+          .eq('tenant_id', editTenant.tenants_id)
+          .eq('config_category', 'general')
+          .eq('config_key', 'currency')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        const currentCurrency = currencyConfig?.config_value && typeof currencyConfig.config_value === 'object' 
+          ? (currencyConfig.config_value as { currency?: string }).currency 
+          : undefined;
+
         form.reset({
           companyName: editTenant.name,
           country: editTenant.country,
+          currency: currentCurrency || getDefaultCurrency(editTenant.country),
           serviceType: editTenant.service_type || '',
           address: scrapyard?.address || editTenant.base_address || '',
           postalCode: scrapyard?.postal_code || '',
@@ -226,6 +280,30 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           // Continue with success - tenant update succeeded
         }
 
+        // Update currency configuration
+        try {
+          // First deactivate existing currency config
+          await supabase
+            .from('billing_configuration')
+            .update({ is_active: false })
+            .eq('tenant_id', editTenant!.tenants_id)
+            .eq('config_category', 'general')
+            .eq('config_key', 'currency');
+
+          // Insert new currency configuration
+          await supabase
+            .from('billing_configuration')
+            .insert({
+              tenant_id: editTenant!.tenants_id,
+              config_category: 'general',
+              config_key: 'currency',
+              config_value: { currency: data.currency },
+              is_active: true,
+            });
+        } catch (currencyError) {
+          console.warn('Error updating currency configuration (non-critical):', currencyError);
+        }
+
         console.log('=== TENANT UPDATE SUCCESS ===');
         console.log('Updated tenant result:', result);
 
@@ -291,9 +369,33 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
 
         console.log('Tenant and scrapyard created successfully:', result);
 
+        // Save currency configuration for new tenant
+        try {
+          const tenantId = result.tenant_id;
+          
+          // Insert currency configuration
+          const { error: currencyError } = await supabase
+            .from('billing_configuration')
+            .insert({
+              tenant_id: tenantId,
+              config_category: 'general',
+              config_key: 'currency',
+              config_value: { currency: data.currency },
+              is_active: true,
+            });
+
+          if (currencyError) {
+            console.warn('Failed to save currency configuration:', currencyError);
+          } else {
+            console.log('Currency configuration saved successfully');
+          }
+        } catch (currencyError) {
+          console.warn('Error saving currency configuration (non-critical):', currencyError);
+        }
+
         toast({
           title: "Tenant Created Successfully",
-          description: `${data.companyName} has been added to the system. Generated password: ${result.generated_password}`,
+          description: `${data.companyName} has been added to the system with ${data.currency} currency. Generated password: ${result.generated_password}`,
         });
         
         onTenantCreated?.(result);
@@ -403,7 +505,35 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
                   </FormItem>
                 )}
               />
-            </div>
+                
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {currencies.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                              {currency.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        This will be used for all pricing and billing in the system
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
             <Separator />
 
