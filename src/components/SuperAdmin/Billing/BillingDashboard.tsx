@@ -1,440 +1,665 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  CreditCard, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  FileText, 
-  Settings, 
-  AlertTriangle,
-  Car,
-  Building2,
-  Calendar,
-  PieChart,
-  ArrowLeft
-} from 'lucide-react';
-// Temporarily disable billing components that cause crashes
-// import { PricingCatalog } from './PricingCatalog';
-// import { InvoiceManagement } from './InvoiceManagement';
-// import { UsageMetering } from './UsageMetering';
-// import { BillingAnalytics } from './BillingAnalytics';
-// import { BillingSettings } from './BillingSettings';
-import { BillingTest } from './BillingTest';
-import { QuickAuth } from './QuickAuth';
+import { DollarSign, Settings, Users, TrendingUp, Loader2 } from 'lucide-react';
+
+interface ServiceCostModel {
+  id: string;
+  service_name: string;
+  cost_type: 'fixed_monthly' | 'usage_based' | 'shared_base';
+  base_cost_monthly: number | null;
+  unit_cost: number | null;
+  allocation_method: string;
+  created_at: string;
+}
+
+interface Tenant {
+  tenants_id: number;
+  name: string;
+  country: string;
+}
 
 interface BillingDashboardProps {
   onBack?: () => void;
 }
 
-export const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
+const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [services, setServices] = useState<ServiceCostModel[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const billingStats = [
-    {
-      title: 'Monthly Revenue',
-      value: '€28,450',
-      change: '+18.2%',
-      trend: 'up',
-      icon: DollarSign,
-      color: 'bg-status-completed'
-    },
-    {
-      title: 'Total COGS',
-      value: '€19,200',
-      change: '+12.1%',
-      trend: 'up',
-      icon: TrendingUp,
-      color: 'bg-status-processing'
-    },
-    {
-      title: 'Gross Margin',
-      value: '32.5%',
-      change: '+2.3%',
-      trend: 'up',
-      icon: PieChart,
-      color: 'bg-admin-primary'
-    },
-    {
-      title: 'Overdue Invoices',
-      value: '3',
-      change: '-2',
-      trend: 'down',
-      icon: AlertTriangle,
-      color: 'bg-status-cancelled'
+  useEffect(() => {
+    Promise.all([fetchServices(), fetchTenants()]).finally(() => setLoading(false));
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_cost_models' as any)
+        .select('*')
+        .order('service_name');
+      
+      if (error) throw error;
+      setServices((data as any) || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch services",
+        variant: "destructive"
+      });
     }
-  ];
-
-  const revenueBreakdown = [
-    { service: 'Monthly Service Fees', amount: '€12,000', margin: '40%', tenants: 24 },
-    { service: 'Car Processing', amount: '€11,250', margin: '25%', cars: 4500 },
-    { service: 'SMS Services', amount: '€2,800', margin: '35%', messages: 14000 },
-    { service: 'Payment Processing', amount: '€2,400', margin: '20%', transactions: 890 }
-  ];
-
-  const marginAlerts = [
-    { tenant: 'Oslo Scrap Yard', service: 'Car Processing', margin: '12%', threshold: '20%', severity: 'high' },
-    { tenant: 'Copenhagen Metals', service: 'SMS Services', margin: '18%', threshold: '25%', severity: 'medium' }
-  ];
-
-  const getTrendIcon = (trend: string) => {
-    return trend === 'up' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />;
   };
 
-  const getTrendColor = (trend: string) => {
-    return trend === 'up' ? 'text-status-completed' : 'text-status-cancelled';
+  const fetchTenants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('tenants_id, name, country')
+        .order('name');
+      
+      if (error) throw error;
+      setTenants(data || []);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
+    }
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'bg-status-cancelled text-white';
-      case 'medium': return 'bg-status-processing text-white';
-      default: return 'bg-status-pending text-white';
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Billing & Invoice Control</h1>
+          <p className="text-muted-foreground">Multi-tenant billing management system</p>
+        </div>
+        {onBack && (
+          <Button variant="outline" onClick={onBack}>
+            ← Back
+          </Button>
+        )}
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="tenants">Per Tenant</TabsTrigger>
+          <TabsTrigger value="usage">Usage</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <OverviewTab services={services} tenants={tenants} />
+        </TabsContent>
+
+        <TabsContent value="services" className="space-y-6">
+          <ServicePricingTab services={services} onRefresh={fetchServices} />
+        </TabsContent>
+
+        <TabsContent value="tenants" className="space-y-6">
+          <TenantBillingTab tenants={tenants} />
+        </TabsContent>
+
+        <TabsContent value="usage" className="space-y-6">
+          <UsageTrackingTab tenants={tenants} services={services} />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <AnalyticsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+const OverviewTab: React.FC<{ services: ServiceCostModel[]; tenants: Tenant[] }> = ({ services, tenants }) => {
+  const [sharedCosts, setSharedCosts] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [totalRevenue, setTotalRevenue] = useState(0);
+
+  useEffect(() => {
+    fetchSharedCosts();
+    fetchRevenueSummary();
+  }, [selectedMonth]);
+
+  const fetchSharedCosts = async () => {
+    try {
+      const startDate = `${selectedMonth}-01`;
+      const endDate = `${selectedMonth}-31`;
+      
+      const { data: usageData } = await supabase
+        .from('tenant_service_usage')
+        .select('*')
+        .gte('usage_date', startDate)
+        .lte('usage_date', endDate);
+      
+      const googleMapsUsage = usageData?.filter((item: any) => 
+        item.service_name?.includes('google_maps') && item.base_cost_allocation > 0
+      ) || [];
+      
+      setSharedCosts(googleMapsUsage);
+    } catch (error) {
+      console.error('Error fetching shared costs:', error);
+    }
+  };
+
+  const fetchRevenueSummary = async () => {
+    try {
+      const startDate = `${selectedMonth}-01`;
+      const endDate = `${selectedMonth}-31`;
+      
+      const { data } = await supabase
+        .from('tenant_service_usage')
+        .select('total_cost')
+        .gte('usage_date', startDate)
+        .lte('usage_date', endDate);
+      
+      const total = data?.reduce((sum, item) => sum + (item.total_cost || 0), 0) || 0;
+      setTotalRevenue(total);
+    } catch (error) {
+      console.error('Error fetching revenue:', error);
     }
   };
 
   return (
-    <div className="theme-admin min-h-screen bg-admin-muted">
-      {/* Header */}
-      <header className="bg-admin-primary text-admin-primary-foreground shadow-custom-md">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBack}
-                className="!border !border-white/30 !bg-transparent !text-white hover:!bg-white/20 hover:!text-white"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Admin
-              </Button>
-              <CreditCard className="h-8 w-8" />
-              <div>
-                <h1 className="text-2xl font-bold">Billing & Invoice Control</h1>
-                <p className="text-admin-primary-foreground/80">Multi-tenant billing management system</p>
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Services</CardTitle>
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{services.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{tenants.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">€{totalRevenue.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Growth</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+0%</div>
+            <p className="text-xs text-muted-foreground">No historical data</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Google Maps API Shared Cost Allocation</CardTitle>
+              <CardDescription>€500/month base cost split by usage percentage</CardDescription>
+            </div>
+            <Input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-auto"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {sharedCosts.length > 0 ? (
+            <div className="space-y-3">
+              {sharedCosts.map((allocation, index) => (
+                <div key={index} className="flex justify-between items-center py-3 border-b last:border-b-0">
+                  <div>
+                    <span className="font-medium">Tenant {allocation.tenant_id}</span>
+                    <span className="text-sm text-muted-foreground ml-2">
+                      ({((allocation.base_cost_allocation / 500) * 100).toFixed(1)}% usage)
+                    </span>
+                  </div>
+                  <span className="text-lg font-semibold">
+                    €{allocation.base_cost_allocation.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+              
+              <div className="pt-3 border-t">
+                <div className="flex justify-between items-center font-semibold text-lg">
+                  <span>Total Allocated:</span>
+                  <span>€{sharedCosts.reduce((sum, item) => sum + item.base_cost_allocation, 0).toFixed(2)}</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!border !border-white/30 !bg-transparent !text-white hover:!bg-white/20 hover:!text-white"
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Generate Monthly Bills
-              </Button>
-            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">No shared cost allocations found for {selectedMonth}</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const ServicePricingTab: React.FC<{ services: ServiceCostModel[]; onRefresh: () => void }> = ({ services, onRefresh }) => {
+  const [editingService, setEditingService] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<any>({});
+  const { toast } = useToast();
+
+  const handleEdit = (service: ServiceCostModel) => {
+    setEditingService(service.id);
+    setEditValues({
+      unit_cost: service.unit_cost,
+      base_cost_monthly: service.base_cost_monthly
+    });
+  };
+
+  const handleSave = async (serviceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('service_cost_models' as any)
+        .update(editValues)
+        .eq('id', serviceId);
+      
+      if (error) throw error;
+      
+      setEditingService(null);
+      onRefresh();
+      
+      toast({
+        title: "Success",
+        description: "Service pricing updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update service pricing",
+        variant: "destructive"
+      });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Service Pricing Configuration</CardTitle>
+        <CardDescription>Configure pricing for individual services</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {services.map((service) => (
+          <Card key={service.id}>
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="font-medium">{service.service_name}</h3>
+                  <div className="mt-1 flex items-center space-x-4 text-sm text-muted-foreground">
+                    <Badge variant="secondary">{service.cost_type}</Badge>
+                    {service.cost_type === 'fixed_monthly' && (
+                      <span>€{service.base_cost_monthly}/month</span>
+                    )}
+                    {service.cost_type === 'usage_based' && (
+                      <span>€{service.unit_cost} per unit</span>
+                    )}
+                    {service.cost_type === 'shared_base' && (
+                      <span>€{service.base_cost_monthly}/month + €{service.unit_cost} per unit</span>
+                    )}
+                  </div>
+                </div>
+                
+                {editingService === service.id ? (
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSave(service.id)}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingService(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEdit(service)}
+                  >
+                    <Settings className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+              
+              {editingService === service.id && (
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  {service.cost_type !== 'fixed_monthly' && (
+                    <div>
+                      <Label>Unit Cost (€)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={editValues.unit_cost}
+                        onChange={(e) => setEditValues({...editValues, unit_cost: parseFloat(e.target.value)})}
+                      />
+                    </div>
+                  )}
+                  {service.cost_type !== 'usage_based' && (
+                    <div>
+                      <Label>Monthly Base Cost (€)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={editValues.base_cost_monthly}
+                        onChange={(e) => setEditValues({...editValues, base_cost_monthly: parseFloat(e.target.value)})}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </CardContent>
+    </Card>
+  );
+};
+
+const TenantBillingTab: React.FC<{ tenants: Tenant[] }> = ({ tenants }) => {
+  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
+  const [billingData, setBillingData] = useState<any>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  useEffect(() => {
+    if (selectedTenant) {
+      fetchTenantBilling();
+    }
+  }, [selectedTenant, selectedMonth]);
+
+  const fetchTenantBilling = async () => {
+    if (!selectedTenant) return;
+    
+    try {
+      const startDate = `${selectedMonth}-01`;
+      const endDate = `${selectedMonth}-31`;
+      
+      const { data } = await supabase
+        .from('tenant_service_usage')
+        .select('*')
+        .eq('tenant_id', selectedTenant)
+        .gte('usage_date', startDate)
+        .lte('usage_date', endDate);
+      
+      const serviceBreakdown = (data || []).reduce((acc: any, item: any) => {
+        const serviceName = item.service_name || 'Unknown Service';
+        if (!acc[serviceName]) {
+          acc[serviceName] = {
+            total_units: 0,
+            total_cost: 0,
+            cost_type: 'usage_based'
+          };
+        }
+        acc[serviceName].total_units += item.units_used || 0;
+        acc[serviceName].total_cost += item.total_cost || 0;
+        return acc;
+      }, {});
+      
+      setBillingData({
+        raw_data: data,
+        service_breakdown: serviceBreakdown,
+        total_cost: Object.values(serviceBreakdown).reduce((sum: number, service: any) => sum + service.total_cost, 0)
+      });
+    } catch (error) {
+      console.error('Error fetching tenant billing:', error);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Per Tenant Billing</CardTitle>
+        <CardDescription>View and manage billing for individual tenants</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Select Tenant</Label>
+            <Select value={selectedTenant?.toString() || ''} onValueChange={(value) => setSelectedTenant(parseInt(value))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a tenant..." />
+              </SelectTrigger>
+              <SelectContent>
+                {tenants.map((tenant) => (
+                  <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
+                    {tenant.name} ({tenant.country})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Billing Month</Label>
+            <Input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            />
           </div>
         </div>
-      </header>
 
-      <div className="p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 bg-admin-primary">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Overview</TabsTrigger>
-            <TabsTrigger value="pricing" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Pricing</TabsTrigger>
-            <TabsTrigger value="per-tenant" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Per Tenant</TabsTrigger>
-            <TabsTrigger value="invoices" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Invoices</TabsTrigger>
-            <TabsTrigger value="usage" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Usage</TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Analytics</TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-white data-[state=active]:text-admin-primary data-[state=inactive]:text-white hover:bg-white/10">Settings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {billingStats.map((stat, index) => (
-                <Card key={index} className="bg-white shadow-custom-sm hover:shadow-custom-md transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={`p-2 rounded-full ${stat.color} text-white`}>
-                      <stat.icon className="h-4 w-4" />
+        {billingData && (
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              {Object.entries(billingData.service_breakdown).map(([serviceName, service]: [string, any]) => (
+                <Card key={serviceName}>
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-medium">{serviceName}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {service.total_units} units • {service.cost_type}
+                        </p>
+                      </div>
+                      <span className="text-xl font-semibold">
+                        €{service.total_cost.toFixed(2)}
+                      </span>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className={`text-xs flex items-center gap-1 ${getTrendColor(stat.trend)}`}>
-                      {getTrendIcon(stat.trend)}
-                      {stat.change}
-                    </p>
                   </CardContent>
                 </Card>
               ))}
             </div>
-
-            {/* Revenue Breakdown */}
-            <Card className="bg-white shadow-custom-sm">
-              <CardHeader>
-                <CardTitle className="text-admin-primary">Revenue Breakdown</CardTitle>
-                <CardDescription>Monthly revenue by service type with margin analysis</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {revenueBreakdown.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-admin-accent/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-admin-accent rounded-full">
-                          <DollarSign className="h-4 w-4 text-admin-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold">{item.service}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {item.tenants ? `${item.tenants} tenants` : 
-                             item.cars ? `${item.cars} cars` : 
-                             item.messages ? `${item.messages} messages` :
-                             item.transactions ? `${item.transactions} transactions` : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-semibold">{item.amount}</p>
-                          <p className="text-sm text-muted-foreground">Revenue</p>
-                        </div>
-                        <Badge className="bg-status-completed text-white">
-                          {item.margin} margin
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Margin Alerts */}
-            <Card className="bg-white shadow-custom-sm">
-              <CardHeader>
-                <CardTitle className="text-admin-primary flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-status-cancelled" />
-                  Margin Alerts
-                </CardTitle>
-                <CardDescription>Services with margins below threshold</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {marginAlerts.map((alert, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-status-cancelled/10 border border-status-cancelled/20 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Building2 className="h-4 w-4 text-status-cancelled" />
-                        <div>
-                          <p className="font-medium">{alert.tenant}</p>
-                          <p className="text-sm text-muted-foreground">{alert.service}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="font-semibold text-status-cancelled">{alert.margin}</p>
-                          <p className="text-sm text-muted-foreground">vs {alert.threshold} threshold</p>
-                        </div>
-                        <Badge className={getSeverityColor(alert.severity)}>
-                          {alert.severity}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="pricing">
-            <div className="space-y-6">
-              <QuickAuth />
-              <BillingTest />
-              <div className="p-6 text-center">
-                <p className="text-muted-foreground">Pricing catalog temporarily disabled</p>
+            
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center text-xl font-bold">
+                <span>Total Monthly Cost:</span>
+                <span>€{billingData.total_cost.toFixed(2)}</span>
               </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="per-tenant">
-            <div className="space-y-6">
-              <Card className="bg-white shadow-custom-sm">
-                <CardHeader>
-                  <CardTitle className="text-admin-primary">Per Tenant Pricing Matrix</CardTitle>
-                  <CardDescription>Overview of pricing models and VAT configuration per tenant</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Tenant Pricing Overview */}
-                    {[
-                      {
-                        id: '1',
-                        name: 'Panta Bilen Stockholm',
-                        plan: 'Premium',
-                        monthlyFee: '€149',
-                        smsUsage: '1,250/2,000',
-                        carsProcessed: '425/2,000',
-                        apiRequests: '45,000/100,000',
-                        vat: '25%',
-                        totalMonthly: '€2,450',
-                        status: 'Active'
-                      },
-                      {
-                        id: '2',
-                        name: 'Oslo Scrap Yard',
-                        plan: 'Starter',
-                        monthlyFee: '€49',
-                        smsUsage: '320/500',
-                        carsProcessed: '180/500',
-                        apiRequests: '12,000/25,000',
-                        vat: '25%',
-                        totalMonthly: '€890',
-                        status: 'Active'
-                      },
-                      {
-                        id: '3',
-                        name: 'Copenhagen Metals',
-                        plan: 'Enterprise',
-                        monthlyFee: '€399',
-                        smsUsage: '8,450/10,000',
-                        carsProcessed: '2,100/5,000',
-                        apiRequests: '180,000/500,000',
-                        vat: '25%',
-                        totalMonthly: '€4,200',
-                        status: 'Active'
-                      }
-                    ].map((tenant) => (
-                      <div key={tenant.id} className="p-4 border rounded-lg hover:bg-admin-accent/10 transition-colors">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-admin-accent rounded-full">
-                              <Building2 className="h-4 w-4 text-admin-primary" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold">{tenant.name}</h4>
-                              <p className="text-sm text-muted-foreground">ID: {tenant.id}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={`${tenant.plan === 'Enterprise' ? 'bg-admin-primary' : tenant.plan === 'Premium' ? 'bg-status-processing' : 'bg-status-pending'} text-white`}>
-                              {tenant.plan}
-                            </Badge>
-                            <Badge className="bg-status-completed text-white">
-                              {tenant.status}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
-                            <p className="text-sm font-medium text-muted-foreground">Monthly Fee</p>
-                            <p className="text-lg font-bold text-admin-primary">{tenant.monthlyFee}</p>
-                          </div>
-                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
-                            <p className="text-sm font-medium text-muted-foreground">SMS Usage</p>
-                            <p className="text-lg font-bold">{tenant.smsUsage}</p>
-                          </div>
-                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
-                            <p className="text-sm font-medium text-muted-foreground">Cars Processed</p>
-                            <p className="text-lg font-bold">{tenant.carsProcessed}</p>
-                          </div>
-                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
-                            <p className="text-sm font-medium text-muted-foreground">API Requests</p>
-                            <p className="text-lg font-bold">{tenant.apiRequests}</p>
-                          </div>
-                          <div className="text-center p-3 bg-admin-accent/10 rounded-lg">
-                            <p className="text-sm font-medium text-muted-foreground">VAT Rate</p>
-                            <p className="text-lg font-bold">{tenant.vat}</p>
-                          </div>
-                          <div className="text-center p-3 bg-admin-primary/10 rounded-lg">
-                            <p className="text-sm font-medium text-muted-foreground">Total Monthly</p>
-                            <p className="text-lg font-bold text-admin-primary">{tenant.totalMonthly}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Service Pricing Breakdown */}
-              <Card className="bg-white shadow-custom-sm">
-                <CardHeader>
-                  <CardTitle className="text-admin-primary">Service Pricing Breakdown</CardTitle>
-                  <CardDescription>Detailed pricing structure per service across all tenants</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-3 font-semibold">Service</th>
-                          <th className="text-left p-3 font-semibold">Starter</th>
-                          <th className="text-left p-3 font-semibold">Premium</th>
-                          <th className="text-left p-3 font-semibold">Enterprise</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b hover:bg-admin-accent/10">
-                          <td className="p-3 font-medium">Platform Base Fee</td>
-                          <td className="p-3">€49/month</td>
-                          <td className="p-3">€149/month</td>
-                          <td className="p-3">€399/month</td>
-                        </tr>
-                        <tr className="border-b hover:bg-admin-accent/10">
-                          <td className="p-3 font-medium">SMS (per message)</td>
-                          <td className="p-3">€0.05 (500 incl.)</td>
-                          <td className="p-3">€0.04 (2,000 incl.)</td>
-                          <td className="p-3">€0.03 (10,000 incl.)</td>
-                        </tr>
-                        <tr className="border-b hover:bg-admin-accent/10">
-                          <td className="p-3 font-medium">Car Processing</td>
-                          <td className="p-3">€2.50 (500 incl.)</td>
-                          <td className="p-3">€2.00 (2,000 incl.)</td>
-                          <td className="p-3">€1.50 (5,000 incl.)</td>
-                        </tr>
-                        <tr className="border-b hover:bg-admin-accent/10">
-                          <td className="p-3 font-medium">Google Maps API</td>
-                          <td className="p-3">€0.005 (25,000 incl.)</td>
-                          <td className="p-3">€0.004 (100,000 incl.)</td>
-                          <td className="p-3">€0.003 (500,000 incl.)</td>
-                        </tr>
-                        <tr className="border-b hover:bg-admin-accent/10">
-                          <td className="p-3 font-medium">VAT Rate</td>
-                          <td className="p-3">25% (Sweden)</td>
-                          <td className="p-3">25% (Sweden)</td>
-                          <td className="p-3">25% (Sweden)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="invoices">
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground">Invoice management temporarily disabled</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="usage">
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground">Usage metering temporarily disabled</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground">Analytics temporarily disabled</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground">Settings temporarily disabled</p>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+            
+            <Button className="w-full">
+              Generate Invoice for {selectedMonth}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
+
+const UsageTrackingTab: React.FC<{ tenants: Tenant[]; services: ServiceCostModel[] }> = ({ tenants, services }) => {
+  const [formData, setFormData] = useState({
+    tenant_id: '',
+    service_name: '',
+    units_used: '',
+    metadata: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('tenant_service_usage')
+        .insert({
+          tenant_id: parseInt(formData.tenant_id),
+          service_name: formData.service_name,
+          units_used: parseFloat(formData.units_used),
+          usage_date: new Date().toISOString().split('T')[0],
+          unit_cost: 0,
+          total_cost: 0,
+          base_cost_allocation: 0,
+          metadata: formData.metadata ? JSON.parse(formData.metadata) : {}
+        });
+
+      if (error) throw error;
+
+      setFormData({ tenant_id: '', service_name: '', units_used: '', metadata: '' });
+      toast({
+        title: "Success",
+        description: "Usage recorded successfully!",
+      });
+    } catch (error) {
+      console.error('Error recording usage:', error);
+      toast({
+        title: "Error",
+        description: "Error recording usage",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Manual Usage Recording</CardTitle>
+        <CardDescription>Record service usage for billing purposes</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Tenant</Label>
+              <Select value={formData.tenant_id} onValueChange={(value) => setFormData({...formData, tenant_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tenant..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.tenants_id} value={tenant.tenants_id.toString()}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Service</Label>
+              <Select value={formData.service_name} onValueChange={(value) => setFormData({...formData, service_name: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.service_name}>
+                      {service.service_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div>
+            <Label>Units Used</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={formData.units_used}
+              onChange={(e) => setFormData({...formData, units_used: e.target.value})}
+              required
+            />
+          </div>
+          
+          <div>
+            <Label>Metadata (JSON)</Label>
+            <Textarea
+              value={formData.metadata}
+              onChange={(e) => setFormData({...formData, metadata: e.target.value})}
+              placeholder='{"description": "Manual entry", "source": "admin"}'
+              rows={3}
+            />
+          </div>
+          
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting ? 'Recording...' : 'Record Usage'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
+const AnalyticsTab: React.FC = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Analytics Dashboard</CardTitle>
+        <CardDescription>
+          Usage analytics and reporting will appear here once usage data is available
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">
+          Start recording usage to see analytics and trends.
+        </p>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default BillingDashboard;

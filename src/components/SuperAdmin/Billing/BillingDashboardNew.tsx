@@ -65,7 +65,7 @@ const BillingDashboardNew: React.FC = () => {
         .order('service_name');
       
       if (error) throw error;
-      setServices(data || []);
+      setServices((data as any) || []);
     } catch (error) {
       console.error('Error fetching services:', error);
       toast({

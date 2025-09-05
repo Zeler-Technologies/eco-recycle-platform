@@ -32,7 +32,7 @@ export class UsageTrackingService {
           .eq('id', data.serviceId)
           .single();
         
-        unitCost = service?.unit_cost || 0;
+        unitCost = (service as any)?.unit_cost || 0;
       }
 
       const totalCost = (data.unitsUsed * unitCost) + (data.baseCostAllocation || 0);
@@ -151,12 +151,12 @@ export class UsageTrackingService {
       }
 
       // Calculate total usage and allocations
-      const totalUnits = monthlyUsage.reduce((sum, usage) => sum + usage.units_used, 0);
+      const totalUnits = (monthlyUsage as any[]).reduce((sum: number, usage: any) => sum + (usage.units_used || 0), 0);
       const baseCost = 500; // €500 monthly base cost
 
       // Group by tenant and calculate allocations
-      const tenantUsage = monthlyUsage.reduce((acc, usage) => {
-        acc[usage.tenant_id] = (acc[usage.tenant_id] || 0) + usage.units_used;
+      const tenantUsage = (monthlyUsage as any[]).reduce((acc: Record<number, number>, usage: any) => {
+        acc[usage.tenant_id] = (acc[usage.tenant_id] || 0) + (usage.units_used || 0);
         return acc;
       }, {} as Record<number, number>);
 
@@ -194,15 +194,7 @@ export class UsageTrackingService {
     try {
       const { data, error } = await supabase
         .from('tenant_service_usage' as any)
-        .select(`
-          service_id,
-          units_used,
-          unit_cost,
-          base_cost_allocation,
-          total_cost,
-          usage_date,
-          service_cost_models!inner(service_name, cost_type)
-        `)
+        .select('*')
         .eq('tenant_id', tenantId)
         .gte('usage_date', startDate)
         .lte('usage_date', endDate)
@@ -214,18 +206,18 @@ export class UsageTrackingService {
       }
 
       // Group by service and calculate totals
-      const summary = data?.reduce((acc, usage) => {
-        const serviceName = (usage as any).service_cost_models.service_name;
+      const summary = (data as any[])?.reduce((acc: any, usage: any) => {
+        const serviceName = usage.service_name || 'Unknown Service';
         if (!acc[serviceName]) {
           acc[serviceName] = {
             total_units: 0,
             total_cost: 0,
             base_cost_allocation: 0,
-            cost_type: (usage as any).service_cost_models.cost_type
+            cost_type: usage.cost_type || 'usage_based'
           };
         }
         
-        acc[serviceName].total_units += usage.units_used;
+        acc[serviceName].total_units += usage.units_used || 0;
         acc[serviceName].total_cost += usage.total_cost || 0;
         acc[serviceName].base_cost_allocation += usage.base_cost_allocation || 0;
         
