@@ -27,7 +27,7 @@ export class UsageTrackingService {
       let unitCost = data.unitCost;
       if (!unitCost) {
         const { data: service } = await supabase
-          .from('service_cost_models')
+          .from('service_cost_models' as any)
           .select('unit_cost')
           .eq('id', data.serviceId)
           .single();
@@ -38,7 +38,7 @@ export class UsageTrackingService {
       const totalCost = (data.unitsUsed * unitCost) + (data.baseCostAllocation || 0);
 
       const { error } = await supabase
-        .from('tenant_service_usage')
+        .from('tenant_service_usage' as any)
         .insert({
           tenant_id: data.tenantId,
           service_id: data.serviceId,
@@ -139,7 +139,7 @@ export class UsageTrackingService {
         .toISOString().split('T')[0];
 
       const { data: monthlyUsage } = await supabase
-        .from('tenant_service_usage')
+        .from('tenant_service_usage' as any)
         .select('tenant_id, units_used')
         .eq('service_id', this.SERVICE_IDS.GOOGLE_MAPS)
         .gte('usage_date', startDate)
@@ -193,7 +193,7 @@ export class UsageTrackingService {
   static async getUsageSummary(tenantId: number, startDate: string, endDate: string) {
     try {
       const { data, error } = await supabase
-        .from('tenant_service_usage')
+        .from('tenant_service_usage' as any)
         .select(`
           service_id,
           units_used,
