@@ -133,6 +133,11 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
     selectedTenant,
     tenantConfigs: tenantConfigs.length,
     currentTenantConfig: !!currentTenantConfig,
+    tenantConfigStructure: currentTenantConfig ? {
+      tenant_id: currentTenantConfig.tenant_id,
+      configurationsCount: currentTenantConfig.configurations?.length,
+      configurationKeys: currentTenantConfig.configurations?.map(c => `${c.config_category}/${c.config_key}`)
+    } : null,
     currencyConfig: currencyConfig?.config_value,
     currency,
     currencySymbol
