@@ -469,8 +469,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
               <TabsContent value="users" className="mt-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-purple-800">User Management</h3>
-                    <p className="text-purple-600 text-sm">Manage all users in the system</p>
+                    <h3 className="text-lg font-semibold text-green-800">User Management</h3>
+                    <p className="text-green-600 text-sm">Manage all users in the system</p>
                   </div>
                   {loading ? (
                     <div className="flex items-center gap-2">
