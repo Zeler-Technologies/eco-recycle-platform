@@ -127,6 +127,16 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
   };
   
   const currencySymbol = getCurrencySymbol(currency);
+  
+  // Debug logging
+  console.log('TenantManagement Currency Debug:', {
+    selectedTenant,
+    tenantConfigs: tenantConfigs.length,
+    currentTenantConfig: !!currentTenantConfig,
+    currencyConfig: currencyConfig?.config_value,
+    currency,
+    currencySymbol
+  });
 
   // Set selected tenant when prop changes
   useEffect(() => {
