@@ -447,8 +447,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   <Users className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-purple-800">User Management</CardTitle>
-                  <p className="text-purple-600 text-sm">Manage users and permissions for the system</p>
+                  <CardTitle className="text-green-800">User Management</CardTitle>
+                  <p className="text-green-600 text-sm">Manage users and permissions for the system</p>
                 </div>
               </div>
             </div>
