@@ -1317,55 +1317,41 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
                   OK
                 </Button>
                 
-                {selectedRequest.status === 'pending' && (
-                  <>
-                    {/* Check if pickup date is today or in the future */}
-                    {selectedRequest.date >= new Date(new Date().setHours(0,0,0,0)) ? (
-                      <Button
-                        onClick={() => handleConfirmRequest(selectedRequest.id)}
-                        className="flex items-center gap-2"
-                        disabled={!selectedRequest.assignedDriver}
-                      >
-                        <Check className="h-4 w-4" />
-                        Bekräfta hämtning
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => handleRescheduleRequest(selectedRequest)}
-                        className="flex items-center gap-2"
-                      >
-                        <Clock className="h-4 w-4" />
-                        Omschemalägg (försenad)
-                      </Button>
-                    )}
-                  </>
+                {/* Always show reschedule button */}
+                <Button
+                  variant="outline"
+                  onClick={() => handleRescheduleRequest(selectedRequest)}
+                  className="flex items-center gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  {selectedRequest.status === 'cancelled' ? 'Återaktivera & Omschemalägg' : 'Omschemalägg'}
+                </Button>
+                
+                {selectedRequest.status === 'pending' && selectedRequest.date >= new Date(new Date().setHours(0,0,0,0)) && (
+                  <Button
+                    onClick={() => handleConfirmRequest(selectedRequest.id)}
+                    className="flex items-center gap-2"
+                    disabled={!selectedRequest.assignedDriver}
+                  >
+                    <Check className="h-4 w-4" />
+                    Bekräfta hämtning
+                  </Button>
                 )}
 
-                {(['scheduled', 'assigned', 'in_progress'].includes(selectedRequest.status) || selectedRequest.status === 'cancelled') && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleRescheduleRequest(selectedRequest)}
-                      className="flex items-center gap-2"
-                    >
-                      <Clock className="h-4 w-4" />
-                      {selectedRequest.status === 'cancelled' ? 'Återaktivera & Omschemalägg' : 'Omschemalägg'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        toast({
-                          title: "SMS skickat",
-                          description: `Påminnelse skickad till ${selectedRequest.customerName}`
-                        });
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      Skicka påminnelse
-                    </Button>
-                  </>
+                {(['scheduled', 'assigned', 'in_progress'].includes(selectedRequest.status)) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      toast({
+                        title: "SMS skickat",
+                        description: `Påminnelse skickad till ${selectedRequest.customerName}`
+                      });
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Skicka påminnelse
+                  </Button>
                 )}
                 
                 {/* Avboka button at far right - hidden for cancelled and completed pickups */}
