@@ -285,7 +285,7 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     
     switch (status) {
       case 'available': return 'bg-status-completed text-white';
-      case 'busy': return 'bg-status-processing text-white';
+      case 'busy': return 'bg-status-cancelled text-white';
       case 'offline': return 'bg-muted text-muted-foreground';
       case 'break': return 'bg-status-pending text-white';
       default: return 'bg-muted';
