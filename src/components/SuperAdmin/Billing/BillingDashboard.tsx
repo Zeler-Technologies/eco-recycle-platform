@@ -115,22 +115,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
     try {
       console.log('Fetching real invoices from database...');
       
-      // Get real invoices from the database
+      // Get real invoices from the database (simplified query)
       const { data, error } = await supabase
         .from('scrapyard_invoices')
-        .select(`
-          id,
-          tenant_id,
-          scrapyard_id,
-          invoice_number,
-          invoice_date,
-          due_date,
-          total_amount,
-          vat_amount,
-          currency,
-          status,
-          tenants!inner(name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -169,16 +157,30 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
       
       console.log('Raw invoice data:', data);
       
+      // Get tenant names separately if we have invoices
+      const tenantMap = new Map();
+      if (data && data.length > 0) {
+        const tenantIds = [...new Set(data.map(inv => inv.tenant_id))];
+        const { data: tenantsData } = await supabase
+          .from('tenants')
+          .select('tenants_id, name')
+          .in('tenants_id', tenantIds);
+        
+        tenantsData?.forEach(tenant => {
+          tenantMap.set(tenant.tenants_id, tenant.name);
+        });
+      }
+      
       // Transform real data to match Invoice interface
       const transformedInvoices = (data || []).map((inv: any) => ({
         id: inv.id,
         invoice_number: inv.invoice_number,
         tenant_id: inv.tenant_id,
-        tenant_name: inv.tenants?.name || 'Unknown Tenant',
+        tenant_name: tenantMap.get(inv.tenant_id) || `Tenant ${inv.tenant_id}`,
         invoice_date: inv.invoice_date || '2025-09-01',
         due_date: inv.due_date || '2025-10-01',
-        total_amount: inv.total_amount || 0,
-        vat_amount: inv.vat_amount || 0,
+        total_amount: Number(inv.total_amount) || 0,
+        vat_amount: Number(inv.vat_amount) || 0,
         status: inv.status as 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled',
         currency: inv.currency || 'SEK'
       }));
