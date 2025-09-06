@@ -80,7 +80,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 
   const fetchBillingOverview = async () => {
     try {
-      // Mock data for development
+      // Use mock data for development - can be replaced with real RPC calls
       const mockOverview: BillingOverview = {
         billing_month: selectedMonth,
         invoice_summary: {
@@ -96,6 +96,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
         }
       };
       setBillingOverview(mockOverview);
+      
+      // TODO: Replace with real RPC call when database is ready:
+      // const { data, error } = await supabase.rpc('get_monthly_billing_overview', {
+      //   p_billing_month: selectedMonth + '-01'
+      // });
     } catch (error) {
       console.error('Error fetching billing overview:', error);
       toast({
@@ -108,7 +113,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 
   const fetchInvoices = async () => {
     try {
-      // Mock data for development
+      // Use mock data for development - can be replaced with real database queries
       const mockInvoices: Invoice[] = [
         {
           id: 1,
@@ -148,6 +153,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
         }
       ];
       setInvoices(mockInvoices);
+      
+      // TODO: Replace with real database query when schema is ready:
+      // const { data, error } = await supabase
+      //   .from('scrapyard_invoices')
+      //   .select('*, tenants!inner(name)')
+      //   .order('created_at', { ascending: false });
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast({
@@ -161,7 +172,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
   const generateMonthlyInvoices = async () => {
     setGenerating(true);
     try {
-      // Mock generation for development
+      // Mock generation for development - can be replaced with real RPC later
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
@@ -185,19 +196,31 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 
   const updateInvoiceStatus = async (invoiceId: number, newStatus: string) => {
     try {
-      // Mock update for development
-      setInvoices(prev => prev.map(inv => 
-        inv.id === invoiceId 
-          ? { ...inv, status: newStatus as any }
-          : inv
-      ));
-      
+      const { error } = await supabase
+        .from('scrapyard_invoices')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoiceId);
+
+      if (error) {
+        console.error('Status update error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update invoice status: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
       toast({
         title: "Success",
         description: `Invoice status updated to ${newStatus}`,
       });
       
-      await fetchBillingOverview();
+      // Refresh data
+      await Promise.all([fetchBillingOverview(), fetchInvoices()]);
     } catch (error) {
       console.error('Error updating invoice status:', error);
       toast({
