@@ -200,13 +200,23 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   // Fetch invoices for the selected month with enhanced data
   const fetchInvoices = async () => {
     try {
-      console.log('Fetching invoices...');
+      console.log('🔍 Fetching invoices for month:', selectedMonth);
       setLoading(true);
+
+      // First, let's check what's actually in the table
+      const { data: allInvoices, error: allError } = await supabase
+        .from('scrapyard_invoices')
+        .select('*');
+      
+      console.log('📊 ALL INVOICES IN TABLE:', allInvoices);
+      console.log('📊 ALL INVOICES COUNT:', allInvoices?.length || 0);
 
       const [year, month] = selectedMonth.split('-').map(Number);
       const startDate = `${selectedMonth}-01`;
-      const nextMonth = new Date(year, month, 1); // first day of next month
+      const nextMonth = new Date(year, month, 1);
       const endDateStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+      
+      console.log('📅 Date range:', startDate, 'to', endDateStr);
 
       // Get invoices from scrapyard_invoices table
       const baseQuery: any = supabase
@@ -363,12 +373,13 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   };
 
   useEffect(() => {
+    console.log('🚀 useEffect triggered for month:', selectedMonth);
     fetchBillingOverview();
     fetchInvoices();
   }, [selectedMonth]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6">{/* Billing Dashboard Container */}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
