@@ -259,43 +259,7 @@ const SuperAdminDashboard = () => {
   }
 
   if (showBillingManagement) {
-    return (
-      <div className="theme-admin min-h-screen bg-admin-muted">
-        <header className="bg-admin-primary text-admin-primary-foreground shadow-custom-md">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowBillingManagement(false)}
-                  className="flex items-center gap-2 text-admin-primary-foreground hover:text-admin-primary-foreground/80 transition-colors"
-                >
-                  <Building2 className="h-6 w-6" />
-                  <span>← Back to Dashboard</span>
-                </button>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-semibold">{user?.name}</p>
-                  <p className="text-sm text-admin-primary-foreground/80">{user?.email}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={logout}
-                  className="border-admin-primary-foreground/30 text-admin-primary-foreground hover:bg-admin-primary-foreground/10"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="p-6">
-          <BillingDashboard />
-        </div>
-      </div>
-    );
+    return <BillingDashboard onBack={() => setShowBillingManagement(false)} />;
   }
 
   if (showTenantList) {
