@@ -197,68 +197,102 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   };
 
   // Fetch invoices for the selected month with enhanced data
+  // Fetch invoices for the selected month with enhanced data
   const fetchInvoices = async () => {
     try {
+      console.log('Fetching invoices...');
       setLoading(true);
-      const startDate = `${selectedMonth}-01`;
-      const [year, month] = selectedMonth.split('-').map(Number);
-      const nextMonth = new Date(year, month, 1); // month is already 1-indexed from selectedMonth
-      const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
 
-      const { data, error } = await supabase
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const startDate = `${selectedMonth}-01`;
+      const nextMonth = new Date(year, month, 1); // first day of next month
+      const endDateStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+
+      // Get invoices from scrapyard_invoices table
+      const baseQuery: any = supabase
         .from('scrapyard_invoices')
         .select(`
           id,
-          invoice_number,
           tenant_id,
+          scrapyard_id,
+          invoice_number,
           invoice_date,
           due_date,
           total_amount,
-          tax_amount,
+          vat_amount,
+          currency,
           status,
-          tenants(name)
-        `)
-        .gte('invoice_date', startDate)
-        .lt('invoice_date', endDate)
-        .order('invoice_date', { ascending: false });
+          invoice_type,
+          billing_month
+        `);
+
+      const { data, error } = await baseQuery
+        .eq('invoice_type', 'monthly')
+        .gte('billing_month', startDate)
+        .lt('billing_month', endDateStr)
+        .order('id', { ascending: false });
 
       if (error) {
-        console.error('Error fetching invoices:', error);
-        toast.error('Failed to fetch invoices');
+        console.error('Invoice fetch error:', error);
+        // Keep sonner for consistency in this file
+        toast.error('Failed to load invoices: ' + error.message);
         return;
       }
 
-      const formattedInvoices: Invoice[] = data.map(invoice => ({
-        id: invoice.id,
-        invoice_number: invoice.invoice_number,
-        tenant_id: invoice.tenant_id,
-        tenant_name: invoice.tenants?.name || `Tenant ${invoice.tenant_id}`,
-        invoice_date: invoice.invoice_date,
-        due_date: invoice.due_date,
-        total_amount: invoice.total_amount,
-        vat_amount: invoice.tax_amount || 0,
-        status: invoice.status as 'pending' | 'paid' | 'overdue' | 'cancelled',
-        currency: 'SEK',
-        invoice_type: 'monthly',
-        billing_month: invoice.invoice_date,
+      console.log('Raw invoice data:', data);
+
+      // Get tenant names separately
+      const tenantMap = new Map<number, string>();
+      if (data && data.length > 0) {
+        const tenantIds = [...new Set((data as any[]).map(inv => inv.tenant_id).filter(Boolean))];
+        
+        if (tenantIds.length > 0) {
+          const { data: tenantsData, error: tenantError } = await supabase
+            .from('tenants')
+            .select<any>('tenants_id, name')
+            .in('tenants_id', tenantIds);
+          
+          if (!tenantError && tenantsData) {
+            (tenantsData as any[]).forEach(tenant => {
+              tenantMap.set(tenant.tenants_id, tenant.name);
+            });
+          }
+        }
+      }
+      
+      // Transform the data to match our Invoice interface
+      const transformedInvoices: Invoice[] = (data || []).map((inv: any) => ({
+        id: inv.id,
+        invoice_number: inv.invoice_number || `INV-${inv.tenant_id}-${selectedMonth}`,
+        tenant_id: inv.tenant_id || 0,
+        tenant_name: tenantMap.get(inv.tenant_id) || `Tenant ${inv.tenant_id}`,
+        invoice_date: inv.invoice_date || new Date().toISOString().split('T')[0],
+        due_date: inv.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        total_amount: Number(inv.total_amount) || 0,
+        vat_amount: Number(inv.vat_amount) || 0,
+        status: (inv.status || 'pending') as Invoice['status'],
+        currency: inv.currency || 'SEK',
+        invoice_type: inv.invoice_type || 'monthly',
+        billing_month: inv.billing_month || startDate,
         vat_rate: 25
       }));
-
-      setInvoices(formattedInvoices);
-
-      // Calculate stats
-      const totalAmount = formattedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-      const uniqueTenants = new Set(formattedInvoices.map(inv => inv.tenant_id)).size;
       
+      console.log('Transformed invoices:', transformedInvoices);
+      setInvoices(transformedInvoices);
+
+      // Update quick stats
+      const totalAmount = transformedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
+      const uniqueTenants = new Set(transformedInvoices.map(inv => inv.tenant_id)).size;
       setStats({
-        totalInvoices: formattedInvoices.length,
-        totalAmount: totalAmount,
-        averageAmount: formattedInvoices.length > 0 ? totalAmount / formattedInvoices.length : 0,
+        totalInvoices: transformedInvoices.length,
+        totalAmount,
+        averageAmount: transformedInvoices.length > 0 ? totalAmount / transformedInvoices.length : 0,
         tenantCount: uniqueTenants
       });
-
+      
     } catch (error) {
-      console.error('Error in fetchInvoices:', error);
+      console.error('Error fetching invoices:', error);
+      toast.error('Failed to load invoices');
     } finally {
       setLoading(false);
     }
