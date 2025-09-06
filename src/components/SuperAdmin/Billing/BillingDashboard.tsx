@@ -200,78 +200,50 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   // Fetch invoices for the selected month with enhanced data
   const fetchInvoices = async () => {
     try {
-      console.log('🔍 Fetching invoices for month:', selectedMonth);
+      console.log('🔥 FETCHING INVOICES FOR:', selectedMonth);
       setLoading(true);
 
-      // First, let's check what's actually in the table
-      const { data: allInvoices, error: allError } = await supabase
-        .from('scrapyard_invoices')
-        .select('*');
-      
-      console.log('📊 ALL INVOICES IN TABLE:', allInvoices);
-      console.log('📊 ALL INVOICES COUNT:', allInvoices?.length || 0);
-
-      const [year, month] = selectedMonth.split('-').map(Number);
       const startDate = `${selectedMonth}-01`;
-      const nextMonth = new Date(year, month, 1);
-      const endDateStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+      console.log('🔥 LOOKING FOR BILLING_MONTH:', startDate);
+
+      // Use fetch API directly to avoid TypeScript issues
+      const supabaseUrl = 'https://cknydpndojctryxwrrmq.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrbnlkcG5kb2pjdHJ5eHdycm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMzczNzMsImV4cCI6MjA2NjYxMzM3M30.lAU68rRvQPGUT4J6HyF537MxeoYLXG6XcKjzU7ZzRSI';
       
-      console.log('📅 Date range:', startDate, 'to', endDateStr);
+      const response = await fetch(`${supabaseUrl}/rest/v1/scrapyard_invoices?billing_month=eq.${startDate}&select=*`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      // Get invoices from scrapyard_invoices table
-      const baseQuery: any = supabase
-        .from('scrapyard_invoices')
-        .select(`
-          id,
-          tenant_id,
-          scrapyard_id,
-          invoice_number,
-          invoice_date,
-          due_date,
-          total_amount,
-          tax_amount,
-          vat_amount,
-          currency,
-          status,
-          invoice_type,
-          billing_month
-        `);
+      const invoices = await response.json();
+      console.log('🔥 FOUND INVOICES:', invoices.length, invoices);
 
-      const { data, error } = await baseQuery
-        .eq('invoice_type', 'monthly')
-        .eq('billing_month', startDate)
-        .order('id', { ascending: false });
-
-      if (error) {
-        console.error('Invoice fetch error:', error);
-        // Keep sonner for consistency in this file
-        toast.error('Failed to load invoices: ' + error.message);
-        return;
-      }
-
-      console.log('Raw invoice data:', data);
-
-      // Get tenant names separately
-      const tenantMap = new Map<number, string>();
-      if (data && data.length > 0) {
-        const tenantIds = [...new Set((data as any[]).map(inv => inv.tenant_id).filter(Boolean))];
+      // Get tenant names
+      const tenantMap = new Map();
+      if (invoices.length > 0) {
+        const tenantIds = [...new Set(invoices.map((inv: any) => inv.tenant_id).filter(Boolean))];
         
         if (tenantIds.length > 0) {
-          const { data: tenantsData, error: tenantError } = await supabase
-            .from('tenants')
-            .select<any>('tenants_id, name')
-            .in('tenants_id', tenantIds);
+          const tenantResponse = await fetch(`${supabaseUrl}/rest/v1/tenants?tenants_id=in.(${tenantIds.join(',')})&select=tenants_id,name`, {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
           
-          if (!tenantError && tenantsData) {
-            (tenantsData as any[]).forEach(tenant => {
-              tenantMap.set(tenant.tenants_id, tenant.name);
-            });
-          }
+          const tenants = await tenantResponse.json();
+          tenants.forEach((tenant: any) => {
+            tenantMap.set(tenant.tenants_id, tenant.name);
+          });
         }
       }
-      
-      // Transform the data to match our Invoice interface
-      const transformedInvoices: Invoice[] = (data || []).map((inv: any) => ({
+
+      // Transform invoices
+      const transformedInvoices = invoices.map((inv: any) => ({
         id: inv.id,
         invoice_number: inv.invoice_number || `INV-${inv.tenant_id}-${selectedMonth}`,
         tenant_id: inv.tenant_id || 0,
@@ -280,29 +252,31 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
         due_date: inv.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         total_amount: Number(inv.total_amount) || 0,
         vat_amount: Number(inv.vat_amount || inv.tax_amount) || 0,
-        status: (inv.status || 'pending') as Invoice['status'],
+        status: inv.status || 'pending',
         currency: inv.currency || 'SEK',
         invoice_type: inv.invoice_type || 'monthly',
         billing_month: inv.billing_month || startDate,
         vat_rate: 25
       }));
-      
-      console.log('Transformed invoices:', transformedInvoices);
+
+      console.log('🔥 TRANSFORMED INVOICES:', transformedInvoices);
       setInvoices(transformedInvoices);
 
-      // Update quick stats
-      const totalAmount = transformedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-      const uniqueTenants = new Set(transformedInvoices.map(inv => inv.tenant_id)).size;
+      // Update stats
+      const totalAmount = transformedInvoices.reduce((sum: number, inv: any) => sum + inv.total_amount, 0);
+      const uniqueTenants = new Set(transformedInvoices.map((inv: any) => inv.tenant_id)).size;
+      
       setStats({
         totalInvoices: transformedInvoices.length,
         totalAmount,
         averageAmount: transformedInvoices.length > 0 ? totalAmount / transformedInvoices.length : 0,
         tenantCount: uniqueTenants
       });
-      
+
     } catch (error) {
-      console.error('Error fetching invoices:', error);
+      console.error('🚨 ERROR fetching invoices:', error);
       toast.error('Failed to load invoices');
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
