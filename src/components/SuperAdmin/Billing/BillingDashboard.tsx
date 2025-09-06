@@ -7,25 +7,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   ArrowLeft, 
-  Download, 
   FileText, 
   DollarSign, 
   TrendingUp, 
   Calendar,
   Plus,
-  Eye,
-  Edit,
-  Trash2,
   RefreshCw,
   Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ServiceCostTab, InvoiceDetailModal } from './ServiceCostComponents';
 
 // Interfaces based on confirmed database schema
 interface ServiceCostModel {
@@ -100,6 +94,7 @@ interface Invoice {
 interface BillingOverview {
   total_invoices_generated: number;
   total_revenue_sek: number;
+  total_vat_sek: number;
   breakdown_by_service: Array<{
     service_name: string;
     total_cost: number;
@@ -116,6 +111,331 @@ interface BillingDashboardProps {
   onBack: () => void;
 }
 
+// Service Cost Tab Component
+const ServiceCostTab: React.FC<{
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
+}> = ({ selectedMonth, setSelectedMonth }) => {
+  const [serviceCosts, setServiceCosts] = useState<ServiceCostModel[]>([]);
+  const [tenantUsage, setTenantUsage] = useState<TenantServiceUsage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchServiceData();
+  }, [selectedMonth]);
+
+  const fetchServiceData = async () => {
+    setLoading(true);
+    try {
+      // Fetch service cost models
+      const { data: costs, error: costsError } = await supabase
+        .from('service_cost_models')
+        .select('*')
+        .order('service_name');
+
+      if (costsError) {
+        console.error('Error fetching service costs:', costsError);
+      } else {
+        setServiceCosts(costs || []);
+      }
+
+      // Fetch tenant usage for selected month
+      const startDate = `${selectedMonth}-01`;
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+
+      const { data: usage, error: usageError } = await supabase
+        .from('tenant_service_usage')
+        .select(`
+          *,
+          service_cost_models(service_name, cost_type),
+          tenants(name)
+        `)
+        .gte('usage_date', startDate)
+        .lte('usage_date', endDate);
+
+      if (usageError) {
+        console.error('Error fetching usage data:', usageError);
+      } else {
+        setTenantUsage(usage || []);
+      }
+    } catch (error) {
+      console.error('Error fetching service data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <span className="ml-2">Loading service data...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-semibold">Service Cost Management</h2>
+          <p className="text-muted-foreground">Pricing models and usage tracking</p>
+        </div>
+      </div>
+
+      {/* Service Pricing Models */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Pricing Models</CardTitle>
+          <CardDescription>Current pricing structure for platform services</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            {serviceCosts.map(service => (
+              <div key={service.id} className="flex justify-between items-center p-4 border rounded-lg">
+                <div>
+                  <div className="font-medium">{service.service_name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Type: {service.cost_type} | Allocation: {service.allocation_method}
+                  </div>
+                </div>
+                <div className="text-right">
+                  {service.base_cost_monthly > 0 && (
+                    <div className="text-sm">
+                      Base: {new Intl.NumberFormat('sv-SE', {
+                        style: 'currency',
+                        currency: 'SEK'
+                      }).format(service.base_cost_monthly)}/month
+                    </div>
+                  )}
+                  <div className="font-medium">
+                    {new Intl.NumberFormat('sv-SE', {
+                      style: 'currency',
+                      currency: 'SEK'
+                    }).format(service.unit_cost)}/unit
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tenant Usage Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tenant Usage Summary</CardTitle>
+          <CardDescription>Usage breakdown by tenant for {selectedMonth}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Object.entries(
+              tenantUsage.reduce((acc, usage) => {
+                const tenantName = usage.tenants?.name || `Tenant ${usage.tenant_id}`;
+                if (!acc[tenantName]) acc[tenantName] = [];
+                acc[tenantName].push(usage);
+                return acc;
+              }, {} as Record<string, TenantServiceUsage[]>)
+            ).map(([tenantName, usages]) => (
+              <div key={tenantName} className="border rounded-lg p-4">
+                <h4 className="font-medium mb-2">{tenantName}</h4>
+                <div className="grid gap-2">
+                  {usages.map(usage => (
+                    <div key={usage.id} className="flex justify-between text-sm">
+                      <span>
+                        {usage.service_cost_models?.service_name}: {usage.units_used} units
+                      </span>
+                      <span className="font-medium">
+                        {new Intl.NumberFormat('sv-SE', {
+                          style: 'currency',
+                          currency: 'SEK'
+                        }).format(usage.total_cost)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+                  <span>Total:</span>
+                  <span>
+                    {new Intl.NumberFormat('sv-SE', {
+                      style: 'currency',
+                      currency: 'SEK'
+                    }).format(usages.reduce((sum, u) => sum + u.total_cost, 0))}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Invoice Detail Modal Component
+const InvoiceDetailModal: React.FC<{
+  invoice: Invoice;
+  onClose: () => void;
+}> = ({ invoice, onClose }) => {
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchInvoiceDetails();
+  }, [invoice.id]);
+
+  const fetchInvoiceDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scrapyard_invoice_items')
+        .select(`
+          *,
+          service_cost_models(service_name)
+        `)
+        .eq('invoice_id', invoice.id);
+
+      if (!error && data) {
+        setLineItems(data);
+      }
+    } catch (error) {
+      console.error('Error fetching invoice details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid': return 'default';
+      case 'pending': return 'secondary';
+      case 'overdue': return 'destructive';
+      case 'cancelled': return 'outline';
+      default: return 'secondary';
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Invoice Details: {invoice.invoice_number}</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Invoice Header */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+            <div>
+              <Label>Tenant:</Label>
+              <div className="font-medium">{invoice.tenant_name}</div>
+            </div>
+            <div>
+              <Label>Invoice Date:</Label>
+              <div className="font-medium">{invoice.invoice_date}</div>
+            </div>
+            <div>
+              <Label>Due Date:</Label>
+              <div className="font-medium">{invoice.due_date}</div>
+            </div>
+            <div>
+              <Label>Status:</Label>
+              <Badge variant={getStatusColor(invoice.status)}>
+                {invoice.status}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Service Breakdown */}
+          <div>
+            <Label>Service Line Items:</Label>
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="border rounded-lg mt-2">
+                {lineItems.length > 0 ? (
+                  lineItems.map(item => (
+                    <div key={item.id} className="flex justify-between p-4 border-b last:border-b-0">
+                      <div>
+                        <div className="font-medium">
+                          {item.service_cost_models?.service_name || item.description}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.quantity} × {new Intl.NumberFormat('sv-SE', {
+                            style: 'currency',
+                            currency: 'SEK'
+                          }).format(item.unit_price)}
+                        </div>
+                        {item.service_period_start && (
+                          <div className="text-xs text-muted-foreground">
+                            Period: {item.service_period_start} to {item.service_period_end}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">
+                          {new Intl.NumberFormat('sv-SE', {
+                            style: 'currency',
+                            currency: 'SEK'
+                          }).format(item.total_price)}
+                        </div>
+                        {item.tax_amount > 0 && (
+                          <div className="text-sm text-muted-foreground">
+                            VAT: {new Intl.NumberFormat('sv-SE', {
+                              style: 'currency',
+                              currency: 'SEK'
+                            }).format(item.tax_amount)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No line items found for this invoice
+                  </div>
+                )}
+                
+                {/* Invoice Totals */}
+                <div className="bg-muted/50 space-y-2 p-4">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span className="font-medium">
+                      {new Intl.NumberFormat('sv-SE', {
+                        style: 'currency',
+                        currency: 'SEK'
+                      }).format(invoice.total_amount - invoice.vat_amount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>VAT ({invoice.vat_rate}%):</span>
+                    <span className="font-medium">
+                      {new Intl.NumberFormat('sv-SE', {
+                        style: 'currency',
+                        currency: 'SEK'
+                      }).format(invoice.vat_amount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Total:</span>
+                    <span>
+                      {new Intl.NumberFormat('sv-SE', {
+                        style: 'currency',
+                        currency: 'SEK'
+                      }).format(invoice.total_amount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -128,12 +448,6 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   const [loading, setLoading] = useState(false);
   const [loadingOverview, setLoadingOverview] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [stats, setStats] = useState({
-    totalInvoices: 0,
-    totalAmount: 0,
-    averageAmount: 0,
-    tenantCount: 0
-  });
 
   // Generate month options for the past 12 months
   const generateMonthOptions = () => {
@@ -161,34 +475,32 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
     }
   };
 
-  // Simplified billing overview using available functions
+  // Fetch billing overview using correct query
   const fetchBillingOverview = async () => {
     setLoadingOverview(true);
     try {
-      const [year, month] = selectedMonth.split('-').map(Number);
       const startDate = `${selectedMonth}-01`;
-      const endDate = new Date(year, month, 1).toISOString().split('T')[0]; // Last day of month
       
       const { data: invoiceData, error } = await supabase
         .from('scrapyard_invoices')
-        .select('total_amount, status, tenants(name)')
-        .gte('invoice_date', startDate)
-        .lt('invoice_date', endDate);
+        .select('total_amount, vat_amount, status, tenant_id')
+        .eq('billing_month', startDate);
       
       if (error) {
         console.error('Billing overview error:', error);
         return;
       }
       
-      // Create mock overview from invoice data
-      const mockOverview = {
+      // Calculate overview from real data
+      const overview: BillingOverview = {
         total_invoices_generated: invoiceData?.length || 0,
-        total_revenue_sek: invoiceData?.reduce((sum, inv) => sum + inv.total_amount, 0) || 0,
+        total_revenue_sek: invoiceData?.reduce((sum, inv) => sum + Number(inv.total_amount), 0) || 0,
+        total_vat_sek: invoiceData?.reduce((sum, inv) => sum + Number(inv.vat_amount), 0) || 0,
         breakdown_by_service: [],
         breakdown_by_tenant: []
       };
       
-      setBillingOverview(mockOverview);
+      setBillingOverview(overview);
     } catch (error) {
       console.error('Error fetching billing overview:', error);
     } finally {
@@ -196,124 +508,134 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
     }
   };
 
-  // Fetch invoices for the selected month with enhanced data
-  // Fetch invoices for the selected month with enhanced data
+  // Fixed fetchInvoices function
   const fetchInvoices = async () => {
     try {
-      console.log('🔥 FETCHING INVOICES FOR:', selectedMonth);
+      console.log('Fetching invoices for month:', selectedMonth);
       setLoading(true);
 
       const startDate = `${selectedMonth}-01`;
-      console.log('🔥 LOOKING FOR BILLING_MONTH:', startDate);
-
-      // Use fetch API directly to avoid TypeScript issues
-      const supabaseUrl = 'https://cknydpndojctryxwrrmq.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrbnlkcG5kb2pjdHJ5eHdycm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMzczNzMsImV4cCI6MjA2NjYxMzM3M30.lAU68rRvQPGUT4J6HyF537MxeoYLXG6XcKjzU7ZzRSI';
       
-      const response = await fetch(`${supabaseUrl}/rest/v1/scrapyard_invoices?billing_month=eq.${startDate}&select=*`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Query billing_month instead of invoice_date
+      const { data, error } = await supabase
+        .from('scrapyard_invoices')
+        .select('*')
+        .eq('billing_month', startDate)
+        .order('id', { ascending: false });
 
-      const invoices = await response.json();
-      console.log('🔥 FOUND INVOICES:', invoices.length, invoices);
+      if (error) {
+        console.error('Query error:', error);
+        toast.error('Failed to load invoices');
+        return;
+      }
+
+      console.log('Found invoices:', data?.length, data);
 
       // Get tenant names
       const tenantMap = new Map();
-      if (invoices.length > 0) {
-        const tenantIds = [...new Set(invoices.map((inv: any) => inv.tenant_id).filter(Boolean))];
+      if (data && data.length > 0) {
+        const tenantIds = [...new Set(data.map(inv => inv.tenant_id).filter(Boolean))];
         
         if (tenantIds.length > 0) {
-          const tenantResponse = await fetch(`${supabaseUrl}/rest/v1/tenants?tenants_id=in.(${tenantIds.join(',')})&select=tenants_id,name`, {
-            headers: {
-              'apikey': supabaseKey,
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          const { data: tenantsData } = await supabase
+            .from('tenants')
+            .select('tenants_id, name')
+            .in('tenants_id', tenantIds);
           
-          const tenants = await tenantResponse.json();
-          tenants.forEach((tenant: any) => {
+          tenantsData?.forEach(tenant => {
             tenantMap.set(tenant.tenants_id, tenant.name);
           });
         }
       }
 
       // Transform invoices
-      const transformedInvoices = invoices.map((inv: any) => ({
+      const transformedInvoices = (data || []).map(inv => ({
         id: inv.id,
-        invoice_number: inv.invoice_number || `INV-${inv.tenant_id}-${selectedMonth}`,
-        tenant_id: inv.tenant_id || 0,
+        invoice_number: inv.invoice_number,
+        tenant_id: inv.tenant_id,
         tenant_name: tenantMap.get(inv.tenant_id) || `Tenant ${inv.tenant_id}`,
-        invoice_date: inv.invoice_date || new Date().toISOString().split('T')[0],
-        due_date: inv.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        total_amount: Number(inv.total_amount) || 0,
-        vat_amount: Number(inv.vat_amount || inv.tax_amount) || 0,
-        status: inv.status || 'pending',
+        invoice_date: inv.invoice_date,
+        due_date: inv.due_date,
+        total_amount: Number(inv.total_amount),
+        vat_amount: Number(inv.vat_amount),
+        status: inv.status,
         currency: inv.currency || 'SEK',
-        invoice_type: inv.invoice_type || 'monthly',
-        billing_month: inv.billing_month || startDate,
-        vat_rate: 25
+        invoice_type: inv.invoice_type,
+        billing_month: inv.billing_month,
+        vat_rate: inv.vat_rate || 25
       }));
 
-      console.log('🔥 TRANSFORMED INVOICES:', transformedInvoices);
+      console.log('Transformed invoices:', transformedInvoices);
       setInvoices(transformedInvoices);
 
-      // Update stats
-      const totalAmount = transformedInvoices.reduce((sum: number, inv: any) => sum + inv.total_amount, 0);
-      const uniqueTenants = new Set(transformedInvoices.map((inv: any) => inv.tenant_id)).size;
-      
-      setStats({
-        totalInvoices: transformedInvoices.length,
-        totalAmount,
-        averageAmount: transformedInvoices.length > 0 ? totalAmount / transformedInvoices.length : 0,
-        tenantCount: uniqueTenants
-      });
-
     } catch (error) {
-      console.error('🚨 ERROR fetching invoices:', error);
+      console.error('Error fetching invoices:', error);
       toast.error('Failed to load invoices');
-      setInvoices([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Generate monthly invoices - simplified approach
+  // Generate monthly invoices using RPC function
   const generateMonthlyInvoices = async () => {
     setGenerating(true);
     try {
-      // Simple mock generation since RPC might not be available
-      const { data: tenants } = await supabase
-        .from('tenants')
-        .select('tenants_id, name')
-        .limit(5);
+      // Try to use the working RPC function first
+      const { data, error } = await supabase.rpc('generate_monthly_invoices_for_tenants_test', {
+        p_billing_month: selectedMonth
+      });
 
-      if (!tenants || tenants.length === 0) {
-        toast.error('No tenants found');
-        return;
+      if (error) {
+        console.error('RPC error, falling back to simple generation:', error);
+        
+        // Fallback to simple generation
+        const { data: tenants } = await supabase
+          .from('tenants')
+          .select('tenants_id, name')
+          .limit(3);
+
+        if (!tenants || tenants.length === 0) {
+          toast.error('No tenants found');
+          return;
+        }
+
+        let generatedCount = 0;
+        const startDate = `${selectedMonth}-01`;
+        
+        for (const tenant of tenants) {
+          // Check if invoice already exists
+          const { data: existing } = await supabase
+            .from('scrapyard_invoices')
+            .select('id')
+            .eq('tenant_id', tenant.tenants_id)
+            .eq('billing_month', startDate)
+            .single();
+
+          if (!existing) {
+            const { error: insertError } = await supabase.from('scrapyard_invoices').insert({
+              scrapyard_id: 1,
+              tenant_id: tenant.tenants_id,
+              invoice_number: `INV-${tenant.tenants_id}-${selectedMonth}`,
+              invoice_date: startDate,
+              due_date: `${selectedMonth}-28`,
+              total_amount: 125,
+              vat_amount: 25,
+              vat_rate: 25,
+              currency: 'SEK',
+              status: 'pending',
+              invoice_type: 'monthly',
+              billing_month: startDate
+            });
+            
+            if (!insertError) generatedCount++;
+          }
+        }
+
+        toast.success(`Generated ${generatedCount} invoices`);
+      } else {
+        toast.success(`Generated ${data.total_invoices_generated} invoices totaling ${data.total_revenue_sek} SEK`);
       }
 
-      let generatedCount = 0;
-      for (const tenant of tenants) {
-        const amount = Math.floor(Math.random() * 500) + 200;
-        const { error } = await supabase.from('scrapyard_invoices').insert({
-          scrapyard_id: 1,
-          tenant_id: tenant.tenants_id,
-          invoice_number: `INV-${selectedMonth}-${tenant.tenants_id}`,
-          invoice_date: `${selectedMonth}-01`,
-          due_date: `${selectedMonth}-28`,
-          total_amount: amount,
-          tax_amount: Math.floor(amount * 0.25),
-          status: 'pending'
-        });
-        if (!error) generatedCount++;
-      }
-
-      toast.success(`Generated ${generatedCount} invoices`);
       await Promise.all([fetchBillingOverview(), fetchInvoices()]);
     } catch (error) {
       console.error('Error generating invoices:', error);
@@ -323,37 +645,31 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
     }
   };
 
-  // Simplified invoice details fetch
-  const fetchInvoiceDetails = async (invoiceId: number) => {
+  const openInvoiceDetail = async (invoice: Invoice) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('scrapyard_invoice_items')
         .select('*')
-        .eq('invoice_id', invoiceId);
+        .eq('invoice_id', invoice.id);
 
-      return data || [];
+      setSelectedInvoice({
+        ...invoice,
+        line_items: data as any
+      });
     } catch (error) {
-      console.error('Error in fetchInvoiceDetails:', error);
-      return [];
+      console.error('Error loading invoice details:', error);
+      setSelectedInvoice(invoice);
     }
   };
 
-  const openInvoiceDetail = async (invoice: Invoice) => {
-    const lineItems = await fetchInvoiceDetails(invoice.id);
-    setSelectedInvoice({
-      ...invoice,
-      line_items: lineItems as any
-    });
-  };
-
   useEffect(() => {
-    console.log('🚀 useEffect triggered for month:', selectedMonth);
+    console.log('useEffect triggered for month:', selectedMonth);
     fetchBillingOverview();
     fetchInvoices();
   }, [selectedMonth]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">{/* Billing Dashboard Container */}
+    <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -415,23 +731,33 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Services</CardTitle>
+              <CardTitle className="text-sm font-medium">VAT Collected</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{billingOverview.breakdown_by_service.length}</div>
-              <p className="text-xs text-muted-foreground">Active service types</p>
+              <div className="text-2xl font-bold">
+                {new Intl.NumberFormat('sv-SE', {
+                  style: 'currency',
+                  currency: 'SEK'
+                }).format(billingOverview.total_vat_sek)}
+              </div>
+              <p className="text-xs text-muted-foreground">25% Swedish VAT</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
+              <CardTitle className="text-sm font-medium">Average Invoice</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{billingOverview.breakdown_by_tenant.length}</div>
-              <p className="text-xs text-muted-foreground">With usage this month</p>
+              <div className="text-2xl font-bold">
+                {new Intl.NumberFormat('sv-SE', {
+                  style: 'currency',
+                  currency: 'SEK'
+                }).format(billingOverview.total_invoices_generated > 0 ? billingOverview.total_revenue_sek / billingOverview.total_invoices_generated : 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">Per invoice</p>
             </CardContent>
           </Card>
         </div>
@@ -449,63 +775,67 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {billingOverview && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Service Breakdown</CardTitle>
-                  <CardDescription>Usage and costs by service type for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {billingOverview.breakdown_by_service.map(service => (
-                      <div key={service.service_name} className="flex justify-between items-center p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{service.service_name}</div>
-                          <div className="text-sm text-muted-foreground">{service.invoice_count} invoices</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            {new Intl.NumberFormat('sv-SE', {
-                              style: 'currency',
-                              currency: 'SEK'
-                            }).format(service.total_cost)}
-                          </div>
-                        </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Summary</CardTitle>
+              <CardDescription>Billing overview for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingOverview ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <span className="ml-2">Loading overview...</span>
+                </div>
+              ) : billingOverview ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">Invoice Summary</h4>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Total Invoices:</span>
+                        <span className="font-medium">{billingOverview.total_invoices_generated}</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tenant Breakdown</CardTitle>
-                  <CardDescription>Costs by tenant for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {billingOverview.breakdown_by_tenant.map(tenant => (
-                      <div key={tenant.tenant_name} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-medium">{tenant.tenant_name}</h4>
-                          <span className="font-medium">
-                            {new Intl.NumberFormat('sv-SE', {
-                              style: 'currency',
-                              currency: 'SEK'
-                            }).format(tenant.total_amount)}
-                          </span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {tenant.invoice_count} invoices this month
-                        </div>
+                      <div className="flex justify-between">
+                        <span>Total Revenue:</span>
+                        <span className="font-medium">
+                          {new Intl.NumberFormat('sv-SE', {
+                            style: 'currency',
+                            currency: 'SEK'
+                          }).format(billingOverview.total_revenue_sek)}
+                        </span>
                       </div>
-                    ))}
+                      <div className="flex justify-between">
+                        <span>VAT Amount:</span>
+                        <span className="font-medium">
+                          {new Intl.NumberFormat('sv-SE', {
+                            style: 'currency',
+                            currency: 'SEK'
+                          }).format(billingOverview.total_vat_sek)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">Actions</h4>
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={generateMonthlyInvoices} 
+                        disabled={generating}
+                        className="w-full"
+                      >
+                        {generating ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-2" />
+                        )}
+                        {generating ? 'Generating...' : 'Generate Monthly Invoices'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="monthly-billing" className="space-y-6">
@@ -530,11 +860,11 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
               
               {billingOverview && (
                 <div className="text-sm text-muted-foreground">
-                  Will generate invoices for {billingOverview.breakdown_by_tenant.length} tenants 
+                  Current month has {billingOverview.total_invoices_generated} invoices 
                   totaling {new Intl.NumberFormat('sv-SE', {
                     style: 'currency',
                     currency: 'SEK'
-                  }).format(billingOverview.total_revenue_sek)} estimated
+                  }).format(billingOverview.total_revenue_sek)}
                 </div>
               )}
             </CardContent>
@@ -556,7 +886,10 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8">Loading...</div>
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                  <p className="mt-2">Loading invoices...</p>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -570,33 +903,41 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map(invoice => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                        <TableCell>{invoice.tenant_name}</TableCell>
-                        <TableCell>{new Date(invoice.invoice_date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {new Intl.NumberFormat('sv-SE', {
-                            style: 'currency',
-                            currency: 'SEK'
-                          }).format(invoice.total_amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusColor(invoice.status)}>
-                            {invoice.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => openInvoiceDetail(invoice)}
-                          >
-                            View Details
-                          </Button>
+                    {invoices.length > 0 ? (
+                      invoices.map(invoice => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                          <TableCell>{invoice.tenant_name}</TableCell>
+                          <TableCell>{new Date(invoice.invoice_date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {new Intl.NumberFormat('sv-SE', {
+                              style: 'currency',
+                              currency: 'SEK'
+                            }).format(invoice.total_amount)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusColor(invoice.status)}>
+                              {invoice.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openInvoiceDetail(invoice)}
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No invoices found for {monthOptions.find(m => m.value === selectedMonth)?.label}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               )}
