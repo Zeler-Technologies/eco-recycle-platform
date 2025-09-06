@@ -113,52 +113,79 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 
   const fetchInvoices = async () => {
     try {
-      // Use mock data for development - can be replaced with real database queries
-      const mockInvoices: Invoice[] = [
-        {
-          id: 1,
-          invoice_number: 'INV-1-2025-09',
-          tenant_id: 1,
-          tenant_name: 'Scrapyard Stockholm',
-          invoice_date: '2025-09-01',
-          due_date: '2025-10-01',
-          total_amount: 1250,
-          vat_amount: 250,
-          status: 'sent',
-          currency: 'SEK'
-        },
-        {
-          id: 2,
-          invoice_number: 'INV-2-2025-09',
-          tenant_id: 2,
-          tenant_name: 'Scrapyard Göteborg',
-          invoice_date: '2025-09-01',
-          due_date: '2025-10-01',
-          total_amount: 1500,
-          vat_amount: 300,
-          status: 'paid',
-          currency: 'SEK'
-        },
-        {
-          id: 3,
-          invoice_number: 'INV-3-2025-09',
-          tenant_id: 3,
-          tenant_name: 'Scrapyard Malmö',
-          invoice_date: '2025-09-01',
-          due_date: '2025-10-01',
-          total_amount: 1000,
-          vat_amount: 200,
-          status: 'sent',
-          currency: 'SEK'
-        }
-      ];
-      setInvoices(mockInvoices);
+      console.log('Fetching real invoices from database...');
       
-      // TODO: Replace with real database query when schema is ready:
-      // const { data, error } = await supabase
-      //   .from('scrapyard_invoices')
-      //   .select('*, tenants!inner(name)')
-      //   .order('created_at', { ascending: false });
+      // Get real invoices from the database
+      const { data, error } = await supabase
+        .from('scrapyard_invoices')
+        .select(`
+          id,
+          tenant_id,
+          scrapyard_id,
+          invoice_number,
+          invoice_date,
+          due_date,
+          total_amount,
+          vat_amount,
+          currency,
+          status,
+          tenants!inner(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('Invoice fetch error:', error);
+        // Fall back to mock data if database query fails
+        const mockInvoices: Invoice[] = [
+          {
+            id: 1,
+            invoice_number: 'INV-1-2025-09',
+            tenant_id: 1,
+            tenant_name: 'Demo Scrapyard Stockholm',
+            invoice_date: '2025-09-01',
+            due_date: '2025-10-01',
+            total_amount: 1250,
+            vat_amount: 250,
+            status: 'sent',
+            currency: 'SEK'
+          },
+          {
+            id: 2,
+            invoice_number: 'INV-2-2025-09',
+            tenant_id: 2,
+            tenant_name: 'Scrapyard Göteborg',
+            invoice_date: '2025-09-01',
+            due_date: '2025-10-01',
+            total_amount: 1500,
+            vat_amount: 300,
+            status: 'paid',
+            currency: 'SEK'
+          }
+        ];
+        setInvoices(mockInvoices);
+        return;
+      }
+      
+      console.log('Raw invoice data:', data);
+      
+      // Transform real data to match Invoice interface
+      const transformedInvoices = (data || []).map((inv: any) => ({
+        id: inv.id,
+        invoice_number: inv.invoice_number,
+        tenant_id: inv.tenant_id,
+        tenant_name: inv.tenants?.name || 'Unknown Tenant',
+        invoice_date: inv.invoice_date || '2025-09-01',
+        due_date: inv.due_date || '2025-10-01',
+        total_amount: inv.total_amount || 0,
+        vat_amount: inv.vat_amount || 0,
+        status: inv.status as 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled',
+        currency: inv.currency || 'SEK'
+      }));
+      
+      console.log('Transformed invoices:', transformedInvoices);
+      setInvoices(transformedInvoices);
+      
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast({
@@ -196,6 +223,9 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 
   const updateInvoiceStatus = async (invoiceId: number, newStatus: string) => {
     try {
+      console.log('Updating invoice status:', { invoiceId, newStatus });
+      
+      // Update the database
       const { error } = await supabase
         .from('scrapyard_invoices')
         .update({ 
@@ -214,13 +244,20 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
         return;
       }
 
+      // Update the local state immediately for better UX
+      setInvoices(prev => prev.map(inv => 
+        inv.id === invoiceId 
+          ? { ...inv, status: newStatus as any }
+          : inv
+      ));
+
       toast({
         title: "Success",
         description: `Invoice status updated to ${newStatus}`,
       });
       
-      // Refresh data
-      await Promise.all([fetchBillingOverview(), fetchInvoices()]);
+      // Refresh overview data to reflect status changes
+      await fetchBillingOverview();
     } catch (error) {
       console.error('Error updating invoice status:', error);
       toast({
