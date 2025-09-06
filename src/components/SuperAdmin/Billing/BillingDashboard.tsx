@@ -165,12 +165,15 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   const fetchBillingOverview = async () => {
     setLoadingOverview(true);
     try {
-      // Use a simpler approach since RPC might not be available
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const startDate = `${selectedMonth}-01`;
+      const endDate = new Date(year, month, 1).toISOString().split('T')[0]; // Last day of month
+      
       const { data: invoiceData, error } = await supabase
         .from('scrapyard_invoices')
         .select('total_amount, status, tenants(name)')
-        .gte('invoice_date', `${selectedMonth}-01`)
-        .lt('invoice_date', `${selectedMonth}-31`);
+        .gte('invoice_date', startDate)
+        .lt('invoice_date', endDate);
       
       if (error) {
         console.error('Billing overview error:', error);
@@ -198,8 +201,8 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
     try {
       setLoading(true);
       const startDate = `${selectedMonth}-01`;
-      const nextMonth = new Date(selectedMonth + '-01');
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const nextMonth = new Date(year, month, 1); // month is already 1-indexed from selectedMonth
       const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
 
       const { data, error } = await supabase
