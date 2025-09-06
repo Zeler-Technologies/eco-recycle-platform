@@ -16,7 +16,7 @@ interface Invoice {
   due_date: string;
   total_amount: number;
   vat_amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending';
   currency: string;
 }
 
@@ -122,13 +122,14 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                         <SelectTrigger className="w-32">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="sent">Sent</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="overdue">Overdue</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
+                         <SelectContent>
+                           <SelectItem value="draft">Draft</SelectItem>
+                           <SelectItem value="pending">Pending</SelectItem>
+                           <SelectItem value="sent">Sent</SelectItem>
+                           <SelectItem value="paid">Paid</SelectItem>
+                           <SelectItem value="overdue">Overdue</SelectItem>
+                           <SelectItem value="cancelled">Cancelled</SelectItem>
+                         </SelectContent>
                       </Select>
                       
                       <Button variant="outline" size="sm">
