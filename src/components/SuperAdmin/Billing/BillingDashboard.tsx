@@ -229,6 +229,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
           invoice_date,
           due_date,
           total_amount,
+          tax_amount,
           vat_amount,
           currency,
           status,
@@ -238,8 +239,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
 
       const { data, error } = await baseQuery
         .eq('invoice_type', 'monthly')
-        .gte('billing_month', startDate)
-        .lt('billing_month', endDateStr)
+        .eq('billing_month', startDate)
         .order('id', { ascending: false });
 
       if (error) {
@@ -279,7 +279,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
         invoice_date: inv.invoice_date || new Date().toISOString().split('T')[0],
         due_date: inv.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         total_amount: Number(inv.total_amount) || 0,
-        vat_amount: Number(inv.vat_amount) || 0,
+        vat_amount: Number(inv.vat_amount || inv.tax_amount) || 0,
         status: (inv.status || 'pending') as Invoice['status'],
         currency: inv.currency || 'SEK',
         invoice_type: inv.invoice_type || 'monthly',
