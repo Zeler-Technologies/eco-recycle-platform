@@ -35,7 +35,7 @@ export class UsageTrackingService {
         unitCost = (service as any)?.unit_cost || 0;
       }
 
-      const totalCost = (data.unitsUsed * unitCost) + (data.baseCostAllocation || 0);
+      const totalCost = (data.unitsUsed * (unitCost || 0)) + (data.baseCostAllocation || 0);
 
       const { error } = await supabase
         .from('tenant_service_usage' as any)
@@ -151,18 +151,18 @@ export class UsageTrackingService {
       }
 
       // Calculate total usage and allocations
-      const totalUnits = (monthlyUsage as any[]).reduce((sum: number, usage: any) => sum + (usage.units_used || 0), 0);
+      const totalUnits = (monthlyUsage as any[]).reduce((sum: number, usage: any) => sum + Number(usage.units_used || 0), 0);
       const baseCost = 500; // €500 monthly base cost
 
       // Group by tenant and calculate allocations
       const tenantUsage = (monthlyUsage as any[]).reduce((acc: Record<number, number>, usage: any) => {
-        acc[usage.tenant_id] = (acc[usage.tenant_id] || 0) + (usage.units_used || 0);
+        acc[usage.tenant_id] = (acc[usage.tenant_id] || 0) + Number(usage.units_used || 0);
         return acc;
       }, {} as Record<number, number>);
 
       // Insert allocation records
       const allocationPromises = Object.entries(tenantUsage).map(([tenantId, usage]) => {
-        const usagePercentage = usage / totalUnits;
+        const usagePercentage = Number(usage) / totalUnits;
         const allocation = baseCost * usagePercentage;
 
         return this.recordUsage({

@@ -9,7 +9,7 @@ import { TenantList } from './TenantList';
 import APIConnectionsPanel from './API/APIConnectionsPanel';
 import TenantManagement from './TenantManagement';
 import UserManagement from './UserManagement';
-import { BillingDashboard } from './Billing/BillingDashboard';
+import BillingDashboard from './Billing/BillingDashboard';
 import DriverManagement from './DriverManagement';
 import PostalCodeManager from './PostalCodeManager';
 import { supabase } from '@/integrations/supabase/client';
