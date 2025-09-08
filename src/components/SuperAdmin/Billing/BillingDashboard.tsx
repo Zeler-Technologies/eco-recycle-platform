@@ -1,47 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircleIcon } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface BillingDashboardProps {
   onBack?: () => void;
 }
 
-const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
+const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
   const [selectedMonth, setSelectedMonth] = useState('2025-09');
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
 
-  // Generate month options
-  const monthOptions = Array.from({ length: 12 }, (_, i) => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    const value = date.toISOString().slice(0, 7);
-    const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-    return { value, label };
-  });
-
-  const generateInvoices = async () => {
-    setGenerating(true);
-    
-    try {
-      console.log('🔥 Starting generation for:', selectedMonth);
-      toast.success('Generation test completed - check console');
-    } catch (error) {
-      console.error('🚨 Generation error:', error);
-      toast.error('Generation failed');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  useEffect(() => {
-    console.log('useEffect triggered for month:', selectedMonth);
-  }, [selectedMonth]);
+  const monthOptions = [
+    { value: '2025-09', label: 'September 2025' },
+    { value: '2025-08', label: 'August 2025' },
+    { value: '2025-07', label: 'July 2025' }
+  ];
 
   return (
     <div className="space-y-6">
@@ -50,136 +23,109 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
         <div className="flex items-center gap-4">
           {onBack && (
             <Button variant="outline" onClick={onBack}>
-              ← Back
+              Back
             </Button>
           )}
-          <h1 className="text-3xl font-bold">Billing Dashboard</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Billing Dashboard</h1>
+            <p className="text-gray-600">Manage service costs, usage tracking, and invoice generation</p>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select month" />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={generateInvoices} disabled={generating}>
-            {generating ? 'Generating...' : 'Generate Test'}
-          </Button>
-        </div>
+        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {monthOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Simple Stats */}
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <CardTitle className="text-sm">Total Invoices</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Authentication required</p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0.00 kr</div>
-            <p className="text-xs text-muted-foreground">Authentication required</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Tax</CardTitle>
+            <CardTitle className="text-sm">Services</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0.00 kr</div>
-            <p className="text-xs text-muted-foreground">Authentication required</p>
+            <div className="text-2xl font-bold">0</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Active Tenants</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Authentication Status Card */}
-      <Card className="border-yellow-200 bg-yellow-50">
+      {/* Auth Issue */}
+      <Card className="border-yellow-300 bg-yellow-50">
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <AlertCircleIcon className="h-5 w-5 text-yellow-600" />
-            <CardTitle className="text-yellow-800">Authentication Required</CardTitle>
-          </div>
+          <CardTitle className="text-yellow-800">Authentication Required</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-yellow-700">
-            The billing dashboard cannot access invoice data because the browser client is unauthenticated.
+        <CardContent>
+          <p className="text-yellow-700 mb-4">
+            Cannot access invoice data - browser client is unauthenticated.
           </p>
-          
-          <div className="bg-white p-4 rounded-lg border">
-            <h4 className="font-semibold mb-2 text-green-700">Your invoice data exists:</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <Badge variant="outline" className="mb-2">Database Confirmed</Badge>
-                <ul className="space-y-1">
-                  <li>• 3 invoices in database</li>
-                  <li>• IDs: 8, 9, 10</li>
-                  <li>• Total: 375.00 SEK</li>
-                </ul>
-              </div>
-              <div>
-                <Badge variant="outline" className="mb-2">Details</Badge>
-                <ul className="space-y-1">
-                  <li>• Billing month: 2025-09-01</li>
-                  <li>• Status: All pending</li>
-                  <li>• VAT: 75.00 SEK total</li>
-                </ul>
-              </div>
-            </div>
+          <div className="bg-white p-3 rounded border">
+            <h4 className="font-semibold mb-2">Your data exists:</h4>
+            <p className="text-sm">3 invoices, 375.00 SEK total, September 2025</p>
           </div>
-          
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h4 className="font-semibold mb-2 text-blue-800">Solutions:</h4>
-            <div className="space-y-3 text-sm">
-              <div>
-                <Badge variant="secondary" className="mb-1">Option 1: Quick Fix</Badge>
-                <p className="text-blue-700 mb-2">Temporarily disable RLS (for testing only):</p>
-                <code className="bg-gray-100 px-3 py-1 rounded text-xs block">
-                  ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;
-                </code>
-              </div>
-              <div>
-                <Badge variant="secondary" className="mb-1">Option 2: Proper Fix</Badge>
-                <p className="text-blue-700">
-                  Implement authentication so browser client runs with authenticated user who has super_admin role
-                </p>
-              </div>
-            </div>
+          <div className="mt-4 p-3 bg-blue-50 rounded border">
+            <h4 className="font-semibold mb-2">Fix:</h4>
+            <code className="text-xs bg-gray-100 p-1 rounded">
+              ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;
+            </code>
           </div>
         </CardContent>
       </Card>
 
-      {/* Invoices Section */}
+      {/* Placeholder Content */}
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Invoices</CardTitle>
+          <CardTitle>Billing Features</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <AlertCircleIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-medium mb-2">No invoices visible</h3>
-            <p className="text-muted-foreground mb-4">
-              Invoices exist but are blocked by RLS policies
-            </p>
-            <div className="bg-muted p-4 rounded-lg max-w-md mx-auto">
-              <p className="text-sm">
-                Switch to September 2025 and check browser console for debugging logs
-              </p>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Button variant="outline" className="h-20 flex-col">
+              <div className="font-semibold">Service Costs</div>
+              <div className="text-xs text-gray-500">Manage pricing models</div>
+            </Button>
+            <Button variant="outline" className="h-20 flex-col">
+              <div className="font-semibold">Invoice Management</div>
+              <div className="text-xs text-gray-500">View and generate invoices</div>
+            </Button>
+            <Button variant="outline" className="h-20 flex-col">
+              <div className="font-semibold">Usage Tracking</div>
+              <div className="text-xs text-gray-500">Monitor service usage</div>
+            </Button>
+            <Button variant="outline" className="h-20 flex-col">
+              <div className="font-semibold">Analytics</div>
+              <div className="text-xs text-gray-500">Revenue and cost insights</div>
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -188,6 +134,3 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 };
 
 export default BillingDashboard;
-
-// Also export as named export for compatibility
-export { BillingDashboard };
