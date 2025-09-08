@@ -172,14 +172,20 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
 
+      console.log('🔥 fetchBillingOverview date range', { startDate, endDate, selectedMonth });
+      console.log('🔥 Running Supabase overview query on scrapyard_invoices by invoice_date range');
+
       const { data: invoiceData, error } = await supabase
         .from('scrapyard_invoices')
         .select('total_amount, status, tenants(name)')
         .gte('invoice_date', startDate)
         .lt('invoice_date', endDate);
       
+      console.log('🔥 Supabase overview result', { error, dataLength: invoiceData?.length, sample: Array.isArray(invoiceData) ? invoiceData.slice(0, 1) : invoiceData });
+      
       if (error) {
         console.error('Billing overview error:', error);
+        console.error('🚨 Supabase query error in fetchBillingOverview', { code: (error as any).code, message: (error as any).message });
         return;
       }
       
@@ -190,6 +196,8 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
         breakdown_by_service: [],
         breakdown_by_tenant: []
       };
+      
+      console.log('🔥 Overview computed', { total_invoices: mockOverview.total_invoices_generated, total_revenue_sek: mockOverview.total_revenue_sek });
       
       setBillingOverview(mockOverview);
     } catch (error) {
@@ -209,6 +217,9 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
 
+      console.log('🔥 fetchInvoices date range', { startDate, endDate, selectedMonth });
+      console.log('🔥 Running Supabase invoices query on scrapyard_invoices by invoice_date range');
+
       const { data, error } = await supabase
         .from('scrapyard_invoices')
         .select(`
@@ -225,6 +236,8 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
         .gte('invoice_date', startDate)
         .lt('invoice_date', endDate)
         .order('invoice_date', { ascending: false });
+
+      console.log('🔥 Supabase invoices result', { error, dataLength: data?.length, sample: Array.isArray(data) ? data.slice(0, 1) : data });
 
       if (error) {
         console.error('Error fetching invoices:', error);
