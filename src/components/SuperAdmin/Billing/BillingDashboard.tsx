@@ -171,3 +171,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 };
 
 export default BillingDashboard;
+
+// Also export as named export for compatibility
+export { BillingDashboard };
