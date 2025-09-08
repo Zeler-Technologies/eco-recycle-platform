@@ -166,11 +166,16 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
     setLoadingOverview(true);
     try {
       // Use a simpler approach since RPC might not be available
+      const startDate = `${selectedMonth}-01`;
+      const nextMonth = new Date(selectedMonth + '-01');
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+
       const { data: invoiceData, error } = await supabase
         .from('scrapyard_invoices')
         .select('total_amount, status, tenants(name)')
-        .gte('invoice_date', `${selectedMonth}-01`)
-        .lt('invoice_date', `${selectedMonth}-31`);
+        .gte('invoice_date', startDate)
+        .lt('invoice_date', endDate);
       
       if (error) {
         console.error('Billing overview error:', error);
@@ -293,7 +298,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
       }
 
       toast.success(`Generated ${generatedCount} invoices`);
-      await Promise.all([fetchBillingOverview(), fetchInvoices()]);
+      await Promise.allSettled([fetchBillingOverview(), fetchInvoices()]);
     } catch (error) {
       console.error('Error generating invoices:', error);
       toast.error('Failed to generate invoices');
