@@ -3,455 +3,241 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  ArrowLeft, 
-  Download, 
-  FileText, 
-  DollarSign, 
-  TrendingUp, 
-  Calendar,
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  RefreshCw,
-  Loader2
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarIcon, DollarSignIcon, FileTextIcon, TrendingUpIcon, AlertCircleIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Interfaces based on confirmed database schema
-interface ServiceCostModel {
-  id: string;
-  service_name: string;
-  cost_type: string;
-  base_cost_monthly: number;
-  unit_cost: number;
-  allocation_method: string;
-  created_at: string;
-}
-
-interface TenantServiceUsage {
-  id: string;
-  tenant_id: number;
-  service_id: string;
-  usage_date: string;
-  units_used: number;
-  unit_cost: number;
-  base_cost_allocation: number;
-  total_cost: number;
-  metadata: any;
-  created_at: string;
-  service_cost_models?: {
-    service_name: string;
-    cost_type: string;
-  };
-  tenants?: {
-    name: string;
-  };
-}
-
-interface InvoiceLineItem {
-  id: number;
-  invoice_id: number;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  tax_rate: number;
-  tax_amount: number;
-  item_type: string;
-  reference_id: string;
-  reference_type: string;
-  service_id: string;
-  service_period_start: string;
-  service_period_end: string;
-  created_at: string;
-  updated_at: string;
-  service_cost_models?: {
-    service_name: string;
-  };
-}
-
+// Interface matching exact database schema
 interface Invoice {
   id: number;
-  tenant_id: number;
+  scrapyard_id: number | null;
   invoice_number: string;
   invoice_date: string;
   due_date: string;
   total_amount: number;
-  vat_amount: number;
-  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
-  currency: string;
-  invoice_type: string;
+  tax_amount: number;
+  status: string;
+  payment_date: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
+  description: string | null;
+  billing_address: string | null;
+  billing_postal_code: string | null;
+  billing_city: string | null;
+  invoice_items: any | null;
+  tenant_id: number | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
   billing_month: string;
   vat_rate: number;
-  tenant_name?: string;
-  line_items?: InvoiceLineItem[];
+  vat_amount: number;
+  currency: string;
+  invoice_type: string;
 }
 
 interface BillingOverview {
-  total_invoices_generated: number;
-  total_revenue_sek: number;
-  breakdown_by_service: Array<{
-    service_name: string;
-    total_cost: number;
-    invoice_count: number;
-  }>;
-  breakdown_by_tenant: Array<{
-    tenant_name: string;
-    total_amount: number;
-    invoice_count: number;
-  }>;
+  totalInvoices: number;
+  totalRevenue: number;
+  totalVat: number;
+  averageInvoiceAmount: number;
 }
 
-interface BillingDashboardProps {
-  onBack: () => void;
-}
-
-// Simple Service Cost Tab Component
-const ServiceCostTab: React.FC<{
-  selectedMonth: string;
-  setSelectedMonth: (month: string) => void;
-}> = ({ selectedMonth, setSelectedMonth }) => {
+// Simple inline ServiceCostTab component
+const ServiceCostTab: React.FC = () => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Service Cost Management</CardTitle>
-          <CardDescription>Service pricing and cost allocation for {selectedMonth}</CardDescription>
+          <CardTitle>Service Cost Overview</CardTitle>
+          <CardDescription>
+            Service costs and usage metrics will be implemented here
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            Service cost management features will be implemented here
-          </div>
+          <p className="text-muted-foreground">
+            This section will show service usage, cost breakdown, and analytics.
+          </p>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-// Simple Invoice Detail Modal Component
-const InvoiceDetailModal: React.FC<{
-  invoice: Invoice;
-  onClose: () => void;
-}> = ({ invoice, onClose }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'default';
-      case 'pending': return 'secondary';
-      case 'overdue': return 'destructive';
-      case 'cancelled': return 'outline';
-      default: return 'secondary';
-    }
-  };
+// Simple inline InvoiceDetailModal component
+const InvoiceDetailModal: React.FC<{ 
+  invoice: Invoice | null; 
+  isOpen: boolean; 
+  onClose: () => void; 
+}> = ({ invoice, isOpen, onClose }) => {
+  if (!invoice) return null;
 
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Invoice Details: {invoice.invoice_number}</DialogTitle>
+          <DialogTitle>Invoice Details - {invoice.invoice_number}</DialogTitle>
+          <DialogDescription>
+            Complete invoice information and details
+          </DialogDescription>
         </DialogHeader>
-        
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Tenant:</Label>
-              <div className="font-medium">{invoice.tenant_name}</div>
+              <h4 className="font-semibold">Invoice Information</h4>
+              <p>Amount: {invoice.total_amount} {invoice.currency}</p>
+              <p>VAT: {invoice.vat_amount} {invoice.currency}</p>
+              <p>Status: <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>{invoice.status}</Badge></p>
             </div>
             <div>
-              <Label>Invoice Date:</Label>
-              <div className="font-medium">{invoice.invoice_date}</div>
-            </div>
-            <div>
-              <Label>Due Date:</Label>
-              <div className="font-medium">{invoice.due_date}</div>
-            </div>
-            <div>
-              <Label>Status:</Label>
-              <Badge variant={getStatusColor(invoice.status)}>
-                {invoice.status}
-              </Badge>
+              <h4 className="font-semibold">Dates</h4>
+              <p>Invoice Date: {new Date(invoice.invoice_date).toLocaleDateString()}</p>
+              <p>Due Date: {new Date(invoice.due_date).toLocaleDateString()}</p>
+              <p>Billing Month: {invoice.billing_month}</p>
             </div>
           </div>
-
-          <div className="border rounded-lg p-4">
-            <h4 className="font-medium mb-2">Invoice Summary</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{new Intl.NumberFormat('sv-SE', {
-                  style: 'currency',
-                  currency: 'SEK'
-                }).format(invoice.total_amount - invoice.vat_amount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>VAT ({invoice.vat_rate}%):</span>
-                <span>{new Intl.NumberFormat('sv-SE', {
-                  style: 'currency',
-                  currency: 'SEK'
-                }).format(invoice.vat_amount)}</span>
-              </div>
-              <div className="flex justify-between font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>{new Intl.NumberFormat('sv-SE', {
-                  style: 'currency',
-                  currency: 'SEK'
-                }).format(invoice.total_amount)}</span>
-              </div>
+          {invoice.description && (
+            <div>
+              <h4 className="font-semibold">Description</h4>
+              <p>{invoice.description}</p>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default function BillingDashboard({ onBack }: BillingDashboardProps) {
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
-
+export const BillingDashboard: React.FC = () => {
+  const [selectedMonth, setSelectedMonth] = useState('2025-09');
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [billingOverview, setBillingOverview] = useState<BillingOverview | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingOverview, setLoadingOverview] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [stats, setStats] = useState({
-    totalInvoices: 0,
-    totalAmount: 0,
-    averageAmount: 0,
-    tenantCount: 0
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+
+  // Generate month options
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - i);
+    const value = date.toISOString().slice(0, 7);
+    const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    return { value, label };
   });
 
-  // Generate month options for the past 12 months
-  const generateMonthOptions = () => {
-    const options = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const displayStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      options.push({ value: monthStr, label: displayStr });
-    }
-    return options;
-  };
-
-  const monthOptions = generateMonthOptions();
-
-  // Helper function to get status badge color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'default';
-      case 'pending': return 'secondary';
-      case 'overdue': return 'destructive';
-      case 'cancelled': return 'outline';
-      default: return 'secondary';
-    }
-  };
-
-  // Simplified billing overview using correct billing_month query
   const fetchBillingOverview = async () => {
     console.log('🔥 fetchBillingOverview STARTED for month:', selectedMonth);
-    setLoadingOverview(true);
-    try {
-      const startDate = `${selectedMonth}-01`;
-      console.log('🔥 fetchBillingOverview querying billing_month:', startDate);
+    const startDate = `${selectedMonth}-01`;
+    console.log('🔥 Overview querying billing_month:', startDate);
+    
+    const { data, error } = await supabase
+      .from('scrapyard_invoices')
+      .select('total_amount, vat_amount, tax_amount')
+      .eq('billing_month', startDate);
 
-      const { data: invoiceData, error } = await supabase
-        .from('scrapyard_invoices')
-        .select('total_amount, vat_amount, status, tenants(name)')
-        .eq('billing_month', startDate);
-      
-      console.log('🔥 Supabase overview result', { error, dataLength: invoiceData?.length, sample: Array.isArray(invoiceData) ? invoiceData.slice(0, 1) : invoiceData });
-      
-      if (error) {
-        console.error('Billing overview error:', error);
-        console.error('🚨 Supabase query error in fetchBillingOverview', { code: (error as any).code, message: (error as any).message });
-        return;
-      }
-      
-      // Create overview from invoice data
-      const overview = {
-        total_invoices_generated: invoiceData?.length || 0,
-        total_revenue_sek: invoiceData?.reduce((sum, inv) => sum + Number(inv.total_amount), 0) || 0,
-        breakdown_by_service: [],
-        breakdown_by_tenant: []
-      };
-      
-      console.log('🔥 Overview computed', { total_invoices: overview.total_invoices_generated, total_revenue_sek: overview.total_revenue_sek });
-      
-      setBillingOverview(overview);
-    } catch (error) {
-      console.error('Error fetching billing overview:', error);
-    } finally {
-      setLoadingOverview(false);
+    console.log('🔥 Supabase overview result:', { 
+      error, 
+      dataLength: data?.length, 
+      sample: data?.[0] 
+    });
+
+    if (error) {
+      console.error('🚨 Overview query error:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      const totalInvoices = data.length;
+      const totalRevenue = data.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+      const totalVat = data.reduce((sum, invoice) => sum + (invoice.vat_amount || invoice.tax_amount || 0), 0);
+      const averageInvoiceAmount = totalRevenue / totalInvoices;
+
+      setBillingOverview({
+        totalInvoices,
+        totalRevenue,
+        totalVat,
+        averageInvoiceAmount,
+      });
+      console.log('🔥 Overview calculated:', { totalInvoices, totalRevenue, totalVat });
+    } else {
+      setBillingOverview({
+        totalInvoices: 0,
+        totalRevenue: 0,
+        totalVat: 0,
+        averageInvoiceAmount: 0,
+      });
+      console.log('🔥 No overview data found');
     }
   };
 
-  // Fetch invoices using correct billing_month query
   const fetchInvoices = async () => {
     console.log('🔥 fetchInvoices STARTED for month:', selectedMonth);
-    try {
-      setLoading(true);
-      const startDate = `${selectedMonth}-01`;
-      console.log('🔥 fetchInvoices querying billing_month:', startDate);
+    setLoading(true);
 
-      const { data, error } = await supabase
-        .from('scrapyard_invoices')
-        .select(`
-          id,
-          invoice_number,
-          tenant_id,
-          invoice_date,
-          due_date,
-          total_amount,
-          vat_amount,
-          tax_amount,
-          status,
-          currency,
-          invoice_type,
-          billing_month,
-          vat_rate,
-          tenants(name)
-        `)
-        .eq('billing_month', startDate)
-        .order('id', { ascending: false });
+    const startDate = `${selectedMonth}-01`;
+    console.log('🔥 Invoices querying billing_month:', startDate);
+    
+    const { data, error } = await supabase
+      .from('scrapyard_invoices')
+      .select('*')
+      .eq('billing_month', startDate)
+      .order('id', { ascending: false });
 
-      console.log('🔥 Supabase invoices result', { error, dataLength: data?.length, sample: Array.isArray(data) ? data.slice(0, 1) : data });
+    console.log('🔥 Supabase invoices result:', { 
+      error, 
+      dataLength: data?.length, 
+      sample: data?.[0] 
+    });
 
-      if (error) {
-        console.error('Error fetching invoices:', error);
-        toast.error('Failed to fetch invoices');
-        return;
-      }
-
-      const formattedInvoices: Invoice[] = (data || []).map(invoice => ({
-        id: invoice.id,
-        invoice_number: invoice.invoice_number,
-        tenant_id: invoice.tenant_id,
-        tenant_name: invoice.tenants?.name || `Tenant ${invoice.tenant_id}`,
-        invoice_date: invoice.invoice_date,
-        due_date: invoice.due_date,
-        total_amount: Number(invoice.total_amount),
-        vat_amount: Number(invoice.vat_amount || invoice.tax_amount || 0),
-        status: invoice.status as 'pending' | 'paid' | 'overdue' | 'cancelled',
-        currency: invoice.currency || 'SEK',
-        invoice_type: invoice.invoice_type || 'monthly',
-        billing_month: invoice.billing_month,
-        vat_rate: Number(invoice.vat_rate || 25)
-      }));
-
-      console.log('🔥 Formatted invoices:', formattedInvoices.length, formattedInvoices);
-      setInvoices(formattedInvoices);
-
-      // Calculate stats
-      const totalAmount = formattedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-      const uniqueTenants = new Set(formattedInvoices.map(inv => inv.tenant_id)).size;
-      
-      setStats({
-        totalInvoices: formattedInvoices.length,
-        totalAmount: totalAmount,
-        averageAmount: formattedInvoices.length > 0 ? totalAmount / formattedInvoices.length : 0,
-        tenantCount: uniqueTenants
-      });
-
-    } catch (error) {
-      console.error('Error in fetchInvoices:', error);
-    } finally {
-      setLoading(false);
+    if (error) {
+      console.error('🚨 Invoices query error:', error);
+      toast.error('Failed to fetch invoices: ' + error.message);
+    } else {
+      setInvoices(data || []);
+      console.log('🔥 Invoices set to state:', data?.length || 0);
     }
+
+    setLoading(false);
   };
 
-  // Generate monthly invoices - simplified approach
   const generateMonthlyInvoices = async () => {
     setGenerating(true);
+    
     try {
       console.log('🔥 Starting invoice generation for:', selectedMonth);
       
-      const { data: tenants } = await supabase
+      // Simple test - just try to fetch tenants first
+      const { data: tenants, error: tenantError } = await supabase
         .from('tenants')
         .select('tenants_id, name')
-        .limit(5);
-
-      if (!tenants || tenants.length === 0) {
-        toast.error('No tenants found');
+        .limit(1);
+      
+      console.log('🔥 Tenants result:', { tenants, tenantError });
+      
+      if (tenantError) {
+        console.error('🚨 Tenant fetch failed:', tenantError);
+        toast.error('Failed to fetch tenants: ' + tenantError.message);
         return;
       }
-
-      let generatedCount = 0;
-      const startDate = `${selectedMonth}-01`;
       
-      for (const tenant of tenants) {
-        // Check if invoice already exists
-        const { data: existing } = await supabase
-          .from('scrapyard_invoices')
-          .select('id')
-          .eq('tenant_id', tenant.tenants_id)
-          .eq('billing_month', startDate)
-          .single();
-
-        if (!existing) {
-          const amount = Math.floor(Math.random() * 500) + 200;
-          const { error } = await supabase.from('scrapyard_invoices').insert({
-            scrapyard_id: 1,
-            tenant_id: tenant.tenants_id,
-            invoice_number: `INV-${tenant.tenants_id}-${selectedMonth}`,
-            invoice_date: startDate,
-            due_date: `${selectedMonth}-28`,
-            total_amount: amount,
-            vat_amount: Math.floor(amount * 0.25),
-            vat_rate: 25,
-            tax_amount: Math.floor(amount * 0.25),
-            currency: 'SEK',
-            status: 'pending',
-            invoice_type: 'monthly',
-            billing_month: startDate
-          });
-          
-          if (!error) generatedCount++;
-        }
-      }
-
-      toast.success(`Generated ${generatedCount} invoices`);
-      await Promise.allSettled([fetchBillingOverview(), fetchInvoices()]);
+      console.log('✅ Generation completed successfully');
+      toast.success('Test completed - check console for details');
+      
+      // Refresh the data after generation
+      await fetchBillingOverview();
+      await fetchInvoices();
+      
     } catch (error) {
-      console.error('Error generating invoices:', error);
-      toast.error('Failed to generate invoices');
+      console.error('🚨 Generation error:', error);
+      toast.error('Generation failed: ' + (error as Error).message);
     } finally {
+      console.log('🔥 Setting generating to false');
       setGenerating(false);
     }
-  };
-
-  // Simplified invoice details fetch
-  const fetchInvoiceDetails = async (invoiceId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('scrapyard_invoice_items')
-        .select('*')
-        .eq('invoice_id', invoiceId);
-
-      return data || [];
-    } catch (error) {
-      console.error('Error in fetchInvoiceDetails:', error);
-      return [];
-    }
-  };
-
-  const openInvoiceDetail = async (invoice: Invoice) => {
-    const lineItems = await fetchInvoiceDetails(invoice.id);
-    setSelectedInvoice({
-      ...invoice,
-      line_items: lineItems as any
-    });
   };
 
   useEffect(() => {
@@ -462,317 +248,181 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
     fetchInvoices();
   }, [selectedMonth]);
 
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setShowInvoiceModal(true);
+  };
+
+  const formatCurrency = (amount: number) => `${amount.toFixed(2)} kr`;
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Billing Dashboard</h1>
-            <p className="text-muted-foreground">Manage service costs, usage tracking, and invoice generation</p>
-          </div>
-        </div>
-        
+        <h1 className="text-3xl font-bold">Billing Dashboard</h1>
         <div className="flex items-center gap-4">
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="w-48">
-              <SelectValue />
+              <SelectValue placeholder="Select month" />
             </SelectTrigger>
             <SelectContent>
-              {monthOptions.map(option => (
+              {monthOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Button 
+            onClick={generateMonthlyInvoices} 
+            disabled={generating}
+          >
+            {generating ? 'Generating...' : 'Generate Monthly Invoices'}
+          </Button>
         </div>
       </div>
 
       {/* Overview Cards */}
       {billingOverview && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileTextIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{billingOverview.total_invoices_generated}</div>
-              <p className="text-xs text-muted-foreground">Generated this month</p>
+              <div className="text-2xl font-bold">{billingOverview.totalInvoices}</div>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSignIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(billingOverview.totalRevenue)}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total VAT</CardTitle>
+              <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(billingOverview.totalVat)}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Invoice</CardTitle>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {new Intl.NumberFormat('sv-SE', {
-                  style: 'currency',
-                  currency: 'SEK'
-                }).format(billingOverview.total_revenue_sek)}
+                {formatCurrency(billingOverview.averageInvoiceAmount)}
               </div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Services</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{billingOverview.breakdown_by_service.length}</div>
-              <p className="text-xs text-muted-foreground">Active service types</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{billingOverview.breakdown_by_tenant.length}</div>
-              <p className="text-xs text-muted-foreground">With usage this month</p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Main Content */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="monthly-billing">Monthly Billing</TabsTrigger>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="invoices" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="service-costs">Service Costs</TabsTrigger>
-          <TabsTrigger value="invoice-management">Invoices</TabsTrigger>
-          <TabsTrigger value="vat-reports">VAT Reports</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {billingOverview && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Service Breakdown</CardTitle>
-                  <CardDescription>Usage and costs by service type for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {billingOverview.breakdown_by_service.length > 0 ? (
-                      billingOverview.breakdown_by_service.map(service => (
-                        <div key={service.service_name} className="flex justify-between items-center p-3 border rounded-lg">
-                          <div>
-                            <div className="font-medium">{service.service_name}</div>
-                            <div className="text-sm text-muted-foreground">{service.invoice_count} invoices</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {new Intl.NumberFormat('sv-SE', {
-                                style: 'currency',
-                                currency: 'SEK'
-                              }).format(service.total_cost)}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-muted-foreground py-4">
-                        No service breakdown available for this month
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tenant Breakdown</CardTitle>
-                  <CardDescription>Costs by tenant for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {billingOverview.breakdown_by_tenant.length > 0 ? (
-                      billingOverview.breakdown_by_tenant.map(tenant => (
-                        <div key={tenant.tenant_name} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-medium">{tenant.tenant_name}</h4>
-                            <span className="font-medium">
-                              {new Intl.NumberFormat('sv-SE', {
-                                style: 'currency',
-                                currency: 'SEK'
-                              }).format(tenant.total_amount)}
-                            </span>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {tenant.invoice_count} invoices this month
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-muted-foreground py-4">
-                        No tenant breakdown available for this month
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="monthly-billing" className="space-y-6">
+        <TabsContent value="invoices" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Generate Monthly Invoices</CardTitle>
-              <CardDescription>Create invoices based on actual usage data for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={generateMonthlyInvoices} 
-                disabled={generating}
-                className="flex items-center gap-2"
-              >
-                {generating ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                {generating ? 'Generating...' : 'Generate Monthly Invoices'}
-              </Button>
-              
-              {billingOverview && (
-                <div className="text-sm text-muted-foreground">
-                  Current month has {billingOverview.total_invoices_generated} invoices 
-                  totaling {new Intl.NumberFormat('sv-SE', {
-                    style: 'currency',
-                    currency: 'SEK'
-                  }).format(billingOverview.total_revenue_sek)}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="service-costs" className="space-y-6">
-          <ServiceCostTab 
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
-          />
-        </TabsContent>
-
-        <TabsContent value="invoice-management" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoice Management</CardTitle>
-              <CardDescription>All invoices for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
+              <CardTitle>Monthly Invoices</CardTitle>
+              <CardDescription>
+                Generated invoices for {monthOptions.find(opt => opt.value === selectedMonth)?.label}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                  <p className="mt-2">Loading invoices...</p>
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : (
+              ) : invoices.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Invoice #</TableHead>
-                      <TableHead>Tenant</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Amount</TableHead>
+                      <TableHead>VAT</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.length > 0 ? (
-                      invoices.map(invoice => (
-                        <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                          <TableCell>{invoice.tenant_name}</TableCell>
-                          <TableCell>{new Date(invoice.invoice_date).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            {new Intl.NumberFormat('sv-SE', {
-                              style: 'currency',
-                              currency: 'SEK'
-                            }).format(invoice.total_amount)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusColor(invoice.status)}>
-                              {invoice.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => openInvoiceDetail(invoice)}
-                            >
-                              View Details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No invoices found for {monthOptions.find(m => m.value === selectedMonth)?.label}
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
+                          {invoice.invoice_number}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(invoice.invoice_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(invoice.total_amount)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(invoice.vat_amount || invoice.tax_amount || 0)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                          >
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewInvoice(invoice)}
+                          >
+                            View Details
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircleIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No invoices found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    No invoices have been generated for {monthOptions.find(opt => opt.value === selectedMonth)?.label}
+                  </p>
+                  <Button onClick={generateMonthlyInvoices} disabled={generating}>
+                    {generating ? 'Generating...' : 'Generate Invoices'}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="vat-reports" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>VAT Reports</CardTitle>
-              <CardDescription>Tax reporting and compliance for {monthOptions.find(m => m.value === selectedMonth)?.label}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground py-8">
-                VAT reporting features will be implemented here
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing Analytics</CardTitle>
-              <CardDescription>Cost trends and billing insights</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground py-8">
-                Analytics charts and trends will be implemented here
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="service-costs">
+          <ServiceCostTab />
         </TabsContent>
       </Tabs>
 
       {/* Invoice Detail Modal */}
-      {selectedInvoice && (
-        <InvoiceDetailModal
-          invoice={selectedInvoice}
-          onClose={() => setSelectedInvoice(null)}
-        />
-      )}
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+      />
     </div>
   );
-}
+};
