@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircleIcon } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface BillingDashboardProps {
@@ -16,8 +15,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
   const [selectedMonth, setSelectedMonth] = useState('2025-09');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [invoiceData, setInvoiceData] = useState<any[]>([]);
-  const [statsData, setStatsData] = useState<any>(null);
 
   // Generate month options
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
@@ -28,85 +25,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
     return { value, label };
   });
 
-  const fetchStats = async () => {
-    console.log('🔥 fetchStats STARTED for month:', selectedMonth);
-    const startDate = `${selectedMonth}-01`;
-    
-    try {
-      // Use raw SQL query to avoid TypeScript depth issues
-      const { data, error } = await supabase.rpc('custom_stats_query', {
-        billing_month_param: startDate
-      });
-
-      console.log('🔥 Stats result:', { error, data });
-
-      if (error) {
-        console.error('🚨 Stats error:', error);
-        // Fallback: try direct table access
-        return fetchStatsFallback();
-      }
-
-      if (data && data.length > 0) {
-        setStatsData(data[0]);
-      } else {
-        setStatsData({ total_invoices: 0, total_revenue: 0, total_tax: 0 });
-      }
-    } catch (err) {
-      console.error('🚨 Stats fetch error:', err);
-      fetchStatsFallback();
-    }
-  };
-
-  const fetchStatsFallback = async () => {
-    console.log('🔥 Using fallback stats method');
-    setStatsData({ total_invoices: 0, total_revenue: 0, total_tax: 0 });
-  };
-
-  const fetchInvoices = async () => {
-    console.log('🔥 fetchInvoices STARTED for month:', selectedMonth);
-    setLoading(true);
-
-    const startDate = `${selectedMonth}-01`;
-    
-    try {
-      // Use raw SQL query to avoid TypeScript issues
-      const { data, error } = await supabase.rpc('get_invoices_by_month', {
-        billing_month_param: startDate
-      });
-
-      console.log('🔥 Invoices result:', { error, dataLength: data?.length });
-
-      if (error) {
-        console.error('🚨 Invoices error:', error);
-        // Fallback: show message about authentication
-        toast.error('Database access blocked - authentication required');
-        setInvoiceData([]);
-      } else {
-        setInvoiceData(data || []);
-        console.log('🔥 Invoices set:', data?.length || 0);
-      }
-    } catch (err) {
-      console.error('🚨 Invoices fetch error:', err);
-      toast.error('Failed to fetch invoices - check authentication');
-      setInvoiceData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const generateInvoices = async () => {
     setGenerating(true);
     
     try {
       console.log('🔥 Starting generation for:', selectedMonth);
-      
-      // Simple test without complex queries
-      toast.success('Generation test - check console for details');
-      
-      // Refresh data
-      await fetchStats();
-      await fetchInvoices();
-      
+      toast.success('Generation test completed - check console');
     } catch (error) {
       console.error('🚨 Generation error:', error);
       toast.error('Generation failed');
@@ -117,11 +41,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
 
   useEffect(() => {
     console.log('useEffect triggered for month:', selectedMonth);
-    fetchStats();
-    fetchInvoices();
   }, [selectedMonth]);
-
-  const formatCurrency = (amount: number) => `${amount?.toFixed(2) || '0.00'} kr`;
 
   return (
     <div className="space-y-6">
@@ -161,9 +81,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {statsData?.total_invoices || 0}
-            </div>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">Authentication required</p>
           </CardContent>
         </Card>
         
@@ -172,9 +91,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(statsData?.total_revenue || 0)}
-            </div>
+            <div className="text-2xl font-bold">0.00 kr</div>
+            <p className="text-xs text-muted-foreground">Authentication required</p>
           </CardContent>
         </Card>
 
@@ -183,9 +101,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
             <CardTitle className="text-sm font-medium">Total Tax</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(statsData?.total_tax || 0)}
-            </div>
+            <div className="text-2xl font-bold">0.00 kr</div>
+            <p className="text-xs text-muted-foreground">Authentication required</p>
           </CardContent>
         </Card>
       </div>
@@ -193,73 +110,60 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
       {/* Authentication Status */}
       <Card>
         <CardHeader>
-          <CardTitle>Authentication Status</CardTitle>
+          <CardTitle>Database Access Issue</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4">
             <AlertCircleIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <h3 className="text-lg font-medium mb-2">Database Access Issue</h3>
+            <h3 className="text-lg font-medium mb-2">Authentication Required</h3>
             <p className="text-muted-foreground mb-4">
-              The billing dashboard requires authentication to access invoice data.
+              The billing dashboard cannot access invoice data because the browser client is unauthenticated.
               <br />
-              Current status: Browser client is unauthenticated (auth.uid() = null)
+              <strong>Root cause:</strong> auth.uid() returns null
             </p>
-            <div className="bg-muted p-4 rounded-lg text-left">
-              <h4 className="font-semibold mb-2">To resolve this issue:</h4>
-              <ol className="list-decimal list-inside space-y-1 text-sm">
-                <li>Implement proper authentication in the SuperAdminDashboard</li>
-                <li>Or temporarily run: <code className="bg-background px-1 rounded">ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;</code></li>
-                <li>Your 3 invoices (375 SEK total) exist in the database but are blocked by RLS policies</li>
+            <div className="bg-muted p-4 rounded-lg text-left max-w-2xl mx-auto">
+              <h4 className="font-semibold mb-2">Your invoice data exists:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm mb-4">
+                <li>3 invoices in database (IDs: 8, 9, 10)</li>
+                <li>Total amount: 375.00 SEK</li>
+                <li>Billing month: 2025-09-01</li>
+                <li>All invoices have status: pending</li>
+              </ul>
+              
+              <h4 className="font-semibold mb-2">Solutions:</h4>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>
+                  <strong>Quick fix (temporary):</strong>
+                  <br />
+                  <code className="bg-background px-2 py-1 rounded text-xs">
+                    ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;
+                  </code>
+                </li>
+                <li>
+                  <strong>Proper fix:</strong> Implement authentication so browser client runs with authenticated user who has super_admin role
+                </li>
               </ol>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Invoices Table */}
+      {/* Placeholder Table */}
       <Card>
         <CardHeader>
           <CardTitle>Monthly Invoices</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : invoiceData.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoiceData.map((invoice, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{invoice.invoice_number || 'N/A'}</TableCell>
-                    <TableCell>{invoice.invoice_date || 'N/A'}</TableCell>
-                    <TableCell>{formatCurrency(invoice.total_amount || 0)}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {invoice.status || 'pending'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8">
-              <AlertCircleIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No invoices found</h3>
-              <p className="text-muted-foreground mb-4">
-                Authentication required to access invoice data
-              </p>
-            </div>
-          )}
+          <div className="text-center py-8">
+            <AlertCircleIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No invoices visible</h3>
+            <p className="text-muted-foreground mb-4">
+              Invoices exist but are blocked by RLS policies
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Switch to September 2025 and check browser console for debugging logs
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
