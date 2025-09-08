@@ -183,14 +183,14 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
     };
   };
 
-  const updateServiceConfig = (service: string, field: string, value: number) => {
+  const updateServiceConfig = (service: string, field: string, value: number | boolean) => {
     setServiceConfigs(prev => {
       const updated = { ...prev };
       updated[service] = { ...updated[service], [field]: value };
       
       if (field === 'internalCost' || field === 'markup') {
-        const internalCost = field === 'internalCost' ? value : updated[service].internalCost;
-        const markup = field === 'markup' ? value : updated[service].markup;
+        const internalCost = field === 'internalCost' ? value as number : updated[service].internalCost;
+        const markup = field === 'markup' ? value as number : updated[service].markup;
         updated[service].finalPrice = internalCost * (1 + markup / 100);
         updated[service].margin = (markup / (100 + markup)) * 100;
       }
