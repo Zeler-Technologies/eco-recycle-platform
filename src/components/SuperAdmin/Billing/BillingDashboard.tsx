@@ -32,27 +32,65 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
     { value: '2025-08', label: 'August 2025' }
   ];
 
-  // Fetch invoice data - simplified approach without Supabase types
+  // Fetch invoice data with real Supabase queries
   const fetchInvoiceData = async () => {
+    console.log('🔥 fetchInvoiceData STARTED for month:', selectedMonth);
     setLoading(true);
+    
     try {
-      // Avoid the problematic Supabase TypeScript query
-      console.log('Fetching data for month:', selectedMonth);
+      // Calculate date range for the selected month
+      const startDate = `${selectedMonth}-01`;
+      const endDate = `${selectedMonth}-31`;
+      console.log('🔥 Querying invoice_date between:', startDate, 'and', endDate);
       
-      // For now, set placeholder data to avoid compilation errors
-      // This will be replaced with working queries once auth is fixed
-      setInvoiceData([]);
-      setStatsData({ totalInvoices: 0, totalRevenue: 0, totalVat: 0, activeTenants: 0 });
+      const { data: invoices, error: invoiceError } = await supabase
+        .from('scrapyard_invoices')
+        .select(`
+          *,
+          scrapyard:scrapyards(name),
+          tenant:tenants(name)
+        `)
+        .gte('invoice_date', startDate)
+        .lte('invoice_date', endDate)
+        .order('invoice_date', { ascending: false });
+
+      console.log('🔥 Invoice query result:', { data: invoices, error: invoiceError, dataLength: invoices?.length });
       
-      // Show what data should exist
-      if (selectedMonth === '2025-09') {
-        console.log('Expected: 3 invoices, 375 SEK total for September 2025');
-        toast.info('September 2025: 3 invoices exist (375 SEK) - authentication required');
+      if (invoiceError) {
+        console.error('🚨 Invoice query error:', invoiceError);
+        toast.error('Failed to fetch invoices: ' + invoiceError.message);
+        setInvoiceData([]);
+        setStatsData({ totalInvoices: 0, totalRevenue: 0, totalVat: 0, activeTenants: 0 });
+        return;
       }
       
+      console.log('🔥 Invoice query succeeded, found:', invoices?.length || 0, 'invoices');
+      
+      // Process the data
+      const processedInvoices = invoices || [];
+      setInvoiceData(processedInvoices);
+      
+      // Calculate stats
+      const totalInvoices = processedInvoices.length;
+      const totalRevenue = processedInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
+      const totalVat = processedInvoices.reduce((sum, inv) => sum + (Number(inv.tax_amount) || 0), 0);
+      const uniqueTenants = new Set(processedInvoices.map(inv => inv.tenant_id)).size;
+      
+      const stats = {
+        totalInvoices,
+        totalRevenue,
+        totalVat,
+        activeTenants: uniqueTenants
+      };
+      
+      console.log('🔥 Calculated stats:', stats);
+      setStatsData(stats);
+      
     } catch (err) {
-      console.log('Data fetch completed:', err);
+      console.error('🚨 Data fetch error:', err);
+      toast.error('Failed to fetch billing data');
       setInvoiceData([]);
+      setStatsData({ totalInvoices: 0, totalRevenue: 0, totalVat: 0, activeTenants: 0 });
     } finally {
       setLoading(false);
     }
@@ -136,11 +174,8 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <div className="mb-2">No invoices visible</div>
-              <div className="text-sm">Note: 3 invoices exist (375 SEK) but require authentication</div>
-              <div className="text-xs mt-2 bg-yellow-50 p-2 rounded">
-                Run: ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;
-              </div>
+              <div className="mb-2">No recent billing activity</div>
+              <div className="text-sm">No invoices found for {monthOptions.find(m => m.value === selectedMonth)?.label}</div>
             </div>
           )}
         </CardContent>
@@ -192,12 +227,9 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
           ) : (
             <div className="text-center py-12">
               <div className="text-gray-500 mb-4">No invoices found for {monthOptions.find(m => m.value === selectedMonth)?.label}</div>
-              <div className="text-sm bg-blue-50 p-4 rounded">
-                <div className="font-medium mb-2">Expected Data:</div>
-                <div>• 3 invoices for September 2025</div>
-                <div>• Total: 375.00 SEK</div>
-                <div>• Status: All pending</div>
-              </div>
+              <Button onClick={generateInvoices} className="mt-4">
+                Generate Invoices for This Month
+              </Button>
             </div>
           )}
         </CardContent>
