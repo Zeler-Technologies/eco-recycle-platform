@@ -80,6 +80,333 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
     mapsApiRequests: 2150
   };
 
+  // Comprehensive Analytics Dashboard Component
+  const AnalyticsDashboard = () => {
+    const [timeFilter, setTimeFilter] = useState('monthly');
+    const [selectedYear, setSelectedYear] = useState('2025');
+    
+    // Mock comprehensive analytics data
+    const analyticsData = {
+      monthly: {
+        '2025': {
+          revenue: [125000, 132000, 145000, 158000, 167000, 172000, 186000, 195000, 203000, 215000, 228000, 240000],
+          invoices: [45, 48, 52, 55, 58, 61, 65, 68, 71, 75, 79, 83],
+          pickups: [320, 340, 365, 380, 395, 410, 425, 440, 455, 470, 485, 500],
+          tenants: [25, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+          serviceCosts: [89000, 94000, 102000, 108000, 115000, 120000, 128000, 134000, 140000, 147000, 154000, 162000]
+        }
+      },
+      quarterly: {
+        '2025': {
+          revenue: [402000, 497000, 584000, 683000],
+          invoices: [145, 174, 204, 237],
+          pickups: [1025, 1230, 1320, 1455],
+          tenants: [25, 30, 33, 37],
+          serviceCosts: [285000, 343000, 402000, 463000]
+        }
+      },
+      yearly: {
+        revenue: [1680000, 2166000],
+        invoices: [650, 760],
+        pickups: [4200, 5030],
+        tenants: [28, 37],
+        serviceCosts: [1250000, 1493000]
+      }
+    };
+
+    const tenantPerformance = [
+      { name: 'Stockholm Scrapyard AB', revenue: 485000, pickups: 1250, growth: 15.3, margin: 23.5 },
+      { name: 'Malmö Auto Recycling', revenue: 342000, pickups: 890, growth: 12.7, margin: 19.2 },
+      { name: 'Göteborg Bil Återvinning', revenue: 398000, pickups: 1080, growth: 18.9, margin: 25.1 },
+      { name: 'Uppsala Återvinning', revenue: 276000, pickups: 720, growth: 8.4, margin: 16.8 },
+      { name: 'Norrköping Auto Parts', revenue: 189000, pickups: 510, growth: 22.1, margin: 21.3 }
+    ];
+
+    const serviceBreakdown = [
+      { service: 'Platform Service', revenue: 186000, percentage: 25.3, trend: 'up' },
+      { service: 'SMS Services', revenue: 142000, percentage: 19.3, trend: 'up' },
+      { service: 'Car Processing', revenue: 298000, percentage: 40.5, trend: 'stable' },
+      { service: 'Google Maps API', revenue: 109000, percentage: 14.9, trend: 'up' }
+    ];
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const years = ['2024', '2025'];
+
+    const getCurrentData = () => {
+      if (timeFilter === 'yearly') return analyticsData.yearly;
+      return analyticsData[timeFilter][selectedYear];
+    };
+
+    const getLabels = () => {
+      if (timeFilter === 'yearly') return years;
+      if (timeFilter === 'quarterly') return quarters;
+      return months;
+    };
+
+    const calculateGrowth = (data: number[]) => {
+      if (data.length < 2) return 0;
+      const current = data[data.length - 1];
+      const previous = data[data.length - 2];
+      return ((current - previous) / previous * 100);
+    };
+
+    const currentData = getCurrentData();
+    const labels = getLabels();
+
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold">Analytics Dashboard</h3>
+            <p className="text-gray-600">Comprehensive business intelligence and performance metrics</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <select 
+              value={timeFilter} 
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="p-2 border rounded-lg"
+            >
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+            {timeFilter !== 'yearly' && (
+              <select 
+                value={selectedYear} 
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="p-2 border rounded-lg"
+              >
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* Key Performance Indicators */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-600 font-medium">Total Revenue</p>
+                <p className="text-2xl font-bold text-blue-800">{formatCurrency(currentData.revenue.reduce((a, b) => a + b, 0))}</p>
+                <p className="text-sm text-blue-600">Growth: +{calculateGrowth(currentData.revenue).toFixed(1)}%</p>
+              </div>
+              <div className="text-3xl">💰</div>
+            </div>
+          </Card>
+          
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-600 font-medium">Total Pickups</p>
+                <p className="text-2xl font-bold text-green-800">{currentData.pickups.reduce((a, b) => a + b, 0).toLocaleString()}</p>
+                <p className="text-sm text-green-600">Growth: +{calculateGrowth(currentData.pickups).toFixed(1)}%</p>
+              </div>
+              <div className="text-3xl">🚛</div>
+            </div>
+          </Card>
+          
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-600 font-medium">Active Tenants</p>
+                <p className="text-2xl font-bold text-purple-800">{Math.max(...currentData.tenants)}</p>
+                <p className="text-sm text-purple-600">New: +{Math.max(...currentData.tenants) - Math.min(...currentData.tenants)}</p>
+              </div>
+              <div className="text-3xl">🏢</div>
+            </div>
+          </Card>
+          
+          <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-orange-600 font-medium">Profit Margin</p>
+                <p className="text-2xl font-bold text-orange-800">
+                  {(((currentData.revenue.reduce((a, b) => a + b, 0) - currentData.serviceCosts.reduce((a, b) => a + b, 0)) / currentData.revenue.reduce((a, b) => a + b, 0)) * 100).toFixed(1)}%
+                </p>
+                <p className="text-sm text-orange-600">Target: 25%</p>
+              </div>
+              <div className="text-3xl">📊</div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Revenue vs Service Costs Chart */}
+        <Card className="p-6">
+          <h4 className="text-lg font-bold mb-4">Revenue vs Service Costs Over Time</h4>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="font-semibold mb-2 text-blue-600">Revenue Trend</h5>
+                <div className="space-y-2">
+                  {currentData.revenue.map((value, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm">{labels[index]}</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-32 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{width: `${(value / Math.max(...currentData.revenue)) * 100}%`}}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-bold w-20 text-right">{formatCurrency(value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h5 className="font-semibold mb-2 text-red-600">Service Costs</h5>
+                <div className="space-y-2">
+                  {currentData.serviceCosts.map((value, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm">{labels[index]}</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-32 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-red-500 h-2 rounded-full" 
+                            style={{width: `${(value / Math.max(...currentData.serviceCosts)) * 100}%`}}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-bold w-20 text-right">{formatCurrency(value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Invoicing Performance */}
+        <Card className="p-6">
+          <h4 className="text-lg font-bold mb-4">Invoicing Performance</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h5 className="font-semibold mb-2">Invoice Volume</h5>
+              <div className="space-y-2">
+                {currentData.invoices.map((value, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="text-sm">{labels[index]}</span>
+                    <span className="font-bold">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h5 className="font-semibold mb-2">Average Invoice Value</h5>
+              <div className="space-y-2">
+                {currentData.revenue.map((revenue, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="text-sm">{labels[index]}</span>
+                    <span className="font-bold">{formatCurrency(revenue / currentData.invoices[index])}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h5 className="font-semibold mb-2">Revenue per Pickup</h5>
+              <div className="space-y-2">
+                {currentData.revenue.map((revenue, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="text-sm">{labels[index]}</span>
+                    <span className="font-bold">{formatCurrency(revenue / currentData.pickups[index])}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Tenant Performance Rankings */}
+        <Card className="p-6">
+          <h4 className="text-lg font-bold mb-4">Top Performing Tenants</h4>
+          <div className="space-y-4">
+            {tenantPerformance.map((tenant, index) => (
+              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <h6 className="font-semibold">{tenant.name}</h6>
+                    <p className="text-sm text-gray-600">{tenant.pickups} pickups</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">{formatCurrency(tenant.revenue)}</p>
+                  <p className="text-sm text-green-600">+{tenant.growth}% growth</p>
+                  <p className="text-sm text-blue-600">{tenant.margin}% margin</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Service Performance Breakdown */}
+        <Card className="p-6">
+          <h4 className="text-lg font-bold mb-4">Service Revenue Breakdown</h4>
+          <div className="space-y-4">
+            {serviceBreakdown.map((service, index) => (
+              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    {service.service === 'Platform Service' ? '🌐' :
+                     service.service === 'SMS Services' ? '📞' :
+                     service.service === 'Car Processing' ? '🚗' : '📍'}
+                  </div>
+                  <div>
+                    <h6 className="font-semibold">{service.service}</h6>
+                    <p className="text-sm text-gray-600">{service.percentage}% of total revenue</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">{formatCurrency(service.revenue)}</p>
+                  <div className="flex items-center space-x-1">
+                    <span className={`text-sm ${service.trend === 'up' ? 'text-green-600' : service.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
+                      {service.trend === 'up' ? '↗' : service.trend === 'down' ? '↘' : '→'}
+                    </span>
+                    <span className="text-sm text-gray-600">{service.trend}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Business Intelligence Insights */}
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
+          <h4 className="text-lg font-bold mb-4">Business Intelligence Insights</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-semibold mb-2 text-blue-600">Revenue Insights</h5>
+              <ul className="space-y-2 text-sm">
+                <li>• Revenue growth accelerating: +{calculateGrowth(currentData.revenue).toFixed(1)}% this period</li>
+                <li>• Stockholm Scrapyard AB leading with highest margins (23.5%)</li>
+                <li>• Car Processing service generating 40.5% of total revenue</li>
+                <li>• Average invoice value trending upward across all tenants</li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-semibold mb-2 text-purple-600">Operational Insights</h5>
+              <ul className="space-y-2 text-sm">
+                <li>• Pickup efficiency improving: +{calculateGrowth(currentData.pickups).toFixed(1)}% more pickups</li>
+                <li>• {Math.max(...currentData.tenants) - Math.min(...currentData.tenants)} new tenants added this period</li>
+                <li>• Service costs well controlled at {((currentData.serviceCosts.reduce((a, b) => a + b, 0) / currentData.revenue.reduce((a, b) => a + b, 0)) * 100).toFixed(1)}% of revenue</li>
+                <li>• SMS and Maps API services showing strong growth trends</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
   // Service configurations with editable pricing
   const [serviceConfigs, setServiceConfigs] = useState<ServiceConfig[]>([
     {
