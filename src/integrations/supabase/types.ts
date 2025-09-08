@@ -68,6 +68,237 @@ export type Database = {
           },
         ]
       }
+      backup_customer_requests: {
+        Row: {
+          car_brand: string | null
+          car_model: string | null
+          car_registration_number: string | null
+          car_year: number | null
+          contact_phone: string | null
+          control_number: string | null
+          created_at: string | null
+          customer_id: string | null
+          estimated_value: number | null
+          id: string | null
+          owner_address: string | null
+          owner_city: string | null
+          owner_name: string | null
+          owner_postal_code: string | null
+          owner_street_address: string | null
+          pickup_address: string | null
+          pickup_city: string | null
+          pickup_date: string | null
+          pickup_latitude: number | null
+          pickup_location: string | null
+          pickup_longitude: number | null
+          pickup_postal_code: string | null
+          pickup_street_address: string | null
+          pnr_num: string | null
+          pnr_num_norm: string | null
+          preferred_contact_method: string | null
+          quote_amount: number | null
+          scrapyard_id: number | null
+          special_instructions: string | null
+          status: string | null
+          tenant_id: number | null
+          transport_fee: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          car_brand?: string | null
+          car_model?: string | null
+          car_registration_number?: string | null
+          car_year?: number | null
+          contact_phone?: string | null
+          control_number?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          estimated_value?: number | null
+          id?: string | null
+          owner_address?: string | null
+          owner_city?: string | null
+          owner_name?: string | null
+          owner_postal_code?: string | null
+          owner_street_address?: string | null
+          pickup_address?: string | null
+          pickup_city?: string | null
+          pickup_date?: string | null
+          pickup_latitude?: number | null
+          pickup_location?: string | null
+          pickup_longitude?: number | null
+          pickup_postal_code?: string | null
+          pickup_street_address?: string | null
+          pnr_num?: string | null
+          pnr_num_norm?: string | null
+          preferred_contact_method?: string | null
+          quote_amount?: number | null
+          scrapyard_id?: number | null
+          special_instructions?: string | null
+          status?: string | null
+          tenant_id?: number | null
+          transport_fee?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          car_brand?: string | null
+          car_model?: string | null
+          car_registration_number?: string | null
+          car_year?: number | null
+          contact_phone?: string | null
+          control_number?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          estimated_value?: number | null
+          id?: string | null
+          owner_address?: string | null
+          owner_city?: string | null
+          owner_name?: string | null
+          owner_postal_code?: string | null
+          owner_street_address?: string | null
+          pickup_address?: string | null
+          pickup_city?: string | null
+          pickup_date?: string | null
+          pickup_latitude?: number | null
+          pickup_location?: string | null
+          pickup_longitude?: number | null
+          pickup_postal_code?: string | null
+          pickup_street_address?: string | null
+          pnr_num?: string | null
+          pnr_num_norm?: string | null
+          preferred_contact_method?: string | null
+          quote_amount?: number | null
+          scrapyard_id?: number | null
+          special_instructions?: string | null
+          status?: string | null
+          tenant_id?: number | null
+          transport_fee?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_scrapyards: {
+        Row: {
+          address: string | null
+          city: string | null
+          closing_time: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: number | null
+          is_active: boolean | null
+          is_primary: boolean | null
+          latitude: number | null
+          longitude: number | null
+          materials_accepted: Json | null
+          max_capacity: number | null
+          name: string | null
+          opening_time: string | null
+          operating_days: string[] | null
+          postal_code: string | null
+          services: Json | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          closing_time?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: number | null
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          materials_accepted?: Json | null
+          max_capacity?: number | null
+          name?: string | null
+          opening_time?: string | null
+          operating_days?: string[] | null
+          postal_code?: string | null
+          services?: Json | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          closing_time?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: number | null
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          materials_accepted?: Json | null
+          max_capacity?: number | null
+          name?: string | null
+          opening_time?: string | null
+          operating_days?: string[] | null
+          postal_code?: string | null
+          services?: Json | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_tenants: {
+        Row: {
+          base_address: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          date: string | null
+          invoice_email: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          postal_code: string | null
+          service_type: string | null
+          street_address: string | null
+          tenants_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          date?: string | null
+          invoice_email?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          postal_code?: string | null
+          service_type?: string | null
+          street_address?: string | null
+          tenants_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          date?: string | null
+          invoice_email?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          postal_code?: string | null
+          service_type?: string | null
+          street_address?: string | null
+          tenants_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       bidding_system: {
         Row: {
           bid_amount: number
@@ -273,26 +504,47 @@ export type Database = {
         Row: {
           car_id: string
           car_registration_number: string | null
+          created_at: string | null
+          file_name: string | null
+          file_size: number | null
           id: string
+          image_type: string | null
           image_url: string
+          notes: string | null
           pnr_num: number
           pnr_num_norm: string | null
+          updated_at: string | null
+          uploaded_by: string | null
         }
         Insert: {
           car_id: string
           car_registration_number?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
           id?: string
+          image_type?: string | null
           image_url: string
+          notes?: string | null
           pnr_num: number
           pnr_num_norm?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
         }
         Update: {
           car_id?: string
           car_registration_number?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
           id?: string
+          image_type?: string | null
           image_url?: string
+          notes?: string | null
           pnr_num?: number
           pnr_num_norm?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -1615,6 +1867,39 @@ export type Database = {
           },
         ]
       }
+      monthly_billing_cycles: {
+        Row: {
+          billing_month: string
+          completed_at: string | null
+          created_at: string | null
+          generated_by: string | null
+          id: string
+          status: string
+          total_amount: number | null
+          total_invoices: number | null
+        }
+        Insert: {
+          billing_month: string
+          completed_at?: string | null
+          created_at?: string | null
+          generated_by?: string | null
+          id?: string
+          status?: string
+          total_amount?: number | null
+          total_invoices?: number | null
+        }
+        Update: {
+          billing_month?: string
+          completed_at?: string | null
+          created_at?: string | null
+          generated_by?: string | null
+          id?: string
+          status?: string
+          total_amount?: number | null
+          total_invoices?: number | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -2167,6 +2452,9 @@ export type Database = {
           quantity: number
           reference_id: string | null
           reference_type: string | null
+          service_id: string | null
+          service_period_end: string | null
+          service_period_start: string | null
           tax_amount: number
           tax_rate: number
           total_price: number
@@ -2182,6 +2470,9 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
+          service_id?: string | null
+          service_period_end?: string | null
+          service_period_start?: string | null
           tax_amount?: number
           tax_rate?: number
           total_price: number
@@ -2197,6 +2488,9 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
+          service_id?: string | null
+          service_period_end?: string | null
+          service_period_start?: string | null
           tax_amount?: number
           tax_rate?: number
           total_price?: number
@@ -2225,21 +2519,31 @@ export type Database = {
             referencedRelation: "scrapyard_invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "scrapyard_invoice_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_cost_models"
+            referencedColumns: ["id"]
+          },
         ]
       }
       scrapyard_invoices: {
         Row: {
           billing_address: string | null
           billing_city: string | null
+          billing_month: string | null
           billing_postal_code: string | null
           created_at: string
           created_by: string | null
+          currency: string | null
           description: string | null
           due_date: string
           id: number
           invoice_date: string
           invoice_items: Json | null
           invoice_number: string
+          invoice_type: string | null
           payment_date: string | null
           payment_method: string | null
           payment_reference: string | null
@@ -2249,19 +2553,24 @@ export type Database = {
           tenant_id: number | null
           total_amount: number
           updated_at: string
+          vat_amount: number | null
+          vat_rate: number | null
         }
         Insert: {
           billing_address?: string | null
           billing_city?: string | null
+          billing_month?: string | null
           billing_postal_code?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
           description?: string | null
           due_date: string
           id?: never
           invoice_date?: string
           invoice_items?: Json | null
           invoice_number: string
+          invoice_type?: string | null
           payment_date?: string | null
           payment_method?: string | null
           payment_reference?: string | null
@@ -2271,19 +2580,24 @@ export type Database = {
           tenant_id?: number | null
           total_amount: number
           updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
         }
         Update: {
           billing_address?: string | null
           billing_city?: string | null
+          billing_month?: string | null
           billing_postal_code?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
           description?: string | null
           due_date?: string
           id?: never
           invoice_date?: string
           invoice_items?: Json | null
           invoice_number?: string
+          invoice_type?: string | null
           payment_date?: string | null
           payment_method?: string | null
           payment_reference?: string | null
@@ -2293,6 +2607,8 @@ export type Database = {
           tenant_id?: number | null
           total_amount?: number
           updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
         }
         Relationships: [
           {
@@ -2430,6 +2746,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      service_cost_models: {
+        Row: {
+          allocation_method: string | null
+          base_cost_monthly: number | null
+          cost_type: string
+          created_at: string | null
+          id: string
+          service_name: string
+          unit_cost: number | null
+        }
+        Insert: {
+          allocation_method?: string | null
+          base_cost_monthly?: number | null
+          cost_type: string
+          created_at?: string | null
+          id?: string
+          service_name: string
+          unit_cost?: number | null
+        }
+        Update: {
+          allocation_method?: string | null
+          base_cost_monthly?: number | null
+          cost_type?: string
+          created_at?: string | null
+          id?: string
+          service_name?: string
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
+      shared_cost_allocations: {
+        Row: {
+          allocation_data: Json | null
+          billing_month: string
+          created_at: string | null
+          id: string
+          service_id: string | null
+          total_base_cost: number | null
+          total_usage_units: number | null
+        }
+        Insert: {
+          allocation_data?: Json | null
+          billing_month: string
+          created_at?: string | null
+          id?: string
+          service_id?: string | null
+          total_base_cost?: number | null
+          total_usage_units?: number | null
+        }
+        Update: {
+          allocation_data?: Json | null
+          billing_month?: string
+          created_at?: string | null
+          id?: string
+          service_id?: string | null
+          total_base_cost?: number | null
+          total_usage_units?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_cost_allocations_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_cost_models"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2834,6 +3218,67 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_coverage_areas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
+      tenant_service_usage: {
+        Row: {
+          base_cost_allocation: number | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          service_id: string | null
+          tenant_id: number | null
+          total_cost: number | null
+          unit_cost: number | null
+          units_used: number
+          usage_date: string | null
+        }
+        Insert: {
+          base_cost_allocation?: number | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          service_id?: string | null
+          tenant_id?: number | null
+          total_cost?: number | null
+          unit_cost?: number | null
+          units_used: number
+          usage_date?: string | null
+        }
+        Update: {
+          base_cost_allocation?: number | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          service_id?: string | null
+          tenant_id?: number | null
+          total_cost?: number | null
+          unit_cost?: number | null
+          units_used?: number
+          usage_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_service_usage_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_cost_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_service_usage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_service_usage_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3903,6 +4348,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_table_exists: {
+        Args: { p_table_name: string }
+        Returns: boolean
+      }
       cleanup_old_driver_locations: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -4218,6 +4667,14 @@ export type Database = {
           | { p_scrapyard_id: number }
           | { p_scrapyard_id: number; p_tenant_id: number }
         Returns: string
+      }
+      generate_monthly_invoices_for_tenants: {
+        Args: { p_billing_month: string }
+        Returns: Json
+      }
+      generate_monthly_invoices_for_tenants_test: {
+        Args: { p_billing_month: string }
+        Returns: Json
       }
       generate_rls_policy_export: {
         Args: Record<PropertyKey, never>
@@ -4553,6 +5010,10 @@ export type Database = {
           total_cancelled_invoices: number
         }[]
       }
+      get_car_id_from_customer_request: {
+        Args: { request_id: string }
+        Returns: string
+      }
       get_current_driver_info: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -4571,6 +5032,18 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_customer_request_images: {
+        Args: { request_id: string }
+        Returns: {
+          created_at: string
+          file_name: string
+          id: string
+          image_type: string
+          image_url: string
+          notes: string
+          uploaded_by: string
+        }[]
       }
       get_driver_pickups: {
         Args: { driver_auth_id: string }
@@ -4622,6 +5095,14 @@ export type Database = {
           reason: string
           scrapyard_name: string
         }[]
+      }
+      get_monthly_billing_overview: {
+        Args: { p_billing_month?: string }
+        Returns: Json
+      }
+      get_monthly_billing_overview_test: {
+        Args: { p_billing_month?: string }
+        Returns: Json
       }
       get_my_requests: {
         Args: Record<PropertyKey, never>
@@ -4838,6 +5319,17 @@ export type Database = {
       gidx_out: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      insert_customer_car_image: {
+        Args: {
+          p_customer_request_id: string
+          p_file_name?: string
+          p_file_size?: number
+          p_image_type: string
+          p_image_url: string
+          p_notes?: string
+        }
+        Returns: string
       }
       is_assigned_driver: {
         Args: { pickup_order_uuid: string }
