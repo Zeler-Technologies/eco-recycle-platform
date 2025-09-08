@@ -3,43 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BillingDashboardProps {
   onBack?: () => void;
 }
 
-// Supabase client configuration
-const createSupabaseClient = () => {
-  // This would be your actual Supabase client initialization
-  return {
-    from: (table: string) => ({
-      select: (columns?: string) => ({
-        eq: (column: string, value: any) => Promise.resolve({ data: [], error: null }),
-        gte: (column: string, value: any) => Promise.resolve({ data: [], error: null }),
-        lt: (column: string, value: any) => Promise.resolve({ data: [], error: null }),
-        order: (column: string, options?: any) => Promise.resolve({ data: [], error: null })
-      }),
-      insert: (data: any) => ({
-        select: () => Promise.resolve({ data: null, error: null })
-      }),
-      update: (data: any) => ({
-        eq: (column: string, value: any) => ({
-          select: () => Promise.resolve({ data: null, error: null })
-        })
-      }),
-      upsert: (data: any, options?: any) => ({
-        select: () => Promise.resolve({ data: null, error: null })
-      })
-    }),
-    auth: {
-      getUser: () => Promise.resolve({
-        data: { user: { id: 'user-123', email: 'admin@pantabilen.se', role: 'super_admin' } },
-        error: null
-      })
-    },
-    rpc: (functionName: string, params?: any) => Promise.resolve({ data: null, error: null })
-  };
-};
 
 const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -147,7 +116,7 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
     Enterprise: { basePrice: 399, currency: 'EUR', smsLimit: 10000, description: 'Advanced features for large operations' }
   };
 
-  const supabase = createSupabaseClient();
+  
 
   // Utility functions
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -209,6 +178,7 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
           await supabase.from('billing_configuration').upsert([{
             tenant_id: data.tenant_id,
             config_category: data.category,
+            config_key: data.key || 'default',
             config_value: data.value,
             is_active: true
           }]);
@@ -237,7 +207,13 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
       console.log('Loading data from Supabase...');
       
       // Load all data in parallel
-      const [tenantsResult, scrapyardsResult, invoicesResult, pricingResult, configResult] = await Promise.all([
+      const [
+        { data: tenants, error: tenantsError },
+        { data: scrapyards, error: scrapyardsError },
+        { data: invoices, error: invoicesError },
+        { data: pricingTiers, error: pricingError },
+        { data: billingConfig, error: configError }
+      ] = await Promise.all([
         supabase.from('tenants').select('*'),
         supabase.from('scrapyards').select('*'),
         supabase.from('scrapyard_invoices').select('*, scrapyards(name, email)'),
@@ -245,12 +221,18 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
         supabase.from('billing_configuration').select('*')
       ]);
 
+      if (tenantsError) throw tenantsError;
+      if (scrapyardsError) throw scrapyardsError;
+      if (invoicesError) throw invoicesError;
+      if (pricingError) throw pricingError;
+      if (configError) throw configError;
+
       setSupabaseData({
-        tenants: tenantsResult.data || [],
-        scrapyards: scrapyardsResult.data || [],
-        invoices: invoicesResult.data || [],
-        pricingTiers: pricingResult.data || [],
-        billingConfig: configResult.data || []
+        tenants: tenants || [],
+        scrapyards: scrapyards || [],
+        invoices: invoices || [],
+        pricingTiers: pricingTiers || [],
+        billingConfig: billingConfig || []
       });
 
       console.log('Supabase data loaded successfully');
