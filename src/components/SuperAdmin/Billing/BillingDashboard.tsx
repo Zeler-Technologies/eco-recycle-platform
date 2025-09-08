@@ -69,7 +69,7 @@ const ServiceCostTab: React.FC = () => {
 
 // Simple inline InvoiceDetailModal component
 const InvoiceDetailModal: React.FC<{ 
-  invoice: Invoice | null; 
+  invoice: InvoiceData | null; 
   isOpen: boolean; 
   onClose: () => void; 
 }> = ({ invoice, isOpen, onClose }) => {
@@ -88,15 +88,14 @@ const InvoiceDetailModal: React.FC<{
           <div className="grid grid-cols-2 gap-4">
             <div>
               <h4 className="font-semibold">Invoice Information</h4>
-              <p>Amount: {invoice.total_amount} {invoice.currency}</p>
-              <p>VAT: {invoice.vat_amount} {invoice.currency}</p>
+              <p>Amount: {invoice.total_amount} SEK</p>
+              <p>Tax: {invoice.tax_amount} SEK</p>
               <p>Status: <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>{invoice.status}</Badge></p>
             </div>
             <div>
               <h4 className="font-semibold">Dates</h4>
               <p>Invoice Date: {new Date(invoice.invoice_date).toLocaleDateString()}</p>
               <p>Due Date: {new Date(invoice.due_date).toLocaleDateString()}</p>
-              <p>Billing Month: {invoice.billing_month}</p>
             </div>
           </div>
           {invoice.description && (
@@ -111,13 +110,13 @@ const InvoiceDetailModal: React.FC<{
   );
 };
 
-export const BillingDashboard: React.FC = () => {
+const BillingDashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState('2025-09');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [billingOverview, setBillingOverview] = useState<BillingOverview | null>(null);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   // Generate month options
@@ -134,43 +133,47 @@ export const BillingDashboard: React.FC = () => {
     const startDate = `${selectedMonth}-01`;
     console.log('🔥 Overview querying billing_month:', startDate);
     
-    const { data, error } = await supabase
-      .from('scrapyard_invoices')
-      .select('total_amount, vat_amount, tax_amount')
-      .eq('billing_month', startDate);
+    try {
+      const { data, error } = await supabase
+        .from('scrapyard_invoices')
+        .select('total_amount, tax_amount')
+        .eq('billing_month', startDate);
 
-    console.log('🔥 Supabase overview result:', { 
-      error, 
-      dataLength: data?.length, 
-      sample: data?.[0] 
-    });
-
-    if (error) {
-      console.error('🚨 Overview query error:', error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      const totalInvoices = data.length;
-      const totalRevenue = data.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-      const totalVat = data.reduce((sum, invoice) => sum + (invoice.vat_amount || invoice.tax_amount || 0), 0);
-      const averageInvoiceAmount = totalRevenue / totalInvoices;
-
-      setBillingOverview({
-        totalInvoices,
-        totalRevenue,
-        totalVat,
-        averageInvoiceAmount,
+      console.log('🔥 Supabase overview result:', { 
+        error, 
+        dataLength: data?.length, 
+        sample: data?.[0] 
       });
-      console.log('🔥 Overview calculated:', { totalInvoices, totalRevenue, totalVat });
-    } else {
-      setBillingOverview({
-        totalInvoices: 0,
-        totalRevenue: 0,
-        totalVat: 0,
-        averageInvoiceAmount: 0,
-      });
-      console.log('🔥 No overview data found');
+
+      if (error) {
+        console.error('🚨 Overview query error:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const totalInvoices = data.length;
+        const totalRevenue = data.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+        const totalVat = data.reduce((sum, invoice) => sum + (invoice.tax_amount || 0), 0);
+        const averageInvoiceAmount = totalRevenue / totalInvoices;
+
+        setBillingOverview({
+          totalInvoices,
+          totalRevenue,
+          totalVat,
+          averageInvoiceAmount,
+        });
+        console.log('🔥 Overview calculated:', { totalInvoices, totalRevenue, totalVat });
+      } else {
+        setBillingOverview({
+          totalInvoices: 0,
+          totalRevenue: 0,
+          totalVat: 0,
+          averageInvoiceAmount: 0,
+        });
+        console.log('🔥 No overview data found');
+      }
+    } catch (err) {
+      console.error('🚨 Overview fetch error:', err);
     }
   };
 
@@ -181,27 +184,32 @@ export const BillingDashboard: React.FC = () => {
     const startDate = `${selectedMonth}-01`;
     console.log('🔥 Invoices querying billing_month:', startDate);
     
-    const { data, error } = await supabase
-      .from('scrapyard_invoices')
-      .select('*')
-      .eq('billing_month', startDate)
-      .order('id', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('scrapyard_invoices')
+        .select('*')
+        .eq('billing_month', startDate)
+        .order('id', { ascending: false });
 
-    console.log('🔥 Supabase invoices result:', { 
-      error, 
-      dataLength: data?.length, 
-      sample: data?.[0] 
-    });
+      console.log('🔥 Supabase invoices result:', { 
+        error, 
+        dataLength: data?.length, 
+        sample: data?.[0] 
+      });
 
-    if (error) {
-      console.error('🚨 Invoices query error:', error);
-      toast.error('Failed to fetch invoices: ' + error.message);
-    } else {
-      setInvoices(data || []);
-      console.log('🔥 Invoices set to state:', data?.length || 0);
+      if (error) {
+        console.error('🚨 Invoices query error:', error);
+        toast.error('Failed to fetch invoices: ' + error.message);
+      } else {
+        setInvoices(data || []);
+        console.log('🔥 Invoices set to state:', data?.length || 0);
+      }
+    } catch (err) {
+      console.error('🚨 Invoices fetch error:', err);
+      toast.error('Failed to fetch invoices');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const generateMonthlyInvoices = async () => {
@@ -248,7 +256,7 @@ export const BillingDashboard: React.FC = () => {
     fetchInvoices();
   }, [selectedMonth]);
 
-  const handleViewInvoice = (invoice: Invoice) => {
+  const handleViewInvoice = (invoice: InvoiceData) => {
     setSelectedInvoice(invoice);
     setShowInvoiceModal(true);
   };
@@ -356,7 +364,7 @@ export const BillingDashboard: React.FC = () => {
                       <TableHead>Invoice #</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>VAT</TableHead>
+                      <TableHead>Tax</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -374,7 +382,7 @@ export const BillingDashboard: React.FC = () => {
                           {formatCurrency(invoice.total_amount)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.vat_amount || invoice.tax_amount || 0)}
+                          {formatCurrency(invoice.tax_amount || 0)}
                         </TableCell>
                         <TableCell>
                           <Badge 
@@ -426,3 +434,6 @@ export const BillingDashboard: React.FC = () => {
     </div>
   );
 };
+
+// CRITICAL: Export as default to fix the import error
+export default BillingDashboard;
