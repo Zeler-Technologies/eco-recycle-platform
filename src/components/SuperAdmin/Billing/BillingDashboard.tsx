@@ -107,65 +107,111 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({ onBack }) => {
         </Card>
       </div>
 
-      {/* Authentication Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Database Access Issue</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">
-            <AlertCircleIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <h3 className="text-lg font-medium mb-2">Authentication Required</h3>
-            <p className="text-muted-foreground mb-4">
-              The billing dashboard cannot access invoice data because the browser client is unauthenticated.
-              <br />
-              <strong>Root cause:</strong> auth.uid() returns null
-            </p>
-            <div className="bg-muted p-4 rounded-lg text-left max-w-2xl mx-auto">
-              <h4 className="font-semibold mb-2">Your invoice data exists:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm mb-4">
-                <li>3 invoices in database (IDs: 8, 9, 10)</li>
-                <li>Total amount: 375.00 SEK</li>
-                <li>Billing month: 2025-09-01</li>
-                <li>All invoices have status: pending</li>
-              </ul>
-              
-              <h4 className="font-semibold mb-2">Solutions:</h4>
-              <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>
-                  <strong>Quick fix (temporary):</strong>
-                  <br />
-                  <code className="bg-background px-2 py-1 rounded text-xs">
-                    ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;
-                  </code>
-                </li>
-                <li>
-                  <strong>Proper fix:</strong> Implement authentication so browser client runs with authenticated user who has super_admin role
-                </li>
-              </ol>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
 
-      {/* Placeholder Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertCircleIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No invoices visible</h3>
-            <p className="text-muted-foreground mb-4">
-              Invoices exist but are blocked by RLS policies
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Switch to September 2025 and check browser console for debugging logs
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="overview" className="space-y-4">
+          {/* Authentication Status */}
+          <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <InfoIcon className="h-5 w-5 text-yellow-600" />
+                <CardTitle className="text-yellow-800 dark:text-yellow-200">Authentication Required</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-yellow-700 dark:text-yellow-300">
+                The billing dashboard cannot access invoice data because the browser client is unauthenticated.
+              </p>
+              
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
+                <h4 className="font-semibold mb-2 text-green-700 dark:text-green-300">Your invoice data exists:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Badge variant="outline" className="mb-2">Database Confirmed</Badge>
+                    <ul className="space-y-1">
+                      <li>• 3 invoices in database</li>
+                      <li>• IDs: 8, 9, 10</li>
+                      <li>• Total: 375.00 SEK</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <Badge variant="outline" className="mb-2">Details</Badge>
+                    <ul className="space-y-1">
+                      <li>• Billing month: 2025-09-01</li>
+                      <li>• Status: All pending</li>
+                      <li>• VAT: 75.00 SEK total</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">Solutions:</h4>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <Badge variant="secondary" className="mb-1">Option 1: Quick Fix</Badge>
+                    <p className="text-blue-700 dark:text-blue-300 mb-2">Temporarily disable RLS (for testing only):</p>
+                    <code className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded text-xs block">
+                      ALTER TABLE scrapyard_invoices DISABLE ROW LEVEL SECURITY;
+                    </code>
+                  </div>
+                  <div>
+                    <Badge variant="secondary" className="mb-1">Option 2: Proper Fix</Badge>
+                    <p className="text-blue-700 dark:text-blue-300">
+                      Implement authentication so browser client runs with authenticated user who has super_admin role
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="invoices" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Invoices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <AlertCircleIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-medium mb-2">No invoices visible</h3>
+                <p className="text-muted-foreground mb-4">
+                  Invoices exist but are blocked by RLS policies
+                </p>
+                <div className="bg-muted p-4 rounded-lg max-w-md mx-auto">
+                  <p className="text-sm">
+                    Switch to September 2025 and check browser console for debugging logs
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing Analytics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <TrendingUpIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-medium mb-2">Analytics Unavailable</h3>
+                <p className="text-muted-foreground">
+                  Analytics will be available once authentication is implemented
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
