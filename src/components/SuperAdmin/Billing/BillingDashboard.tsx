@@ -163,6 +163,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
 
   // Simplified billing overview using available functions
   const fetchBillingOverview = async () => {
+    console.log('🔥 fetchBillingOverview STARTED for month:', selectedMonth);
     setLoadingOverview(true);
     try {
       // Use a simpler approach since RPC might not be available
@@ -200,6 +201,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
 
   // Fetch invoices for the selected month with enhanced data
   const fetchInvoices = async () => {
+    console.log('🔥 fetchInvoices STARTED for month:', selectedMonth);
     try {
       setLoading(true);
       const startDate = `${selectedMonth}-01`;
@@ -332,7 +334,9 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
 
   useEffect(() => {
     console.log('useEffect triggered for month:', selectedMonth);
+    console.log('About to call fetchBillingOverview');
     fetchBillingOverview();
+    console.log('About to call fetchInvoices'); 
     fetchInvoices();
   }, [selectedMonth]);
 
