@@ -331,6 +331,7 @@ export default function BillingDashboard({ onBack }: BillingDashboardProps) {
   };
 
   useEffect(() => {
+    console.log('useEffect triggered for month:', selectedMonth);
     fetchBillingOverview();
     fetchInvoices();
   }, [selectedMonth]);
