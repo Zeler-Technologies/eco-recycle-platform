@@ -150,16 +150,15 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         console.log('Creating new car record...');
         
         const carData = {
-          tenant_id: customerRequest.scrapyard_id,
-          license_plate: customerRequest.car_registration_number,
+          tenant_id: customerRequest.scrapyard_id as number,
+          license_plate: customerRequest.car_registration_number as string,
           brand: customerRequest.car_brand || 'Okänd',
           model: customerRequest.car_model || 'Okänd',
           color: 'Okänd', // Default color
-          status: 'new', // Valid car_status enum value
-          treatment_type: 'pickup', // Valid treatment_type enum value
-          age: customerRequest.car_year?.toString() || null
+          status: 'new' as 'new', // Valid car_status enum value
+          treatment_type: 'pickup' as 'pickup', // Valid treatment_type enum value
+          age: customerRequest.car_year ? String(customerRequest.car_year) : undefined
         };
-
         console.log('Creating car with data:', carData);
 
         const { data: newCar, error: createError } = await supabase

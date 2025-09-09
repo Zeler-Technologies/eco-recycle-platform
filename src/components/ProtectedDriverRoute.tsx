@@ -25,8 +25,20 @@ const ProtectedDriverRoute: React.FC<ProtectedDriverRouteProps> = ({ children })
     return <Navigate to="/login" replace />;
   }
 
+  // If authenticated but profile hasn't loaded yet, show a loader
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Check if user has driver role
-  if (profile?.role !== 'driver') {
+  if (profile.role !== 'driver') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
