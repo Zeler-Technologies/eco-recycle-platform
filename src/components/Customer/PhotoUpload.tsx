@@ -155,8 +155,8 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
           brand: customerRequest.car_brand || 'Okänd',
           model: customerRequest.car_model || 'Okänd',
           color: 'Okänd', // Default color
-          status: 'new', // Valid car_status enum value
-          treatment_type: 'pickup', // Valid treatment_type enum value
+          status: 'new' as const, // Valid car_status enum value
+          treatment_type: 'pickup' as const, // Valid treatment_type enum value
           age: customerRequest.car_year?.toString() || null
         };
 
