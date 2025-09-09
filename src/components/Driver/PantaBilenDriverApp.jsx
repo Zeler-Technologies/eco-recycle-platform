@@ -26,7 +26,8 @@ const PantaBilenDriverApp = () => {
   console.log('🔴 EMERGENCY: PantaBilenDriverApp rendering started');
   // Use real Supabase authentication
   const { user, logout } = useAuth();
-  
+  const [showInspectionModal, setShowInspectionModal] = useState(false);
+  const [currentPickupForInspection, setCurrentPickupForInspection] = useState(null);
   // Use the driver integration hook 
   const { 
     pickups,
