@@ -140,8 +140,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       console.log('Inserting directly to car_images table with data:', {
         car_id: null,
         image_url: imageUrl,
-        pnr_num: numericPnr,
-        pnr_num_norm: pnrNorm,
         car_registration_number: customerRequest.car_registration_number,
         image_type: currentPhotoType,
         file_name: fileName,
