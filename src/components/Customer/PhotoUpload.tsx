@@ -24,7 +24,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Photo requirements as per your original specification
+  // Photo requirements matching database constraints
   const [photoRequirements, setPhotoRequirements] = useState<PhotoRequirement[]>([
     {
       id: 'engine',
@@ -35,17 +35,17 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       completed: false
     },
     {
-      id: 'overall1',
-      title: 'Helhetsbild 1',
-      description: 'Övergripande bild av fordonet',
+      id: 'exterior_front',
+      title: 'Helhetsbild framifrån',
+      description: 'Övergripande bild av fordonet framifrån',
       type: 'overall',
       required: true,
       completed: false
     },
     {
-      id: 'overall2',
-      title: 'Helhetsbild 2',
-      description: 'Ytterligare övergripande bild',
+      id: 'exterior_back',
+      title: 'Helhetsbild bakifrån',
+      description: 'Övergripande bild av fordonet bakifrån',
       type: 'overall',
       required: true,
       completed: false
@@ -103,9 +103,12 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const cleanPnr = customerRequest.pnr_num?.toString().replace(/\D/g, '') || '';
       const numericPnr = parseInt(cleanPnr) || 0;
 
-      if (numericPnr === 0 || cleanPnr.length < 8) {
-        throw new Error('Ogiltigt personnummer');
+      if (numericPnr === 0 || cleanPnr.length < 10 || cleanPnr.length > 12) {
+        throw new Error('Ogiltigt personnummer - måste vara 10 eller 12 siffror');
       }
+
+      // Format PNR for pnr_num_norm field (10 or 12 digits as string)
+      const pnrNorm = cleanPnr.length === 12 ? cleanPnr : cleanPnr.padStart(10, '0');
 
       // Generate unique filename
       const fileExt = file.name.split('.').pop();
