@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDriverIntegration } from '@/hooks/useDriverIntegration';
 import { useAuth } from '@/contexts/AuthContext';
+import DriverCarInspection from './DriverCarInspection';
 import { 
   STATUS_TEXTS, 
   STATUS_COLORS, 
