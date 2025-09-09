@@ -1,23 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Camera, Upload, X } from 'lucide-react';
 
 interface PhotoUploadProps {
-  request: {
-    id: string;
-    car_registration_number: string;
-    car_brand?: string;
-    car_model?: string;
-    car_year?: number;
-    customer_id?: string;
-    scrapyard_id?: number;
-    pnr_num?: string;
-  };
-  onComplete?: (photos: any[]) => void;
-  onBack?: () => void;
+  customerRequestId: string;
+  onNext: () => void;
+  onBack: () => void;
 }
 
-const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }) => {
+const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, onBack }) => {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +52,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }
     setUploadProgress(0);
 
     try {
-      console.log('Starting photo upload for customer request:', request.id);
+      console.log('Starting photo upload for customer request:', customerRequestId);
 
       // Upload each photo using your existing helper function
       const uploadPromises = selectedImages.map(async (image, index) => {
@@ -69,7 +60,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }
           // Generate unique filename
           const fileExt = image.name.split('.').pop();
           const timestamp = Date.now();
-          const fileName = `${request.car_registration_number}_${timestamp}_${index}.${fileExt}`;
+          const fileName = `customer_${customerRequestId}_${timestamp}_${index}.${fileExt}`;
           const filePath = `car-images/${fileName}`;
 
           console.log(`Uploading image ${index + 1}:`, fileName);
@@ -100,7 +91,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }
           const { data: imageId, error: dbError } = await supabase.rpc(
             'insert_customer_car_image',
             {
-              p_customer_request_id: request.id,
+              p_customer_request_id: customerRequestId,
               p_image_url: imageUrl,
               p_image_type: imageType,
               p_file_name: fileName,
@@ -140,18 +131,18 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }
           status: 'photos_uploaded',
           updated_at: new Date().toISOString()
         })
-        .eq('id', request.id);
+        .eq('id', customerRequestId);
 
       if (updateError) {
         console.error('Status update error:', updateError);
         // Don't throw - photos are uploaded successfully
       }
 
-      console.log(`Successfully uploaded ${photoRecords.length} photos for request ${request.id}`);
+      console.log(`Successfully uploaded ${photoRecords.length} photos for request ${customerRequestId}`);
       
-      // Clear error and notify completion
+      // Clear error and proceed to next step
       setError(null);
-      onComplete?.(photoRecords);
+      onNext();
       
     } catch (error: any) {
       console.error('Photo upload error:', error);
@@ -174,14 +165,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             Ladda upp bilder
           </h2>
-          <p className="text-gray-600 text-sm">
-            Bil: {request.car_registration_number}
-          </p>
-          {(request.car_brand || request.car_model) && (
-            <p className="text-gray-500 text-xs">
-              {request.car_brand} {request.car_model} {request.car_year}
-            </p>
-          )}
           <p className="text-gray-500 text-xs mt-1">
             Ta bilder från olika vinklar för bästa värdering
           </p>
@@ -307,15 +290,13 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }
             </button>
           )}
 
-          {onBack && (
-            <button
-              onClick={onBack}
-              disabled={uploading}
-              className="w-full bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
-            >
-              Tillbaka
-            </button>
-          )}
+          <button
+            onClick={onBack}
+            disabled={uploading}
+            className="w-full bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+          >
+            Tillbaka
+          </button>
         </div>
 
         {/* Help Text */}
