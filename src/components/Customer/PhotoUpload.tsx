@@ -1,360 +1,327 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Camera, Check, X, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
-interface Photo {
-  id: string;
-  url: string;
-  type: 'engine' | 'overall';
-  file: File;
-  fileName: string;
-}
+import React, { useState, useRef } from 'react';
+import { supabase } from '../../lib/supabase';
+import { Camera, Upload, X } from 'lucide-react';
 
 interface PhotoUploadProps {
-  customerRequestId: string;
-  onNext: () => void;
-  onBack: () => void;
+  request: {
+    id: string;
+    car_registration_number: string;
+    car_brand?: string;
+    car_model?: string;
+    car_year?: number;
+    customer_id?: string;
+    scrapyard_id?: number;
+    pnr_num?: string;
+  };
+  onComplete?: (photos: any[]) => void;
+  onBack?: () => void;
 }
 
-const PHOTO_REQUIREMENTS = [
-  {
-    id: 'engine',
-    title: 'Motorrum', 
-    description: 'Ett foto av motorrummet',
-    required: true
-  },
-  {
-    id: 'overall1',
-    title: 'Helhetsbild 1',
-    description: 'Övergripande bild av fordonet', 
-    required: true
-  },
-  {
-    id: 'overall2', 
-    title: 'Helhetsbild 2',
-    description: 'Ytterligare övergripande bild',
-    required: true
-  }
-];
-
-const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, onBack }) => {
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [currentPhotoType, setCurrentPhotoType] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
+const PhotoUpload: React.FC<PhotoUploadProps> = ({ request, onComplete, onBack }) => {
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const completedPhotos = photos.length;
-  const totalRequired = 3;
-  const progressPercentage = (completedPhotos / totalRequired) * 100;
-  const canProceed = completedPhotos === totalRequired;
-
-  const capturePhoto = useCallback((photoType: string) => {
-    setCurrentPhotoType(photoType);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  }, []);
-
-  const handlePhotoCapture = useCallback(async (event: any) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    event.target.value = '';
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Bilden är för stor. Max storlek är 10MB.');
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Endast bildfiler är tillåtna.');
-      return;
-    }
-
-    try {
-      setIsUploading(true);
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const imageFiles = Array.from(files).filter(file => 
+        file.type.startsWith('image/')
+      );
       
-      // Get customer request info - using any to bypass type issues
-      const { data: requestData, error: requestError } = await (supabase as any)
-        .from('customer_requests')
-        .select('car_registration_number, pnr_num')
-        .eq('id', customerRequestId)
-        .single();
-
-      if (requestError || !requestData) {
-        console.error('Request data error:', requestError);
-        throw new Error('Kunde inte hitta kundförfrågan');
+      if (imageFiles.length === 0) {
+        setError('Välj endast bildfiler (JPG, PNG, etc.)');
+        return;
       }
 
-      // Get car_id from cars table - using any to bypass type issues
-      const { data: carData, error: carError } = await (supabase as any)
-        .from('cars')
-        .select('id')
-        .eq('license_plate', requestData.car_registration_number)
-        .single();
-
-      if (carError || !carData) {
-        console.error('Car data error:', carError);
-        throw new Error('Kunde inte hitta bil i systemet');
+      if (imageFiles.length > 10) {
+        setError('Du kan ladda upp max 10 bilder åt gången');
+        return;
       }
 
-      // Generate filename
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `${customerRequestId}_${currentPhotoType}_${Date.now()}.${fileExt}`;
-
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('car-images')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error('Uppladdning misslyckades');
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('car-images')
-        .getPublicUrl(fileName);
-
-      if (!urlData?.publicUrl) {
-        throw new Error('Kunde inte få bildens URL');
-      }
-
-      // Insert to database - using any to bypass type checking
-      const imageType = currentPhotoType === 'engine' ? 'engine' : 'overall';
-      const pnrNumber = requestData.pnr_num ? Number(requestData.pnr_num) : 0;
-      
-      const { error: dbError } = await (supabase as any)
-        .from('car_images')
-        .insert({
-          car_id: carData.id,
-          image_url: urlData.publicUrl,
-          pnr_num: pnrNumber,
-          car_registration_number: requestData.car_registration_number,
-          image_type: imageType,
-          uploaded_by: 'customer',
-          file_name: fileName,
-          file_size: file.size,
-          notes: null
-        });
-
-      if (dbError) {
-        console.error('Database error:', dbError);
-        throw new Error('Fel vid sparning till databas');
-      }
-
-      setPhotos(prev => prev.filter(p => p.id !== currentPhotoType));
-      setPhotos(prev => [...prev, {
-        id: currentPhotoType,
-        url: urlData.publicUrl,
-        type: imageType,
-        file,
-        fileName
-      }]);
-
-      toast.success('Bild uppladdad framgångsrikt!');
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error instanceof Error ? error.message : 'Fel vid uppladdning');
-    } finally {
-      setIsUploading(false);
-    }
-  }, [customerRequestId, currentPhotoType]);
-
-  const deletePhoto = async (photoId: string) => {
-    const photo = photos.find(p => p.id === photoId);
-    if (!photo) return;
-
-    try {
-      await supabase.storage.from('car-images').remove([photo.fileName]);
-      await (supabase as any).from('car_images').delete().eq('file_name', photo.fileName);
-      setPhotos(prev => prev.filter(p => p.id !== photoId));
-      toast.success('Bild borttagen');
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Fel vid borttagning av bild');
+      setSelectedImages(imageFiles);
+      setError(null);
     }
   };
 
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpload = async () => {
+    if (!selectedImages.length) {
+      setError('Välj minst en bild att ladda upp');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setUploadProgress(0);
+
+    try {
+      console.log('Starting photo upload for customer request:', request.id);
+
+      // Upload each photo using your existing helper function
+      const uploadPromises = selectedImages.map(async (image, index) => {
+        try {
+          // Generate unique filename
+          const fileExt = image.name.split('.').pop();
+          const timestamp = Date.now();
+          const fileName = `${request.car_registration_number}_${timestamp}_${index}.${fileExt}`;
+          const filePath = `car-images/${fileName}`;
+
+          console.log(`Uploading image ${index + 1}:`, fileName);
+
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('car-images')
+            .upload(filePath, image);
+
+          if (uploadError) {
+            console.error('Storage upload error:', uploadError);
+            throw new Error(`Fel vid uppladdning av ${image.name}: ${uploadError.message}`);
+          }
+
+          console.log('Storage upload successful:', uploadData);
+
+          // Get public URL for the uploaded image
+          const { data: urlData } = supabase.storage
+            .from('car-images')
+            .getPublicUrl(filePath);
+
+          const imageUrl = urlData.publicUrl;
+
+          // Determine image type (you can modify this logic as needed)
+          const imageType = index === 0 ? 'engine' : 'overall';
+
+          // Use your existing helper function to save the image record
+          const { data: imageId, error: dbError } = await supabase.rpc(
+            'insert_customer_car_image',
+            {
+              p_customer_request_id: request.id,
+              p_image_url: imageUrl,
+              p_image_type: imageType,
+              p_file_name: fileName,
+              p_file_size: image.size,
+              p_notes: null
+            }
+          );
+
+          if (dbError) {
+            console.error('Database insert error:', dbError);
+            throw new Error(`Fel vid sparande av bildinfo för ${image.name}`);
+          }
+
+          console.log('Photo record saved successfully with ID:', imageId);
+          
+          // Update progress
+          setUploadProgress(((index + 1) / selectedImages.length) * 100);
+          
+          return {
+            id: imageId,
+            url: imageUrl,
+            fileName: fileName,
+            type: imageType
+          };
+        } catch (error) {
+          console.error(`Error uploading image ${index + 1}:`, error);
+          throw error;
+        }
+      });
+
+      const photoRecords = await Promise.all(uploadPromises);
+
+      // Update customer request status to indicate photos are uploaded
+      const { error: updateError } = await supabase
+        .from('customer_requests')
+        .update({ 
+          status: 'photos_uploaded',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+
+      if (updateError) {
+        console.error('Status update error:', updateError);
+        // Don't throw - photos are uploaded successfully
+      }
+
+      console.log(`Successfully uploaded ${photoRecords.length} photos for request ${request.id}`);
+      
+      // Clear error and notify completion
+      setError(null);
+      onComplete?.(photoRecords);
+      
+    } catch (error: any) {
+      console.error('Photo upload error:', error);
+      setError(error.message || 'Fel vid bilduppladdning. Försök igen.');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-400 to-orange-400 flex flex-col relative overflow-hidden">
-      <div className="flex justify-between items-center text-black text-sm pt-2 px-4">
-        <span className="font-medium">12:30</span>
-        <div className="flex items-center space-x-1">
-          <div className="flex space-x-1">
-            <div className="w-1 h-3 bg-black rounded-full"></div>
-            <div className="w-1 h-3 bg-black rounded-full"></div>
-            <div className="w-1 h-3 bg-black rounded-full"></div>
-            <div className="w-1 h-3 bg-black rounded-full opacity-50"></div>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-md mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Ladda upp bilder
+          </h2>
+          <p className="text-gray-600 text-sm">
+            Bil: {request.car_registration_number}
+          </p>
+          {(request.car_brand || request.car_model) && (
+            <p className="text-gray-500 text-xs">
+              {request.car_brand} {request.car_model} {request.car_year}
+            </p>
+          )}
+          <p className="text-gray-500 text-xs mt-1">
+            Ta bilder från olika vinklar för bästa värdering
+          </p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <X className="h-5 w-5 text-red-500 mr-2" />
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+            <button 
+              onClick={() => setError(null)}
+              className="mt-2 text-red-600 text-xs underline"
+            >
+              Stäng
+            </button>
           </div>
-          <svg className="w-6 h-4 ml-2" fill="black" viewBox="0 0 24 16">
-            <path d="M2 4v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z"/>
-            <path d="M18 2v12h2V2h-2z"/>
-          </svg>
-        </div>
-      </div>
+        )}
 
-      <div className="flex items-center justify-between text-black text-xs px-4 py-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-black rounded-full"></div>
-          <span className="font-medium">Dokumentera Bilen</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="opacity-50">Biluppgifter</span>
-          <span className="opacity-50">Om bilen</span>
-          <span className="opacity-50">Transport</span>
-          <span className="opacity-50">Betalnings Info</span>
-        </div>
-      </div>
+        {/* File Input (Hidden) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploading}
+        />
 
-      <div className="flex-1 px-4 mobile-container mx-auto">
-        <h1 className="text-2xl font-bold text-black mb-6">DOKUMENTERA BILEN</h1>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm space-y-6">
-          <div className="mb-6">
-            <div className="w-full h-2 bg-gray-200 rounded-full mb-2">
+        {/* Upload Area */}
+        {!selectedImages.length ? (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+            <div 
+              onClick={triggerFileInput}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+            >
+              <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">Tryck för att ta bilder</p>
+              <p className="text-gray-500 text-sm">
+                Ta bilder från olika vinklar
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-medium text-gray-900">
+                Valda bilder ({selectedImages.length})
+              </h3>
+              <button
+                onClick={triggerFileInput}
+                className="text-blue-600 text-sm underline"
+                disabled={uploading}
+              >
+                Lägg till fler
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {selectedImages.map((image, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg"
+                  />
+                  {!uploading && (
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Upload Progress */}
+        {uploading && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+            <div className="flex items-center mb-2">
+              <Upload className="h-5 w-5 text-blue-500 mr-2" />
+              <span className="text-gray-700">Laddar upp bilder...</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-center text-gray-600 text-sm mb-5">
-              {completedPhotos} av {totalRequired} foton tagna
+            <p className="text-sm text-gray-500 mt-1">
+              {Math.round(uploadProgress)}% slutfört
             </p>
           </div>
+        )}
 
-          <div className="bg-gray-50 border-l-4 border-green-500 p-4 mb-6 rounded">
-            <h3 className="font-semibold text-gray-800 mb-2">Fotoanvisningar:</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li className="flex items-center">
-                <Check className="w-4 h-4 text-green-500 mr-2" />
-                3 meters avstånd till bilen
-              </li>
-              <li className="flex items-center">
-                <Check className="w-4 h-4 text-green-500 mr-2" />
-                God belysning (dagsljus föredras)
-              </li>
-              <li className="flex items-center">
-                <Check className="w-4 h-4 text-green-500 mr-2" />
-                Tydlig bild av hela bilen/motorrum
-              </li>
-            </ul>
-          </div>
-
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Obligatoriska foton</h2>
-
-          <div className="space-y-3">
-            {PHOTO_REQUIREMENTS.map((req) => {
-              const isCompleted = photos.some(p => p.id === req.id);
-              
-              return (
-                <div key={req.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-800 mb-1">{req.title}</div>
-                    <div className="text-sm text-gray-600">{req.description}</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      isCompleted 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {isCompleted ? 'Klar' : 'Väntar'}
-                    </span>
-                    <button
-                      onClick={() => capturePhoto(req.id)}
-                      disabled={isUploading}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold transition-all ${
-                        isCompleted 
-                          ? 'bg-green-500 hover:bg-green-600' 
-                          : 'bg-gray-700 hover:bg-gray-800'
-                      } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      {isUploading && currentPhotoType === req.id ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : isCompleted ? (
-                        <Check className="w-5 h-5" />
-                      ) : (
-                        <Camera className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {photos.length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-semibold text-gray-800 mb-3">Uppladdade foton</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-                    <img 
-                      src={photo.url} 
-                      alt={`${photo.type} foto`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={() => deletePhoto(photo.id)}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs font-bold hover:bg-red-600 flex items-center justify-center"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 text-center">
-                      {PHOTO_REQUIREMENTS.find(req => req.id === photo.id)?.title}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          {selectedImages.length > 0 && (
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+            >
+              {uploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                  Laddar upp...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Ladda upp {selectedImages.length} bilder
+                </>
+              )}
+            </button>
           )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={handlePhotoCapture}
-          />
-
-          <div className="space-y-3 pt-6">
-            <button
-              onClick={onNext}
-              disabled={!canProceed || isUploading}
-              className={`w-full py-4 rounded-full text-lg font-semibold transition-all mb-3 ${
-                canProceed && !isUploading
-                  ? 'bg-gray-700 text-white hover:bg-gray-800 hover:-translate-y-0.5'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {!canProceed && (
-                <div className="flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 mr-2" />
-                  Ta alla {totalRequired} foton för att fortsätta
-                </div>
-              )}
-              {canProceed && !isUploading && `NÄSTA (${completedPhotos}/${totalRequired})`}
-              {isUploading && 'Laddar upp...'}
-            </button>
-            
+          {onBack && (
             <button
               onClick={onBack}
-              disabled={isUploading}
-              className="w-full text-center text-gray-700 underline hover:text-gray-900"
+              disabled={uploading}
+              className="w-full bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
             >
-              Backa
+              Tillbaka
             </button>
-          </div>
+          )}
         </div>
-      </div>
 
-      <div className="pb-8 flex justify-center">
-        <div className="w-32 h-1 bg-black rounded-full opacity-60"></div>
+        {/* Help Text */}
+        <div className="mt-6 text-center text-gray-500 text-sm">
+          <p>Tips: Ta bilder från framsidan, baksidan, sidorna och eventuella skador</p>
+        </div>
       </div>
     </div>
   );
