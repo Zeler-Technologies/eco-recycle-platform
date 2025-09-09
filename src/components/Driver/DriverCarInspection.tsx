@@ -1,221 +1,459 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Camera, CheckCircle, AlertCircle, Car } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Camera, Upload, X, CheckCircle } from 'lucide-react';
 
-interface InspectionItem {
+interface PhotoUploadProps {
+  customerRequestId: string;
+  onNext: () => void;
+  onBack: () => void;
+}
+
+interface PhotoRequirement {
   id: string;
-  label: string;
-  checked: boolean;
-  notes?: string;
+  title: string;
+  description: string;
+  type: 'engine' | 'exterior_front' | 'exterior_back';
+  required: boolean;
+  completed: boolean;
 }
 
-interface DriverCarInspectionProps {
-  carId?: string;
-  licensePlate?: string;
-  onComplete?: (inspectionData: any) => void;
-}
+const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, onBack }) => {
+  const [currentPhotoType, setCurrentPhotoType] = useState<string>('engine');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-const DriverCarInspection: React.FC<DriverCarInspectionProps> = ({
-  carId,
-  licensePlate,
-  onComplete
-}) => {
-  const [inspectionItems, setInspectionItems] = useState<InspectionItem[]>([
-    { id: 'exterior', label: 'Exterior condition', checked: false },
-    { id: 'interior', label: 'Interior condition', checked: false },
-    { id: 'tires', label: 'Tires condition', checked: false },
-    { id: 'engine', label: 'Engine compartment', checked: false },
-    { id: 'fluids', label: 'Fluid levels', checked: false },
-    { id: 'documents', label: 'Required documents', checked: false }
+  // Photo requirements matching database constraints (exact image_type values)
+  const [photoRequirements, setPhotoRequirements] = useState<PhotoRequirement[]>([
+    {
+      id: 'engine',
+      title: 'Motorrum',
+      description: 'Ett foto av motorrummet',
+      type: 'engine',
+      required: true,
+      completed: false
+    },
+    {
+      id: 'exterior_front',
+      title: 'Framifrån',
+      description: 'Bild framifrån av fordonet',
+      type: 'exterior_front',
+      required: true,
+      completed: false
+    },
+    {
+      id: 'exterior_back',
+      title: 'Bakifrån',
+      description: 'Bild bakifrån av fordonet',
+      type: 'exterior_back',
+      required: true,
+      completed: false
+    }
   ]);
 
-  const [overallCondition, setOverallCondition] = useState<string>('');
-  const [additionalNotes, setAdditionalNotes] = useState<string>('');
-  const [photos, setPhotos] = useState<File[]>([]);
+  const completedPhotos = photoRequirements.filter(req => req.completed).length;
+  const totalRequired = photoRequirements.filter(req => req.required).length;
+  const canProceed = completedPhotos === totalRequired;
+  const progressPercentage = (completedPhotos / totalRequired) * 100;
 
-  const handleItemCheck = (itemId: string, checked: boolean) => {
-    setInspectionItems(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, checked } : item
-      )
-    );
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset input
+    event.target.value = '';
+
+    // Validation
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Bilden är för stor. Max storlek är 10MB.');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setError('Endast bildfiler är tillåtna.');
+      return;
+    }
+
+    await handlePhotoUpload(file);
   };
 
-  const handleItemNotes = (itemId: string, notes: string) => {
-    setInspectionItems(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, notes } : item
-      )
-    );
+  const handlePhotoUpload = async (file: File) => {
+    setUploading(true);
+    setError(null);
+
+    try {
+      console.log('Starting RLS-compliant photo upload for type:', currentPhotoType);
+
+      // Step 1: Get customer request details including scrapyard_id for RLS
+      const { data: customerRequest, error: requestError } = await supabase
+        .from('customer_requests')
+        .select(`
+          car_registration_number, 
+          pnr_num, 
+          scrapyard_id, 
+          car_brand, 
+          car_model,
+          car_year
+        `)
+        .eq('id', customerRequestId)
+        .single();
+
+      if (requestError || !customerRequest) {
+        console.error('Customer request lookup failed:', requestError);
+        throw new Error('Kunde inte hitta kundförfrågan');
+      }
+
+      console.log('Customer request data:', customerRequest);
+
+      // Step 2: Validate required data
+      if (!customerRequest.car_registration_number) {
+        throw new Error('Bilregistreringsnummer saknas');
+      }
+
+      if (!customerRequest.scrapyard_id) {
+        throw new Error('Skrothandlare-ID saknas');
+      }
+
+      // Validate and clean PNR (required for car_images.pnr_num)
+      const cleanPnr = customerRequest.pnr_num?.toString().replace(/\D/g, '') || '';
+      const numericPnr = parseInt(cleanPnr) || 0;
+
+      if (numericPnr === 0 || cleanPnr.length < 8) {
+        throw new Error('Ogiltigt personnummer');
+      }
+
+      console.log('Using PNR:', numericPnr, 'for registration:', customerRequest.car_registration_number);
+
+      // Step 3: Create or find car record (required for RLS policy)
+      console.log('Creating/finding car record for RLS compliance...');
+      
+      let carId = null;
+
+      // First check if car already exists
+      const { data: existingCar, error: findError } = await supabase
+        .from('cars')
+        .select('id')
+        .eq('license_plate', customerRequest.car_registration_number)
+        .eq('tenant_id', customerRequest.scrapyard_id)
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Error checking for existing car:', findError);
+        throw new Error('Fel vid kontroll av befintlig bil');
+      }
+
+      if (existingCar) {
+        carId = existingCar.id;
+        console.log('Found existing car with ID:', carId);
+      } else {
+        // Create new car record with all required fields and correct enum values
+        console.log('Creating new car record...');
+        
+        const carData = {
+          tenant_id: customerRequest.scrapyard_id,
+          license_plate: customerRequest.car_registration_number,
+          brand: customerRequest.car_brand || 'Okänd',
+          model: customerRequest.car_model || 'Okänd',
+          color: 'Okänd', // Default color
+          status: 'new', // Valid car_status enum value
+          treatment_type: 'pickup', // Valid treatment_type enum value
+          age: customerRequest.car_year?.toString() || null
+        };
+
+        console.log('Creating car with data:', carData);
+
+        const { data: newCar, error: createError } = await supabase
+          .from('cars')
+          .insert(carData)
+          .select('id')
+          .single();
+
+        if (createError) {
+          console.error('Car creation failed:', createError);
+          throw new Error(`Kunde inte skapa bilpost: ${createError.message}`);
+        }
+
+        carId = newCar.id;
+        console.log('Created new car with ID:', carId);
+      }
+
+      // Step 4: Upload image to storage
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const timestamp = Date.now();
+      const fileName = `${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
+      const filePath = `car-images/${fileName}`;
+
+      console.log('Uploading file to storage:', fileName);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('car-images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Fel vid uppladdning: ${uploadError.message}`);
+      }
+
+      // Step 5: Get public URL
+      const { data: urlData } = supabase.storage
+        .from('car-images')
+        .getPublicUrl(filePath);
+
+      const imageUrl = urlData.publicUrl;
+      console.log('Image uploaded to storage successfully:', imageUrl);
+
+      // Step 6: Insert into car_images table with RLS-compliant car_id
+      console.log('Inserting to car_images table with car_id for RLS compliance:', {
+        car_id: carId,
+        image_url: imageUrl,
+        pnr_num: numericPnr,
+        car_registration_number: customerRequest.car_registration_number,
+        image_type: currentPhotoType,
+        file_name: fileName,
+        file_size: file.size,
+        uploaded_by: 'customer'
+      });
+
+      const { data: photoRecord, error: dbError } = await supabase
+        .from('car_images')
+        .insert({
+          car_id: carId, // Required for RLS policy satisfaction
+          image_url: imageUrl,
+          pnr_num: numericPnr, // Required field (NOT NULL)
+          car_registration_number: customerRequest.car_registration_number,
+          image_type: currentPhotoType, // Must match constraint values
+          file_name: fileName,
+          file_size: file.size,
+          uploaded_by: 'customer'
+          // Note: pnr_num_norm removed - it may be auto-generated or cause conflicts
+        })
+        .select('id')
+        .single();
+
+      if (dbError) {
+        console.error('Database insert error:', {
+          message: dbError.message,
+          details: dbError.details,
+          hint: dbError.hint,
+          code: dbError.code
+        });
+
+        // Handle specific constraint violations
+        if (dbError.code === '23505' && dbError.message.includes('pnr_num')) {
+          throw new Error('Du har redan laddat upp bilder för detta personnummer');
+        }
+        
+        if (dbError.code === '23503' && dbError.message.includes('car_registration_number')) {
+          throw new Error('Bilregistreringsnumret är inte giltigt');
+        }
+
+        if (dbError.code === '23503' && dbError.message.includes('car_id')) {
+          throw new Error('Bil-ID är inte giltigt (RLS policy fel)');
+        }
+
+        if (dbError.code === '23514' && dbError.message.includes('image_type')) {
+          throw new Error(`Bildtyp '${currentPhotoType}' är inte tillåten`);
+        }
+
+        throw new Error(`Databasfel: ${dbError.message}`);
+      }
+
+      if (!photoRecord?.id) {
+        throw new Error('Ingen bild-ID returnerades från databasen');
+      }
+
+      console.log('Photo uploaded successfully with ID:', photoRecord.id);
+
+      // Step 7: Mark current photo requirement as completed
+      setPhotoRequirements(prev => 
+        prev.map(req => 
+          req.id === currentPhotoType 
+            ? { ...req, completed: true }
+            : req
+        )
+      );
+
+      // Move to next required photo type
+      const nextIncomplete = photoRequirements.find(req => 
+        req.required && !req.completed && req.id !== currentPhotoType
+      );
+      
+      if (nextIncomplete) {
+        setCurrentPhotoType(nextIncomplete.id);
+      }
+
+      setError(null);
+
+    } catch (error: any) {
+      console.error('Complete photo upload process failed:', error);
+      setError(error.message || 'Fel vid bilduppladdning. Försök igen.');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setPhotos(prev => [...prev, ...files]);
+  const selectPhotoType = (photoId: string) => {
+    setCurrentPhotoType(photoId);
   };
 
-  const handleComplete = () => {
-    const inspectionData = {
-      carId,
-      licensePlate,
-      inspectionItems,
-      overallCondition,
-      additionalNotes,
-      photos,
-      completedAt: new Date().toISOString()
-    };
-    
-    onComplete?.(inspectionData);
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
-  const allItemsChecked = inspectionItems.every(item => item.checked);
-  const completionRate = (inspectionItems.filter(item => item.checked).length / inspectionItems.length) * 100;
+  const handleProceed = () => {
+    if (canProceed) {
+      onNext();
+    }
+  };
 
   return (
-    <div className="space-y-6 p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
-            Car Inspection
-          </CardTitle>
-          {licensePlate && (
-            <Badge variant="outline" className="w-fit">
-              {licensePlate}
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Progress indicator */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label className="text-sm font-medium">Completion Progress</Label>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(completionRate)}%
-              </span>
-            </div>
-            <div className="w-full bg-secondary rounded-full h-2">
-              <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300"
-                style={{ width: `${completionRate}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Inspection items */}
-          <div className="space-y-4">
-            <h3 className="font-medium">Inspection Checklist</h3>
-            {inspectionItems.map((item) => (
-              <Card key={item.id} className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={item.id}
-                      checked={item.checked}
-                      onCheckedChange={(checked) => 
-                        handleItemCheck(item.id, checked as boolean)
-                      }
-                    />
-                    <Label htmlFor={item.id} className="font-medium">
-                      {item.label}
-                    </Label>
-                    {item.checked && (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    )}
-                  </div>
-                  
-                  {item.checked && (
-                    <Textarea
-                      placeholder="Add notes about this inspection item..."
-                      value={item.notes || ''}
-                      onChange={(e) => handleItemNotes(item.id, e.target.value)}
-                      className="text-sm"
-                    />
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          {/* Overall condition */}
-          <div className="space-y-2">
-            <Label htmlFor="condition">Overall Vehicle Condition</Label>
-            <select
-              id="condition"
-              value={overallCondition}
-              onChange={(e) => setOverallCondition(e.target.value)}
-              className="w-full p-2 border border-input rounded-md bg-background"
-            >
-              <option value="">Select condition...</option>
-              <option value="excellent">Excellent</option>
-              <option value="good">Good</option>
-              <option value="fair">Fair</option>
-              <option value="poor">Poor</option>
-              <option value="scrap">Scrap Only</option>
-            </select>
-          </div>
-
-          {/* Additional notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Any additional observations or comments..."
-              value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-md mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Ladda upp bilder
+          </h2>
+          <p className="text-gray-500 text-xs mt-1">
+            {completedPhotos} av {totalRequired} bilder uppladdade
+          </p>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+            <div 
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progressPercentage}%` }}
             />
           </div>
+        </div>
 
-          {/* Photo upload */}
-          <div className="space-y-2">
-            <Label>Inspection Photos</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotoUpload}
-                className="hidden"
-                id="photo-upload"
-              />
-              <Label 
-                htmlFor="photo-upload"
-                className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md cursor-pointer"
+        {/* Photo Requirements */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <h3 className="font-medium text-gray-900 mb-4">Bildkrav</h3>
+          <div className="space-y-3">
+            {photoRequirements.map((requirement) => (
+              <div 
+                key={requirement.id}
+                className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                  requirement.completed 
+                    ? 'border-green-200 bg-green-50' 
+                    : currentPhotoType === requirement.id
+                    ? 'border-blue-400 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => selectPhotoType(requirement.id)}
               >
-                <Camera className="h-4 w-4" />
-                Upload Photos ({photos.length})
-              </Label>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {requirement.title}
+                    {requirement.required && <span className="text-red-500 ml-1">*</span>}
+                  </p>
+                  <p className="text-xs text-gray-500">{requirement.description}</p>
+                </div>
+                <div className="ml-3">
+                  {requirement.completed ? (
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                  ) : currentPhotoType === requirement.id ? (
+                    <Camera className="h-6 w-6 text-blue-500" />
+                  ) : (
+                    <div className="h-6 w-6 border-2 border-gray-300 rounded-full" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <X className="h-5 w-5 text-red-500 mr-2" />
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+            <button 
+              onClick={() => setError(null)}
+              className="mt-2 text-red-600 text-xs underline"
+            >
+              Stäng
+            </button>
+          </div>
+        )}
+
+        {/* File Input (Hidden) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploading}
+        />
+
+        {/* Camera Button */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <div 
+            onClick={triggerFileInput}
+            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+          >
+            <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 mb-2">
+              Ta bild: {photoRequirements.find(req => req.id === currentPhotoType)?.title}
+            </p>
+            <p className="text-gray-500 text-sm">
+              {photoRequirements.find(req => req.id === currentPhotoType)?.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Upload Progress */}
+        {uploading && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent mr-3" />
+              <span className="text-gray-700">Laddar upp bild...</span>
             </div>
           </div>
+        )}
 
-          {/* Complete button */}
-          <Button
-            onClick={handleComplete}
-            disabled={!allItemsChecked || !overallCondition}
-            className="w-full"
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <button
+            onClick={handleProceed}
+            disabled={!canProceed}
+            className={`w-full font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center ${
+              canProceed
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
           >
-            {allItemsChecked && overallCondition ? (
+            {canProceed ? (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Complete Inspection
+                Fortsätt till nästa steg
               </>
             ) : (
-              <>
-                <AlertCircle className="h-4 w-4 mr-2" />
-                Complete All Items ({inspectionItems.filter(i => !i.checked).length} remaining)
-              </>
+              `Ladda upp ${totalRequired - completedPhotos} bilder till`
             )}
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
+
+          <button
+            onClick={onBack}
+            disabled={uploading}
+            className="w-full bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+          >
+            Tillbaka
+          </button>
+        </div>
+
+        {/* Help Text */}
+        <div className="mt-6 text-center text-gray-500 text-sm">
+          <p>Tips: Ta tydliga bilder i god belysning för bästa värdering</p>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default DriverCarInspection;
+export default PhotoUpload;
