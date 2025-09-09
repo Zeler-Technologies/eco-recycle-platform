@@ -151,6 +151,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
           car_id: null, // cars table is not used
           image_url: imageUrl,
           pnr_num: numericPnr,
+          pnr_num_norm: pnrNorm, // Add normalized PNR for constraint
           car_registration_number: customerRequest.car_registration_number,
           image_type: currentPhotoType,
           file_name: fileName,
