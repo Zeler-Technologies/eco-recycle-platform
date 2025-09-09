@@ -56,6 +56,39 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
   const canProceed = completedPhotos === totalRequired;
   const progressPercentage = (completedPhotos / totalRequired) * 100;
 
+  // Ensure 'car-images' storage bucket exists before uploads
+  const ensureCarImagesBucket = async () => {
+    console.log('[Storage] Checking for bucket "car-images"...');
+    const { data: bucketData, error: getBucketError } = await supabase.storage.getBucket('car-images');
+    if (getBucketError) {
+      console.warn('[Storage] getBucket error:', getBucketError);
+    }
+    if (bucketData) {
+      console.log('[Storage] Bucket exists:', bucketData);
+      return;
+    }
+
+    console.log('[Storage] Bucket missing. Creating "car-images"...');
+    const { data: createdBucket, error: createError } = await supabase.storage.createBucket('car-images', {
+      public: true,
+      fileSizeLimit: 10 * 1024 * 1024, // 10MB
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+    });
+
+    if (createError) {
+      console.error('[Storage] Bucket creation failed:', createError);
+      throw new Error(`Kunde inte skapa lagringshinken: ${createError.message}`);
+    }
+
+    console.log('[Storage] Bucket created:', createdBucket);
+    const { data: confirm, error: confirmError } = await supabase.storage.getBucket('car-images');
+    if (confirmError || !confirm) {
+      console.error('[Storage] Bucket confirmation failed:', confirmError);
+      throw new Error('Kunde inte bekräfta att lagringshinken skapades.');
+    }
+    console.log('[Storage] Bucket confirmed.');
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -175,6 +208,10 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         carId = newCar.id;
         console.log('Created new car with ID:', carId);
       }
+
+      // Ensure bucket exists before upload
+      console.log('[Storage] Ensuring "car-images" bucket exists before upload...');
+      await ensureCarImagesBucket();
 
       // Step 4: Upload image to storage
       const fileExt = file.name.split('.').pop() || 'jpg';
