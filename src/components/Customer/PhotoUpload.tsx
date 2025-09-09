@@ -54,7 +54,20 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     try {
       console.log('Starting photo upload for customer request:', customerRequestId);
 
-      // Upload each photo using your existing helper function
+      // First, get customer request details
+      const { data: customerRequest, error: requestError } = await supabase
+        .from('customer_requests')
+        .select('car_registration_number, pnr_num')
+        .eq('id', customerRequestId)
+        .single();
+
+      if (requestError || !customerRequest) {
+        throw new Error('Kunde inte hitta kundförfrågan');
+      }
+
+      console.log('Customer request data:', customerRequest);
+
+      // Upload each photo using direct database insert (since your helper function requires cars table)
       const uploadPromises = selectedImages.map(async (image, index) => {
         try {
           // Generate unique filename
@@ -84,37 +97,32 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
           const imageUrl = urlData.publicUrl;
 
-          // Determine image type (you can modify this logic as needed)
-          const imageType = index === 0 ? 'engine' : 'overall';
-
-          // Use your existing helper function to save the image record
-          const { data: imageId, error: dbError } = await supabase.rpc(
-            'insert_customer_car_image',
-            {
-              p_customer_request_id: customerRequestId,
-              p_image_url: imageUrl,
-              p_image_type: imageType,
-              p_file_name: fileName,
-              p_file_size: image.size,
-              p_notes: null
-            }
-          );
+          // Since cars table is empty, we'll insert directly to car_images with available data
+          const { data: photoRecord, error: dbError } = await supabase
+            .from('car_images')
+            .insert([{
+              car_id: '00000000-0000-0000-0000-000000000000', // Placeholder UUID since cars table is empty
+              image_url: imageUrl,
+              car_registration_number: customerRequest.car_registration_number,
+              pnr_num: customerRequest.pnr_num || 0
+            }])
+            .select('id')
+            .single();
 
           if (dbError) {
             console.error('Database insert error:', dbError);
-            throw new Error(`Fel vid sparande av bildinfo för ${image.name}`);
+            throw new Error(`Fel vid sparande av bildinfo för ${image.name}: ${dbError.message}`);
           }
 
-          console.log('Photo record saved successfully with ID:', imageId);
+          console.log('Photo record saved successfully:', photoRecord);
           
           // Update progress
           setUploadProgress(((index + 1) / selectedImages.length) * 100);
           
           return {
-            id: imageId,
+            id: photoRecord.id,
             url: imageUrl,
-            fileName: fileName,
-            type: imageType
+            fileName: fileName
           };
         } catch (error) {
           console.error(`Error uploading image ${index + 1}:`, error);
