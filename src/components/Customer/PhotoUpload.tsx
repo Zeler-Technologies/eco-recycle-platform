@@ -12,7 +12,7 @@ interface PhotoRequirement {
   id: string;
   title: string;
   description: string;
-  type: 'engine' | 'overall';
+  type: 'engine' | 'exterior_front' | 'exterior_back';
   required: boolean;
   completed: boolean;
 }
@@ -21,10 +21,9 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
   const [currentPhotoType, setCurrentPhotoType] = useState<string>('engine');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Photo requirements matching database constraints
+  // Photo requirements matching database constraints (exact image_type values)
   const [photoRequirements, setPhotoRequirements] = useState<PhotoRequirement[]>([
     {
       id: 'engine',
@@ -36,17 +35,17 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     },
     {
       id: 'exterior_front',
-      title: 'Helhetsbild framifrån',
-      description: 'Övergripande bild av fordonet framifrån',
-      type: 'overall',
+      title: 'Framifrån',
+      description: 'Bild framifrån av fordonet',
+      type: 'exterior_front',
       required: true,
       completed: false
     },
     {
       id: 'exterior_back',
-      title: 'Helhetsbild bakifrån',
-      description: 'Övergripande bild av fordonet bakifrån',
-      type: 'overall',
+      title: 'Bakifrån',
+      description: 'Bild bakifrån av fordonet',
+      type: 'exterior_back',
       required: true,
       completed: false
     }
@@ -83,12 +82,19 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     setError(null);
 
     try {
-      console.log('Starting direct photo upload for type:', currentPhotoType);
+      console.log('Starting RLS-compliant photo upload for type:', currentPhotoType);
 
-      // Get customer request details
+      // Step 1: Get customer request details including scrapyard_id for RLS
       const { data: customerRequest, error: requestError } = await supabase
         .from('customer_requests')
-        .select('car_registration_number, pnr_num')
+        .select(`
+          car_registration_number, 
+          pnr_num, 
+          scrapyard_id, 
+          car_brand, 
+          car_model,
+          car_year
+        `)
         .eq('id', customerRequestId)
         .single();
 
@@ -99,26 +105,86 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Customer request data:', customerRequest);
 
-      // Validate PNR number (must be unique)
+      // Step 2: Validate required data
+      if (!customerRequest.car_registration_number) {
+        throw new Error('Bilregistreringsnummer saknas');
+      }
+
+      if (!customerRequest.scrapyard_id) {
+        throw new Error('Skrothandlare-ID saknas');
+      }
+
+      // Validate and clean PNR (required for car_images.pnr_num)
       const cleanPnr = customerRequest.pnr_num?.toString().replace(/\D/g, '') || '';
       const numericPnr = parseInt(cleanPnr) || 0;
 
-      if (numericPnr === 0 || cleanPnr.length < 10 || cleanPnr.length > 12) {
-        throw new Error('Ogiltigt personnummer - måste vara 10 eller 12 siffror');
+      if (numericPnr === 0 || cleanPnr.length < 8) {
+        throw new Error('Ogiltigt personnummer');
       }
 
-      // Format PNR for pnr_num_norm field (10 or 12 digits as string)
-      const pnrNorm = cleanPnr.length === 12 ? cleanPnr : cleanPnr.padStart(10, '0');
+      console.log('Using PNR:', numericPnr, 'for registration:', customerRequest.car_registration_number);
 
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
+      // Step 3: Create or find car record (required for RLS policy)
+      console.log('Creating/finding car record for RLS compliance...');
+      
+      let carId = null;
+
+      // First check if car already exists
+      const { data: existingCar, error: findError } = await supabase
+        .from('cars')
+        .select('id')
+        .eq('license_plate', customerRequest.car_registration_number)
+        .eq('tenant_id', customerRequest.scrapyard_id)
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Error checking for existing car:', findError);
+        throw new Error('Fel vid kontroll av befintlig bil');
+      }
+
+      if (existingCar) {
+        carId = existingCar.id;
+        console.log('Found existing car with ID:', carId);
+      } else {
+        // Create new car record with all required fields and correct enum values
+        console.log('Creating new car record...');
+        
+        const carData = {
+          tenant_id: customerRequest.scrapyard_id,
+          license_plate: customerRequest.car_registration_number,
+          brand: customerRequest.car_brand || 'Okänd',
+          model: customerRequest.car_model || 'Okänd',
+          color: 'Okänd', // Default color
+          status: 'new', // Valid car_status enum value
+          treatment_type: 'pickup', // Valid treatment_type enum value
+          age: customerRequest.car_year?.toString() || null
+        };
+
+        console.log('Creating car with data:', carData);
+
+        const { data: newCar, error: createError } = await supabase
+          .from('cars')
+          .insert(carData)
+          .select('id')
+          .single();
+
+        if (createError) {
+          console.error('Car creation failed:', createError);
+          throw new Error(`Kunde inte skapa bilpost: ${createError.message}`);
+        }
+
+        carId = newCar.id;
+        console.log('Created new car with ID:', carId);
+      }
+
+      // Step 4: Upload image to storage
+      const fileExt = file.name.split('.').pop() || 'jpg';
       const timestamp = Date.now();
       const fileName = `${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
       const filePath = `car-images/${fileName}`;
 
       console.log('Uploading file to storage:', fileName);
 
-      // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('car-images')
         .upload(filePath, file);
@@ -128,7 +194,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error(`Fel vid uppladdning: ${uploadError.message}`);
       }
 
-      // Get public URL
+      // Step 5: Get public URL
       const { data: urlData } = supabase.storage
         .from('car-images')
         .getPublicUrl(filePath);
@@ -136,8 +202,8 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const imageUrl = urlData.publicUrl;
       console.log('Image uploaded to storage successfully:', imageUrl);
 
-      // Direct insert to car_images table (with proper car_id for RLS)
-      console.log('Inserting directly to car_images table with data:', {
+      // Step 6: Insert into car_images table with RLS-compliant car_id
+      console.log('Inserting to car_images table with car_id for RLS compliance:', {
         car_id: carId,
         image_url: imageUrl,
         pnr_num: numericPnr,
@@ -151,15 +217,15 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const { data: photoRecord, error: dbError } = await supabase
         .from('car_images')
         .insert({
-          car_id: null, // cars table is not used
+          car_id: carId, // Required for RLS policy satisfaction
           image_url: imageUrl,
-          pnr_num: numericPnr,
-          pnr_num_norm: pnrNorm, // Add normalized PNR for constraint
+          pnr_num: numericPnr, // Required field (NOT NULL)
           car_registration_number: customerRequest.car_registration_number,
-          image_type: currentPhotoType,
+          image_type: currentPhotoType, // Must match constraint values
           file_name: fileName,
           file_size: file.size,
           uploaded_by: 'customer'
+          // Note: pnr_num_norm removed - it may be auto-generated or cause conflicts
         })
         .select('id')
         .single();
@@ -181,6 +247,14 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
           throw new Error('Bilregistreringsnumret är inte giltigt');
         }
 
+        if (dbError.code === '23503' && dbError.message.includes('car_id')) {
+          throw new Error('Bil-ID är inte giltigt (RLS policy fel)');
+        }
+
+        if (dbError.code === '23514' && dbError.message.includes('image_type')) {
+          throw new Error(`Bildtyp '${currentPhotoType}' är inte tillåten`);
+        }
+
         throw new Error(`Databasfel: ${dbError.message}`);
       }
 
@@ -190,7 +264,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Photo uploaded successfully with ID:', photoRecord.id);
 
-      // Mark current photo requirement as completed
+      // Step 7: Mark current photo requirement as completed
       setPhotoRequirements(prev => 
         prev.map(req => 
           req.id === currentPhotoType 
@@ -211,7 +285,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       setError(null);
 
     } catch (error: any) {
-      console.error('Photo upload error:', error);
+      console.error('Complete photo upload process failed:', error);
       setError(error.message || 'Fel vid bilduppladdning. Försök igen.');
     } finally {
       setUploading(false);
