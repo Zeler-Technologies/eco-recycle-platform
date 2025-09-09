@@ -136,12 +136,11 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const imageUrl = urlData.publicUrl;
       console.log('Image uploaded to storage successfully:', imageUrl);
 
-      // Direct insert to car_images table (no helper function)
+      // Direct insert to car_images table (with proper car_id for RLS)
       console.log('Inserting directly to car_images table with data:', {
-        car_id: null,
+        car_id: carId,
         image_url: imageUrl,
         pnr_num: numericPnr,
-        pnr_num_norm: null,
         car_registration_number: customerRequest.car_registration_number,
         image_type: currentPhotoType,
         file_name: fileName,
