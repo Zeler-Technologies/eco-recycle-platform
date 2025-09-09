@@ -132,23 +132,31 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       });
 
       // Add timeout to prevent hanging
-      const uploadPromise = supabase.rpc(
-        'insert_customer_car_image',
-        {
-          p_customer_request_id: customerRequestId,
-          p_image_url: imageUrl,
-          p_image_type: currentPhotoType,
-          p_file_name: fileName,
-          p_file_size: file.size,
-          p_notes: null
-        }
-      );
-
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Database operation timed out after 30 seconds')), 30000)
       );
 
-      const { data: imageId, error: dbError } = await Promise.race([uploadPromise, timeoutPromise]);
+      let imageId, dbError;
+      
+      try {
+        const result = await Promise.race([
+          supabase.rpc('insert_customer_car_image', {
+            p_customer_request_id: customerRequestId,
+            p_image_url: imageUrl,
+            p_image_type: currentPhotoType,
+            p_file_name: fileName,
+            p_file_size: file.size,
+            p_notes: null
+          }),
+          timeoutPromise
+        ]);
+        
+        imageId = result.data;
+        dbError = result.error;
+      } catch (timeoutError) {
+        console.error('Function call timed out or failed:', timeoutError);
+        throw timeoutError;
+      }
 
       if (dbError) {
         console.error('Database function error details:', {
