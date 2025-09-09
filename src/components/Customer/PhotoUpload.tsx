@@ -83,7 +83,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     setError(null);
 
     try {
-      console.log('Starting photo upload for type:', currentPhotoType);
+      console.log('Starting direct photo upload for type:', currentPhotoType);
 
       // Get customer request details
       const { data: customerRequest, error: requestError } = await supabase
@@ -93,7 +93,18 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         .single();
 
       if (requestError || !customerRequest) {
+        console.error('Customer request lookup failed:', requestError);
         throw new Error('Kunde inte hitta kundförfrågan');
+      }
+
+      console.log('Customer request data:', customerRequest);
+
+      // Validate PNR number (must be unique)
+      const cleanPnr = customerRequest.pnr_num?.toString().replace(/\D/g, '') || '';
+      const numericPnr = parseInt(cleanPnr) || 0;
+
+      if (numericPnr === 0 || cleanPnr.length < 8) {
+        throw new Error('Ogiltigt personnummer');
       }
 
       // Generate unique filename
@@ -102,7 +113,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const fileName = `${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
       const filePath = `car-images/${fileName}`;
 
-      console.log('Uploading file:', fileName);
+      console.log('Uploading file to storage:', fileName);
 
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -120,68 +131,60 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         .getPublicUrl(filePath);
 
       const imageUrl = urlData.publicUrl;
+      console.log('Image uploaded to storage successfully:', imageUrl);
 
-      // Use the helper function with timeout and better error handling
-      console.log('Calling insert_customer_car_image with params:', {
-        p_customer_request_id: customerRequestId,
-        p_image_url: imageUrl,
-        p_image_type: currentPhotoType,
-        p_file_name: fileName,
-        p_file_size: file.size,
-        p_notes: null
+      // Direct insert to car_images table (no helper function)
+      console.log('Inserting directly to car_images table with data:', {
+        car_id: null,
+        image_url: imageUrl,
+        pnr_num: numericPnr,
+        car_registration_number: customerRequest.car_registration_number,
+        image_type: currentPhotoType,
+        file_name: fileName,
+        file_size: file.size,
+        uploaded_by: 'customer'
       });
 
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Database operation timed out after 30 seconds')), 30000)
-      );
-
-      let imageId, dbError;
-      
-      try {
-        const result = await Promise.race([
-          supabase.rpc('insert_customer_car_image', {
-            p_customer_request_id: customerRequestId,
-            p_image_url: imageUrl,
-            p_image_type: currentPhotoType,
-            p_file_name: fileName,
-            p_file_size: file.size,
-            p_notes: null
-          }),
-          timeoutPromise
-        ]);
-        
-        imageId = result.data;
-        dbError = result.error;
-      } catch (timeoutError) {
-        console.error('Function call timed out or failed:', timeoutError);
-        throw timeoutError;
-      }
+      const { data: photoRecord, error: dbError } = await supabase
+        .from('car_images')
+        .insert({
+          car_id: null, // cars table is not used
+          image_url: imageUrl,
+          pnr_num: numericPnr,
+          car_registration_number: customerRequest.car_registration_number,
+          image_type: currentPhotoType,
+          file_name: fileName,
+          file_size: file.size,
+          uploaded_by: 'customer'
+        })
+        .select('id')
+        .single();
 
       if (dbError) {
-        console.error('Database function error details:', {
-          error: dbError,
+        console.error('Database insert error:', {
           message: dbError.message,
           details: dbError.details,
           hint: dbError.hint,
           code: dbError.code
         });
-        
-        // Try to provide more specific error messages
-        if (dbError.message?.includes('pnr_num')) {
-          throw new Error('Problem med personnummer - kontakta support');
-        } else if (dbError.message?.includes('car_id')) {
-          throw new Error('Problem med bilregistrering - kontakta support');
-        } else {
-          throw new Error(`Database error: ${dbError.message || 'Unknown database error'}`);
+
+        // Handle specific constraint violations
+        if (dbError.code === '23505' && dbError.message.includes('pnr_num')) {
+          throw new Error('Du har redan laddat upp bilder för detta personnummer');
         }
+        
+        if (dbError.code === '23503' && dbError.message.includes('car_registration_number')) {
+          throw new Error('Bilregistreringsnumret är inte giltigt');
+        }
+
+        throw new Error(`Databasfel: ${dbError.message}`);
       }
 
-      if (!imageId) {
+      if (!photoRecord?.id) {
         throw new Error('Ingen bild-ID returnerades från databasen');
       }
 
-      console.log('Photo uploaded successfully:', imageId);
+      console.log('Photo uploaded successfully with ID:', photoRecord.id);
 
       // Mark current photo requirement as completed
       setPhotoRequirements(prev => 
