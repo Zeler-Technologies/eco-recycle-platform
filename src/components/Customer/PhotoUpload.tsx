@@ -121,8 +121,18 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       const imageUrl = urlData.publicUrl;
 
-      // Use the helper function which should handle all the complex relationships
-      const { data: imageId, error: dbError } = await supabase.rpc(
+      // Use the helper function with timeout and better error handling
+      console.log('Calling insert_customer_car_image with params:', {
+        p_customer_request_id: customerRequestId,
+        p_image_url: imageUrl,
+        p_image_type: currentPhotoType,
+        p_file_name: fileName,
+        p_file_size: file.size,
+        p_notes: null
+      });
+
+      // Add timeout to prevent hanging
+      const uploadPromise = supabase.rpc(
         'insert_customer_car_image',
         {
           p_customer_request_id: customerRequestId,
@@ -134,9 +144,33 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         }
       );
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Database operation timed out after 30 seconds')), 30000)
+      );
+
+      const { data: imageId, error: dbError } = await Promise.race([uploadPromise, timeoutPromise]);
+
       if (dbError) {
-        console.error('Database insert error:', dbError);
-        throw new Error(`Fel vid sparande av bildinfo: ${dbError.message}`);
+        console.error('Database function error details:', {
+          error: dbError,
+          message: dbError.message,
+          details: dbError.details,
+          hint: dbError.hint,
+          code: dbError.code
+        });
+        
+        // Try to provide more specific error messages
+        if (dbError.message?.includes('pnr_num')) {
+          throw new Error('Problem med personnummer - kontakta support');
+        } else if (dbError.message?.includes('car_id')) {
+          throw new Error('Problem med bilregistrering - kontakta support');
+        } else {
+          throw new Error(`Database error: ${dbError.message || 'Unknown database error'}`);
+        }
+      }
+
+      if (!imageId) {
+        throw new Error('Ingen bild-ID returnerades från databasen');
       }
 
       console.log('Photo uploaded successfully:', imageId);
