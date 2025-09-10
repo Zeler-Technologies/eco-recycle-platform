@@ -232,9 +232,19 @@ const PantaBilenDriverApp = () => {
     
     setSigning(true);
     try {
+      // Get car_id from customer_requests
+      const { data: carData, error: carError } = await supabase
+        .from('customer_requests')
+        .select('id as car_id')
+        .eq('id', selectedPickup.customer_request_id)
+        .single();
+
+      if (carError) throw carError;
+
       const verificationData = {
         pickup_order_id: selectedPickup.id,
         driver_id: driver?.id,
+        car_id: carData.car_id,
         tenant_id: user.tenant_id,
         
         motor_present: checklist.motor,
