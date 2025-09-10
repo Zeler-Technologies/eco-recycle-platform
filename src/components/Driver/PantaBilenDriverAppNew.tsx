@@ -1,6 +1,4 @@
-{
-  `path`: `C:\\Users\\Thomas\\Desktop\\Claude chats\\Chats\\Projects\\Panta_Bilen\\2025-09\\redesigned_driver_app.tsx`,
-  `content`: `import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -16,12 +14,10 @@ import {
   Navigation,
   CheckCircle,
   Camera,
-  ArrowLeft,
-  Clock
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Types
 interface Pickup {
   id: string;
   customer_request_id: string;
@@ -48,14 +44,12 @@ interface DriverProfile {
 const PantaBilenDriverApp = () => {
   const { user, logout } = useAuth();
   
-  // Core state
   const [driver, setDriver] = useState<DriverProfile | null>(null);
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<'list' | 'verification'>('list');
   const [selectedPickup, setSelectedPickup] = useState<Pickup | null>(null);
   
-  // Verification workflow state
   const [verificationStep, setVerificationStep] = useState<'checklist' | 'signature'>('checklist');
   const [checklist, setChecklist] = useState({
     reg_nr: false,
@@ -70,11 +64,9 @@ const PantaBilenDriverApp = () => {
   const [finalPrice, setFinalPrice] = useState('');
   const [driverNotes, setDriverNotes] = useState('');
   
-  // UI state
   const [uploading, setUploading] = useState(false);
   const [signing, setSigning] = useState(false);
 
-  // Load driver profile and pickups
   useEffect(() => {
     if (user) {
       loadDriverProfile();
@@ -154,7 +146,6 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  // Status update
   const updatePickupStatus = async (pickupId: string, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -176,13 +167,11 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  // Photo upload
   const uploadPhoto = async (file: File) => {
     if (!selectedPickup) return;
     
     setUploading(true);
     try {
-      // Validate file
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
         throw new Error('Endast JPEG, PNG och WebP bilder tillåtna');
       }
@@ -191,13 +180,11 @@ const PantaBilenDriverApp = () => {
         throw new Error('Bilden är för stor. Max 10MB tillåtet');
       }
 
-      // Generate secure file path
       const timestamp = Date.now();
       const sanitizedPickupId = selectedPickup.id.replace(/[^a-zA-Z0-9-]/g, '');
       const fileExt = file.name.split('.').pop() || 'jpg';
       const fileName = `driver_verification/${sanitizedPickupId}/${timestamp}.${fileExt}`;
 
-      // Upload to pickup-photos bucket
       const { data, error: uploadError } = await supabase.storage
         .from('pickup-photos')
         .upload(fileName, file);
@@ -212,12 +199,10 @@ const PantaBilenDriverApp = () => {
         throw new Error(`Uppladdning misslyckades: ${uploadError.message}`);
       }
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('pickup-photos')
         .getPublicUrl(fileName);
 
-      // Save to database
       await supabase.from('car_images').insert({
         image_url: urlData.publicUrl,
         car_registration_number: selectedPickup.car_registration_number,
@@ -242,13 +227,11 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  // Complete verification with BankID
   const completeVerification = async () => {
     if (!selectedPickup) return;
     
     setSigning(true);
     try {
-      // Create verification record
       const verificationData = {
         pickup_order_id: selectedPickup.id,
         driver_id: driver?.id,
@@ -273,7 +256,6 @@ const PantaBilenDriverApp = () => {
 
       if (error) throw error;
 
-      // Update pickup status to completed
       await supabase
         .from('pickup_orders')
         .update({ 
@@ -285,7 +267,6 @@ const PantaBilenDriverApp = () => {
 
       toast.success('Upphämtning slutförd och signerad');
       
-      // Reset state and return to list
       setCurrentView('list');
       setSelectedPickup(null);
       resetVerificationState();
@@ -352,76 +333,73 @@ const PantaBilenDriverApp = () => {
 
   if (loading) {
     return (
-      <div className=\"min-h-screen flex items-center justify-center bg-gray-50\">
-        <div className=\"text-center\">
-          <RefreshCw className=\"h-8 w-8 animate-spin mx-auto mb-4 text-blue-600\" />
-          <p className=\"text-gray-600\">Laddar förarpanel...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Laddar förarpanel...</p>
         </div>
       </div>
     );
   }
 
-  // Pickup List View
   if (currentView === 'list') {
     return (
-      <div className=\"min-h-screen bg-gray-50\">
-        {/* Header */}
-        <div className=\"bg-white shadow-sm border-b\">
-          <div className=\"max-w-md mx-auto px-4 py-4\">
-            <div className=\"flex items-center justify-between\">
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-md mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className=\"text-xl font-bold text-gray-900\">Förare Panel</h1>
-                <p className=\"text-sm text-gray-600\">
+                <h1 className="text-xl font-bold text-gray-900">Förare Panel</h1>
+                <p className="text-sm text-gray-600">
                   {driver?.full_name} • Klockan {getCurrentTime()}
                 </p>
               </div>
-              <div className=\"flex items-center gap-2\">
+              <div className="flex items-center gap-2">
                 <Button
                   onClick={loadPickups}
-                  variant=\"ghost\"
-                  size=\"sm\"
+                  variant="ghost"
+                  size="sm"
                 >
-                  <RefreshCw className=\"h-4 w-4\" />
+                  <RefreshCw className="h-4 w-4" />
                 </Button>
                 <Button
                   onClick={logout}
-                  variant=\"ghost\"
-                  size=\"sm\"
+                  variant="ghost"
+                  size="sm"
                 >
-                  <LogOut className=\"h-4 w-4\" />
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Pickup List */}
-        <div className=\"max-w-md mx-auto px-4 py-6\">
-          <div className=\"mb-4\">
-            <h2 className=\"text-lg font-semibold text-gray-900 mb-2\">
+        <div className="max-w-md mx-auto px-4 py-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
               Mina upphämtningar ({pickups.length})
             </h2>
           </div>
 
           {pickups.length === 0 ? (
-            <div className=\"text-center py-12 text-gray-500\">
-              <Car className=\"h-12 w-12 mx-auto mb-4 text-gray-300\" />
-              <p className=\"font-medium\">Inga upphämtningar tilldelade</p>
-              <p className=\"text-sm\">Nya upphämtningar visas här automatiskt</p>
+            <div className="text-center py-12 text-gray-500">
+              <Car className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="font-medium">Inga upphämtningar tilldelade</p>
+              <p className="text-sm">Nya upphämtningar visas här automatiskt</p>
             </div>
           ) : (
-            <div className=\"space-y-4\">
+            <div className="space-y-4">
               {pickups.map((pickup) => (
-                <Card key={pickup.id} className=\"overflow-hidden\">
-                  <CardContent className=\"p-4\">
-                    <div className=\"flex justify-between items-start mb-3\">
+                <Card key={pickup.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className=\"font-semibold text-gray-900\">{pickup.owner_name}</h3>
+                        <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
                         <a 
                           href={`tel:${pickup.phone_number}`}
-                          className=\"flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1\"
+                          className="flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1"
                         >
-                          <Phone className=\"w-3 h-3 mr-1\" />
+                          <Phone className="w-3 h-3 mr-1" />
                           {pickup.phone_number}
                         </a>
                       </div>
@@ -430,38 +408,38 @@ const PantaBilenDriverApp = () => {
                       </Badge>
                     </div>
 
-                    <div className=\"space-y-2 mb-4\">
-                      <div className=\"flex items-center text-sm text-gray-600\">
-                        <Car className=\"w-4 h-4 mr-2\" />
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Car className="w-4 h-4 mr-2" />
                         <span>{pickup.car_brand} {pickup.car_model} • {pickup.car_registration_number}</span>
                       </div>
                       
-                      <div className=\"flex items-center text-sm text-gray-600\">
-                        <MapPin className=\"w-4 h-4 mr-2\" />
+                      <div className="flex items-center text-sm text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2" />
                         <span>{pickup.pickup_address}</span>
                       </div>
                       
-                      <div className=\"flex items-center text-sm text-gray-600\">
-                        <Calendar className=\"w-4 h-4 mr-2\" />
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="w-4 h-4 mr-2" />
                         <span>{formatDate(pickup.scheduled_pickup_date)}</span>
                       </div>
                     </div>
 
-                    <div className=\"space-y-2\">
+                    <div className="space-y-2">
                       {pickup.status === 'scheduled' && (
                         <Button
                           onClick={() => updatePickupStatus(pickup.id, 'assigned')}
-                          className=\"w-full bg-green-600 hover:bg-green-700\"
+                          className="w-full bg-green-600 hover:bg-green-700"
                         >
                           Acceptera upphämtning
                         </Button>
                       )}
 
                       {pickup.status === 'assigned' && (
-                        <div className=\"space-y-2\">
+                        <div className="space-y-2">
                           <Button
                             onClick={() => updatePickupStatus(pickup.id, 'in_progress')}
-                            className=\"w-full bg-blue-600 hover:bg-blue-700\"
+                            className="w-full bg-blue-600 hover:bg-blue-700"
                           >
                             Starta upphämtning
                           </Button>
@@ -470,10 +448,10 @@ const PantaBilenDriverApp = () => {
                               const address = encodeURIComponent(pickup.pickup_address);
                               window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank');
                             }}
-                            variant=\"outline\"
-                            className=\"w-full\"
+                            variant="outline"
+                            className="w-full"
                           >
-                            <Navigation className=\"w-4 h-4 mr-2\" />
+                            <Navigation className="w-4 h-4 mr-2" />
                             Navigation
                           </Button>
                         </div>
@@ -482,7 +460,7 @@ const PantaBilenDriverApp = () => {
                       {pickup.status === 'in_progress' && (
                         <Button
                           onClick={() => startVerification(pickup)}
-                          className=\"w-full bg-orange-600 hover:bg-orange-700\"
+                          className="w-full bg-orange-600 hover:bg-orange-700"
                         >
                           Slutför upphämtning
                         </Button>
@@ -498,38 +476,34 @@ const PantaBilenDriverApp = () => {
     );
   }
 
-  // Verification View
   if (currentView === 'verification' && selectedPickup) {
     return (
-      <div className=\"min-h-screen bg-white\">
-        {/* Header */}
-        <div className=\"bg-gray-900 text-white p-4\">
-          <div className=\"flex items-center justify-between\">
+      <div className="min-h-screen bg-white">
+        <div className="bg-gray-900 text-white p-4">
+          <div className="flex items-center justify-between">
             <button 
               onClick={() => {
                 setCurrentView('list');
                 setSelectedPickup(null);
               }}
-              className=\"text-white\"
+              className="text-white"
             >
-              <ArrowLeft className=\"w-5 h-5\" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className=\"text-lg font-semibold\">{selectedPickup.car_registration_number}</h1>
-            <div className=\"text-sm\">
+            <h1 className="text-lg font-semibold">{selectedPickup.car_registration_number}</h1>
+            <div className="text-sm">
               {verificationStep === 'checklist' ? 'Kontroll' : 'Signering'}
             </div>
           </div>
         </div>
 
-        {/* Checklist Step */}
         {verificationStep === 'checklist' && (
-          <div className=\"p-6\">
-            <h2 className=\"text-xl font-bold mb-6\">
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-6">
               Jag intygar härmed att jag har kontrollerat följande:
             </h2>
 
-            {/* Checklist Items */}
-            <div className=\"space-y-4 mb-8\">
+            <div className="space-y-4 mb-8">
               {[
                 { key: 'reg_nr', label: `Reg.nr: ${selectedPickup.car_registration_number}`, required: true },
                 { key: 'motor', label: 'Motor finns' },
@@ -539,15 +513,15 @@ const PantaBilenDriverApp = () => {
                 { key: 'battery', label: 'Batteri finns' },
                 { key: 'no_waste', label: 'Inga hushållssoppor eller grovskräp finns i bilen' }
               ].map(item => (
-                <label key={item.key} className=\"flex items-center space-x-3\">
+                <label key={item.key} className="flex items-center space-x-3">
                   <input
-                    type=\"checkbox\"
+                    type="checkbox"
                     checked={checklist[item.key as keyof typeof checklist]}
                     onChange={(e) => setChecklist(prev => ({ 
                       ...prev, 
                       [item.key]: e.target.checked 
                     }))}
-                    className=\"w-5 h-5 text-blue-600\"
+                    className="w-5 h-5 text-blue-600"
                   />
                   <span className={item.required ? 'font-semibold' : ''}>
                     {item.label}
@@ -556,42 +530,40 @@ const PantaBilenDriverApp = () => {
               ))}
             </div>
 
-            {/* Internal Notes */}
-            <div className=\"mb-6\">
-              <h3 className=\"font-semibold mb-2\">Intern kommentar</h3>
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Intern kommentar</h3>
               <textarea
                 value={driverNotes}
                 onChange={(e) => setDriverNotes(e.target.value)}
-                placeholder=\"Skriv eventuella kommentarer här...\"
-                className=\"w-full p-3 border rounded-lg h-24 resize-none\"
+                placeholder="Skriv eventuella kommentarer här..."
+                className="w-full p-3 border rounded-lg h-24 resize-none"
                 maxLength={240}
               />
-              <div className=\"text-right text-sm text-gray-500 mt-1\">
+              <div className="text-right text-sm text-gray-500 mt-1">
                 {driverNotes.length}/240
               </div>
             </div>
 
-            {/* Optional Photo Section */}
-            <div className=\"mb-6\">
-              <h3 className=\"font-semibold mb-2\">Bild (Valfri dokumentation)</h3>
-              <p className=\"text-sm text-gray-600 mb-4\">
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Bild (Valfri dokumentation)</h3>
+              <p className="text-sm text-gray-600 mb-4">
                 Ladda upp foton endast om du behöver dokumentera avvikelser.
               </p>
               
               <input
-                type=\"file\"
-                accept=\"image/jpeg,image/png,image/webp\"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) uploadPhoto(file);
                 }}
-                className=\"hidden\"
-                id=\"photo-upload\"
+                className="hidden"
+                id="photo-upload"
                 disabled={uploading}
               />
               
               <label
-                htmlFor=\"photo-upload\"
+                htmlFor="photo-upload"
                 className={`w-full border-2 border-dashed rounded-lg p-8 text-center block cursor-pointer transition-colors ${
                   uploading 
                     ? 'border-gray-200 text-gray-400' 
@@ -599,31 +571,30 @@ const PantaBilenDriverApp = () => {
                 }`}
               >
                 {uploading ? (
-                  <div className=\"flex flex-col items-center\">
-                    <RefreshCw className=\"w-8 h-8 animate-spin mb-2\" />
+                  <div className="flex flex-col items-center">
+                    <RefreshCw className="w-8 h-8 animate-spin mb-2" />
                     <span>Laddar upp bild...</span>
                   </div>
                 ) : (
-                  <div className=\"flex flex-col items-center\">
-                    <Camera className=\"w-8 h-8 mb-2\" />
+                  <div className="flex flex-col items-center">
+                    <Camera className="w-8 h-8 mb-2" />
                     <span>Ta bild för dokumentation</span>
                   </div>
                 )}
               </label>
 
-              {/* Uploaded Photos */}
               {photos.length > 0 && (
-                <div className=\"mt-4\">
-                  <h4 className=\"font-medium mb-2\">Uppladdade foton ({photos.length})</h4>
-                  <div className=\"grid grid-cols-2 gap-2\">
+                <div className="mt-4">
+                  <h4 className="font-medium mb-2">Uppladdade foton ({photos.length})</h4>
+                  <div className="grid grid-cols-2 gap-2">
                     {photos.map((photo, index) => (
-                      <div key={index} className=\"relative\">
+                      <div key={index} className="relative">
                         <img
                           src={photo.url}
                           alt={`Verification ${index + 1}`}
-                          className=\"w-full h-20 object-cover rounded border\"
+                          className="w-full h-20 object-cover rounded border"
                         />
-                        <div className=\"text-xs text-gray-500 mt-1 truncate\">
+                        <div className="text-xs text-gray-500 mt-1 truncate">
                           {photo.fileName}
                         </div>
                       </div>
@@ -633,27 +604,25 @@ const PantaBilenDriverApp = () => {
               )}
             </div>
 
-            {/* Final Price */}
-            <div className=\"mb-8\">
-              <label className=\"block font-semibold mb-2\">Slutligt pris</label>
-              <div className=\"flex items-center\">
+            <div className="mb-8">
+              <label className="block font-semibold mb-2">Slutligt pris</label>
+              <div className="flex items-center">
                 <input
-                  type=\"number\"
+                  type="number"
                   value={finalPrice}
                   onChange={(e) => setFinalPrice(e.target.value)}
-                  className=\"flex-1 p-3 border rounded-lg text-xl font-bold\"
-                  placeholder=\"0\"
+                  className="flex-1 p-3 border rounded-lg text-xl font-bold"
+                  placeholder="0"
                 />
-                <span className=\"ml-2 text-xl\">kr</span>
+                <span className="ml-2 text-xl">kr</span>
               </div>
             </div>
 
-            {/* Navigation */}
-            <div className=\"space-y-3\">
+            <div className="space-y-3">
               <Button
                 onClick={() => setVerificationStep('signature')}
                 disabled={!checklist.reg_nr || !finalPrice}
-                className=\"w-full bg-blue-600 text-white py-3 disabled:bg-gray-400\"
+                className="w-full bg-blue-600 text-white py-3 disabled:bg-gray-400"
               >
                 Fortsätt till signering
               </Button>
@@ -663,8 +632,8 @@ const PantaBilenDriverApp = () => {
                   setCurrentView('list');
                   setSelectedPickup(null);
                 }}
-                variant=\"outline\"
-                className=\"w-full\"
+                variant="outline"
+                className="w-full"
               >
                 Avbryt
               </Button>
@@ -672,15 +641,13 @@ const PantaBilenDriverApp = () => {
           </div>
         )}
 
-        {/* Signature Step */}
         {verificationStep === 'signature' && (
-          <div className=\"p-6\">
-            <h2 className=\"text-xl font-bold mb-6\">Signera verifiering med BankID</h2>
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-6">Signera verifiering med BankID</h2>
             
-            {/* Summary */}
-            <div className=\"bg-gray-50 p-4 rounded-lg mb-6\">
-              <h3 className=\"font-semibold mb-2\">Sammanfattning</h3>
-              <div className=\"text-sm space-y-1\">
+            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+              <h3 className="font-semibold mb-2">Sammanfattning</h3>
+              <div className="text-sm space-y-1">
                 <p><strong>Bil:</strong> {selectedPickup.car_registration_number}</p>
                 <p><strong>Slutpris:</strong> {finalPrice} kr</p>
                 <p><strong>Dokumentation:</strong> {photos.length} foton</p>
@@ -688,8 +655,8 @@ const PantaBilenDriverApp = () => {
               </div>
             </div>
 
-            <div className=\"text-center\">
-              <p className=\"text-gray-600 mb-6\">
+            <div className="text-center">
+              <p className="text-gray-600 mb-6">
                 Genom att signera med BankID bekräftar du att informationen ovan är korrekt 
                 och att upphämtningen är genomförd enligt specifikationerna.
               </p>
@@ -697,16 +664,16 @@ const PantaBilenDriverApp = () => {
               <Button
                 onClick={completeVerification}
                 disabled={signing}
-                className=\"w-full bg-gray-900 text-white py-4 text-lg font-semibold disabled:bg-gray-400\"
+                className="w-full bg-gray-900 text-white py-4 text-lg font-semibold disabled:bg-gray-400"
               >
                 {signing ? (
-                  <div className=\"flex items-center justify-center space-x-3\">
-                    <RefreshCw className=\"w-5 h-5 animate-spin\" />
+                  <div className="flex items-center justify-center space-x-3">
+                    <RefreshCw className="w-5 h-5 animate-spin" />
                     <span>Signerar...</span>
                   </div>
                 ) : (
-                  <div className=\"flex items-center justify-center space-x-3\">
-                    <div className=\"text-xl font-bold\">iD</div>
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="text-xl font-bold">iD</div>
                     <span>Signera med BankID</span>
                   </div>
                 )}
@@ -714,8 +681,8 @@ const PantaBilenDriverApp = () => {
 
               <Button
                 onClick={() => setVerificationStep('checklist')}
-                variant=\"outline\"
-                className=\"w-full mt-4\"
+                variant="outline"
+                className="w-full mt-4"
               >
                 Tillbaka till kontroll
               </Button>
@@ -729,5 +696,4 @@ const PantaBilenDriverApp = () => {
   return null;
 };
 
-export default PantaBilenDriverApp;`
-}
+export default PantaBilenDriverApp;
