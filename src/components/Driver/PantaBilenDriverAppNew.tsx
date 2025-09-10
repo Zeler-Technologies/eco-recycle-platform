@@ -410,11 +410,42 @@ const PantaBilenDriverAppNew = () => {
     }
   };
 
+  // Ensure pickup-photos bucket exists
+  const ensurePickupPhotosBucket = async () => {
+    try {
+      console.log('[Storage] Ensuring "pickup-photos" bucket exists...');
+      
+      const { data: buckets, error: listError } = await supabase
+        .storage
+        .listBuckets();
+
+      if (listError) {
+        console.error('[Storage] Error listing buckets:', listError);
+        throw new Error(`Failed to check buckets: ${listError.message}`);
+      }
+
+      const bucketExists = buckets?.some(bucket => bucket.name === 'pickup-photos');
+      
+      if (!bucketExists) {
+        console.log('[Storage] Bucket "pickup-photos" does not exist but should exist from migration');
+        throw new Error('pickup-photos bucket was not created properly by migration');
+      } else {
+        console.log('[Storage] Bucket "pickup-photos" exists and ready for use.');
+      }
+    } catch (error) {
+      console.error('[Storage] Error in ensurePickupPhotosBucket:', error);
+      throw error;
+    }
+  };
+
   // Photo upload handler
   const handlePhotoUpload = async (pickupOrderId: string, file: File) => {
     setUploadingPhoto(true);
     try {
-      const fileName = `pickup-${pickupOrderId}-${Date.now()}.jpg`;
+      // Ensure bucket exists before upload
+      await ensurePickupPhotosBucket();
+
+      const fileName = `driver_pickup_${pickupOrderId}_${Date.now()}.jpg`;
       const { data, error } = await supabase.storage
         .from('pickup-photos')
         .upload(fileName, file);

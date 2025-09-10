@@ -56,37 +56,21 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
   const canProceed = completedPhotos === totalRequired;
   const progressPercentage = (completedPhotos / totalRequired) * 100;
 
-  // Ensure 'car-images' storage bucket exists before uploads
-  const ensureCarImagesBucket = async () => {
-    console.log('[Storage] Checking for bucket "car-images"...');
-    const { data: bucketData, error: getBucketError } = await supabase.storage.getBucket('car-images');
+  // Ensure 'pickup-photos' storage bucket exists for driver verification photos
+  const ensurePickupPhotosBucket = async () => {
+    console.log('[Storage] Checking for bucket "pickup-photos"...');
+    const { data: bucketData, error: getBucketError } = await supabase.storage.getBucket('pickup-photos');
     if (getBucketError) {
       console.warn('[Storage] getBucket error:', getBucketError);
     }
     if (bucketData) {
-      console.log('[Storage] Bucket exists:', bucketData);
+      console.log('[Storage] Bucket "pickup-photos" exists:', bucketData);
       return;
     }
 
-    console.log('[Storage] Bucket missing. Creating "car-images"...');
-    const { data: createdBucket, error: createError } = await supabase.storage.createBucket('car-images', {
-      public: true,
-      fileSizeLimit: 10 * 1024 * 1024, // 10MB
-      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
-    });
-
-    if (createError) {
-      console.error('[Storage] Bucket creation failed:', createError);
-      throw new Error(`Kunde inte skapa lagringshinken: ${createError.message}`);
-    }
-
-    console.log('[Storage] Bucket created:', createdBucket);
-    const { data: confirm, error: confirmError } = await supabase.storage.getBucket('car-images');
-    if (confirmError || !confirm) {
-      console.error('[Storage] Bucket confirmation failed:', confirmError);
-      throw new Error('Kunde inte bekräfta att lagringshinken skapades.');
-    }
-    console.log('[Storage] Bucket confirmed.');
+    // Bucket should exist from migration, this is an error condition
+    console.error('[Storage] pickup-photos bucket missing - should exist from migration');
+    throw new Error('pickup-photos bucket not found. Contact support.');
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,21 +210,20 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
         console.log('Created new car with ID:', carId);
       }
 
-      // Ensure bucket exists before upload
-      console.log('[Storage] Ensuring "car-images" bucket exists before upload...');
-      await ensureCarImagesBucket();
+      // Step 5: Ensure pickup-photos bucket exists for driver verification
+      console.log('[Storage] Ensuring "pickup-photos" bucket exists for driver upload...');
+      await ensurePickupPhotosBucket();
 
-      // Step 5: Upload image to storage
+      // Step 5: Upload image to pickup-photos storage
       const fileExt = file.name.split('.').pop() || 'jpg';
       const timestamp = Date.now();
-      const fileName = `${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
-      const filePath = `car-images/${fileName}`;
+      const fileName = `driver_verification_${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
 
-      console.log('Uploading file to storage:', fileName);
+      console.log('[Storage] Uploading driver verification to pickup-photos bucket:', fileName);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('car-images')
-        .upload(filePath, file);
+        .from('pickup-photos')
+        .upload(fileName, file);
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
@@ -249,22 +232,22 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
 
       // Step 6: Get public URL
       const { data: urlData } = supabase.storage
-        .from('car-images')
-        .getPublicUrl(filePath);
+        .from('pickup-photos')
+        .getPublicUrl(fileName);
 
       const imageUrl = urlData.publicUrl;
       console.log('Image uploaded to storage successfully:', imageUrl);
 
-      // Step 7: Insert into car_images table with RLS-compliant car_id
-      console.log('Inserting to car_images table with car_id for RLS compliance:', {
+      // Step 7: Insert into car_images table with driver verification data
+      console.log('Inserting driver verification photo to car_images table:', {
         car_id: carId,
         image_url: imageUrl,
         pnr_num: numericPnr,
         car_registration_number: customerRequest.car_registration_number,
-        image_type: currentPhotoType,
+        image_type: `verification_${currentPhotoType}`,
         file_name: fileName,
         file_size: file.size,
-        uploaded_by: 'customer'
+        uploaded_by: 'driver'
       });
 
       const { data: photoRecord, error: dbError } = await supabase
@@ -274,10 +257,10 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
           image_url: imageUrl,
           pnr_num: numericPnr, // Required field (NOT NULL)
           car_registration_number: customerRequest.car_registration_number,
-          image_type: currentPhotoType, // Must match constraint values
+          image_type: `verification_${currentPhotoType}`, // Driver verification type
           file_name: fileName,
           file_size: file.size,
-          uploaded_by: 'customer'
+          uploaded_by: 'driver' // Mark as driver uploaded for comparison
           // Note: pnr_num_norm removed - it may be auto-generated or cause conflicts
         })
         .select('id')

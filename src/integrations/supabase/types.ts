@@ -502,7 +502,7 @@ export type Database = {
       }
       car_images: {
         Row: {
-          car_id: string
+          car_id: string | null
           car_registration_number: string | null
           created_at: string | null
           file_name: string | null
@@ -517,7 +517,7 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
-          car_id: string
+          car_id?: string | null
           car_registration_number?: string | null
           created_at?: string | null
           file_name?: string | null
@@ -532,7 +532,7 @@ export type Database = {
           uploaded_by?: string | null
         }
         Update: {
-          car_id?: string
+          car_id?: string | null
           car_registration_number?: string | null
           created_at?: string | null
           file_name?: string | null
@@ -547,13 +547,6 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "car_images_car_id_fkey"
-            columns: ["car_id"]
-            isOneToOne: false
-            referencedRelation: "cars"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "fk_car_images_registration"
             columns: ["car_registration_number"]
@@ -1578,6 +1571,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "driver_status_history_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_verifications: {
+        Row: {
+          battery_discrepancy: boolean
+          battery_present: boolean
+          car_id: string
+          catalytic_discrepancy: boolean
+          catalytic_present: boolean
+          completed_at: string | null
+          created_at: string | null
+          driver_id: string
+          driver_notes: string | null
+          id: string
+          motor_discrepancy: boolean
+          motor_present: boolean
+          pickup_order_id: string
+          rejection_reason: string | null
+          tenant_id: number
+          transmission_discrepancy: boolean
+          transmission_present: boolean
+          verification_status: string | null
+          wheels_discrepancy: boolean
+          wheels_mounted: boolean
+        }
+        Insert: {
+          battery_discrepancy?: boolean
+          battery_present?: boolean
+          car_id: string
+          catalytic_discrepancy?: boolean
+          catalytic_present?: boolean
+          completed_at?: string | null
+          created_at?: string | null
+          driver_id: string
+          driver_notes?: string | null
+          id?: string
+          motor_discrepancy?: boolean
+          motor_present?: boolean
+          pickup_order_id: string
+          rejection_reason?: string | null
+          tenant_id: number
+          transmission_discrepancy?: boolean
+          transmission_present?: boolean
+          verification_status?: string | null
+          wheels_discrepancy?: boolean
+          wheels_mounted?: boolean
+        }
+        Update: {
+          battery_discrepancy?: boolean
+          battery_present?: boolean
+          car_id?: string
+          catalytic_discrepancy?: boolean
+          catalytic_present?: boolean
+          completed_at?: string | null
+          created_at?: string | null
+          driver_id?: string
+          driver_notes?: string | null
+          id?: string
+          motor_discrepancy?: boolean
+          motor_present?: boolean
+          pickup_order_id?: string
+          rejection_reason?: string | null
+          tenant_id?: number
+          transmission_discrepancy?: boolean
+          transmission_present?: boolean
+          verification_status?: string | null
+          wheels_discrepancy?: boolean
+          wheels_mounted?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_verifications_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_verifications_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
