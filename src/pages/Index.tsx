@@ -33,7 +33,7 @@ interface Pickup {
   driver_notes?: string;
 }
 
-const PantaBilenDriverApp = () => {
+const PantaBilenDriverAppNew = () => {
   const { user, logout } = useAuth();
   
   const [availablePickups, setAvailablePickups] = useState<Pickup[]>([]);
