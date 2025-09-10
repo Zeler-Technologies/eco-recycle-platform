@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import DriverMapView from './DriverMapView';
 
 const PantaBilenDriverApp = () => {
   const { user, logout } = useAuth();
@@ -533,11 +534,14 @@ const PantaBilenDriverApp = () => {
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-[calc(100vh-280px)] text-gray-500">
-          <div className="text-center p-8">
-            <div className="text-8xl mb-4">🗺️</div>
-            <p className="text-2xl font-medium">Kartvy kommer snart</p>
-          </div>
+        <div className="h-[calc(100vh-200px)]">
+          <DriverMapView 
+            pickups={filteredPickups}
+            onPickupSelect={(pickup) => {
+              setSelectedPickup(pickup);
+              setShowDetailView(true);
+            }}
+          />
         </div>
       )}
 
