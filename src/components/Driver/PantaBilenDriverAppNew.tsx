@@ -624,15 +624,37 @@ const PantaBilenDriverApp = () => {
             {/* Action buttons - Mobile optimized */}
             <div className="space-y-3 pb-8">
               {selectedPickup.status === 'assigned' && (
-                <button 
-                  className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
-                  onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'in_progress')}
-                >
-                  <span className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">▶️</span>
-                    Starta upphämtning
-                  </span>
-                </button>
+                <>
+                  <button 
+                    className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
+                    onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'in_progress')}
+                  >
+                    <span className="flex items-center justify-center gap-3">
+                      <span className="text-2xl">▶️</span>
+                      Starta upphämtning
+                    </span>
+                  </button>
+                  
+                  <button 
+                    className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
+                    onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'rejected')}
+                  >
+                    <span className="flex items-center justify-center gap-3">
+                      <span className="text-2xl">❌</span>
+                      Avvisa uppdrag
+                    </span>
+                  </button>
+                  
+                  <button 
+                    className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
+                    onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'scheduled')}
+                  >
+                    <span className="flex items-center justify-center gap-3">
+                      <span className="text-2xl">📅</span>
+                      Schemalägg om
+                    </span>
+                  </button>
+                </>
               )}
               
               {selectedPickup.status === 'in_progress' && (
