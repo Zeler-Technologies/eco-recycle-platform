@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +42,14 @@ const PantaBilenDriverApp = () => {
   const [activeTab, setActiveTab] = useState<'available' | 'assigned' | 'completed' | 'verification'>('available');
   const [selectedPickup, setSelectedPickup] = useState<Pickup | null>(null);
   
+  // Driver state
+  const [driverStatus, setDriverStatus] = useState<'available' | 'busy' | 'offline'>('available');
+  const [dailyStats, setDailyStats] = useState({
+    completed: 0,
+    inProgress: 1,
+    pending: 1
+  });
+  
   const [verificationStep, setVerificationStep] = useState<'checklist' | 'signature'>('checklist');
   const [checklist, setChecklist] = useState({
     reg_nr: false,
@@ -56,7 +63,6 @@ const PantaBilenDriverApp = () => {
   const [photos, setPhotos] = useState<Array<{url: string, fileName: string}>>([]);
   const [finalPrice, setFinalPrice] = useState('');
   const [driverNotes, setDriverNotes] = useState('');
-  
   const [uploading, setUploading] = useState(false);
   const [signing, setSigning] = useState(false);
 
@@ -67,9 +73,44 @@ const PantaBilenDriverApp = () => {
     }
   }, [user]);
 
+  const updateDriverStatus = async (newStatus: 'available' | 'busy' | 'offline') => {
+    setDriverStatus(newStatus);
+    toast.success(`Status ändrad till: ${getDriverStatusText(newStatus)}`);
+  };
+
+  const getDriverStatusColor = (status: string) => {
+    switch (status) {
+      case 'available': return 'bg-green-500';
+      case 'busy': return 'bg-red-500';
+      case 'offline': return 'bg-gray-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getDriverStatusText = (status: string) => {
+    switch (status) {
+      case 'available': return 'Tillgänglig';
+      case 'busy': return 'Upptagen';
+      case 'offline': return 'Offline';
+      default: return 'Offline';
+    }
+  };
+
+  const reschedulePickup = (pickup: Pickup) => {
+    toast.info(`Omschemaläggning av ${pickup.car_registration_number} - funktionalitet kommer snart`);
+  };
+
+  const rejectPickup = (pickupId: string) => {
+    const pickup = assignedPickups.find(p => p.id === pickupId);
+    if (pickup) {
+      setAssignedPickups(prev => prev.filter(p => p.id !== pickupId));
+      setAvailablePickups(prev => [...prev, { ...pickup, status: 'scheduled' }]);
+      toast.success('Upphämtning avvisad och återställd till tillgängliga');
+    }
+  };
+
   const loadAllPickups = async () => {
     try {
-      // Available pickups (scheduled, not assigned to anyone)
       const availableMockData = [
         {
           id: 'avail1',
@@ -80,26 +121,12 @@ const PantaBilenDriverApp = () => {
           owner_name: 'Maria Karlsson',
           phone_number: '070-345-6789',
           pickup_address: 'Vasagatan 8, Stockholm',
-          scheduled_pickup_date: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+          scheduled_pickup_date: new Date(Date.now() + 86400000).toISOString(),
           status: 'scheduled',
           final_price: 22000
-        },
-        {
-          id: 'avail2',
-          customer_request_id: 'req2',
-          car_registration_number: 'QWE456',
-          car_brand: 'Audi',
-          car_model: 'A4',
-          owner_name: 'Johan Svensson',
-          phone_number: '070-456-7890',
-          pickup_address: 'Drottninggatan 15, Stockholm',
-          scheduled_pickup_date: new Date(Date.now() + 172800000).toISOString(), // Day after tomorrow
-          status: 'scheduled',
-          final_price: 28000
         }
       ];
 
-      // Assigned pickups (assigned to current driver)
       const assignedMockData = [
         {
           id: 'assign1',
@@ -113,23 +140,9 @@ const PantaBilenDriverApp = () => {
           scheduled_pickup_date: new Date().toISOString(),
           status: 'assigned',
           final_price: 25000
-        },
-        {
-          id: 'assign2',
-          customer_request_id: 'req4',
-          car_registration_number: 'DEF456',
-          car_brand: 'Saab',
-          car_model: '9-3',
-          owner_name: 'Erik Eriksson',
-          phone_number: '070-234-5678',
-          pickup_address: 'Kungsgatan 25, Stockholm',
-          scheduled_pickup_date: new Date().toISOString(),
-          status: 'in_progress',
-          final_price: 18000
         }
       ];
 
-      // Completed pickups
       const completedMockData = [
         {
           id: 'comp1',
@@ -140,22 +153,9 @@ const PantaBilenDriverApp = () => {
           owner_name: 'Lisa Nordström',
           phone_number: '070-567-8901',
           pickup_address: 'Östermalm 3, Stockholm',
-          scheduled_pickup_date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+          scheduled_pickup_date: new Date(Date.now() - 86400000).toISOString(),
           status: 'completed',
           final_price: 32000
-        },
-        {
-          id: 'comp2',
-          customer_request_id: 'req6',
-          car_registration_number: 'JKL012',
-          car_brand: 'Toyota',
-          car_model: 'Avensis',
-          owner_name: 'Peter Lindqvist',
-          phone_number: '070-678-9012',
-          pickup_address: 'Södermalm 7, Stockholm',
-          scheduled_pickup_date: new Date(Date.now() - 172800000).toISOString(), // Day before yesterday
-          status: 'completed',
-          final_price: 16500
         }
       ];
 
@@ -171,9 +171,7 @@ const PantaBilenDriverApp = () => {
 
   const updatePickupStatus = async (pickupId: string, newStatus: string) => {
     try {
-      // Simulate status update
       if (newStatus === 'assigned') {
-        // Move from available to assigned
         const pickup = availablePickups.find(p => p.id === pickupId);
         if (pickup) {
           setAvailablePickups(prev => prev.filter(p => p.id !== pickupId));
@@ -181,13 +179,11 @@ const PantaBilenDriverApp = () => {
           toast.success('Upphämtning accepterad');
         }
       } else if (newStatus === 'in_progress') {
-        // Update status in assigned pickups
         setAssignedPickups(prev => prev.map(p => 
           p.id === pickupId ? { ...p, status: 'in_progress' } : p
         ));
         toast.success('Upphämtning påbörjad');
       } else if (newStatus === 'completed') {
-        // Move from assigned to completed
         const pickup = assignedPickups.find(p => p.id === pickupId);
         if (pickup) {
           setAssignedPickups(prev => prev.filter(p => p.id !== pickupId));
@@ -201,73 +197,11 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  const uploadPhoto = async (file: File) => {
-    if (!selectedPickup) return;
-    
-    setUploading(true);
-    try {
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-        throw new Error('Endast JPEG, PNG och WebP bilder tillåtna');
-      }
-      
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Bilden är för stor. Max 10MB tillåtet');
-      }
-
-      const timestamp = Date.now();
-      const sanitizedPickupId = selectedPickup.id.replace(/[^a-zA-Z0-9-]/g, '');
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `driver_verification/${sanitizedPickupId}/${timestamp}.${fileExt}`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from('pickup-photos')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        if (uploadError.message?.includes('permission') || uploadError.message?.includes('security')) {
-          throw new Error('Endast tilldelade förare kan ladda upp verifieringsfoton');
-        }
-        throw new Error(`Uppladdning misslyckades: ${uploadError.message}`);
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('pickup-photos')
-        .getPublicUrl(fileName);
-
-      setPhotos(prev => [...prev, {
-        url: urlData.publicUrl,
-        fileName: fileName.split('/').pop() || 'photo.jpg'
-      }]);
-
-      toast.success('Foto uppladdad');
-    } catch (error: any) {
-      console.error('Photo upload failed:', error);
-      toast.error(error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const completeVerification = async () => {
-    if (!selectedPickup) return;
-    
-    setSigning(true);
-    try {
-      // Update pickup status to completed
-      await updatePickupStatus(selectedPickup.id, 'completed');
-      
-      toast.success('Upphämtning slutförd och signerad');
-      
-      setActiveTab('assigned');
-      setSelectedPickup(null);
-      resetVerificationState();
-      
-    } catch (error: any) {
-      console.error('Verification failed:', error);
-      toast.error('Signering misslyckades');
-    } finally {
-      setSigning(false);
-    }
+  const startVerification = (pickup: Pickup) => {
+    setSelectedPickup(pickup);
+    setActiveTab('verification');
+    setFinalPrice(pickup.final_price?.toString() || '');
+    resetVerificationState();
   };
 
   const resetVerificationState = () => {
@@ -286,11 +220,22 @@ const PantaBilenDriverApp = () => {
     setDriverNotes('');
   };
 
-  const startVerification = (pickup: Pickup) => {
-    setSelectedPickup(pickup);
-    setActiveTab('verification');
-    setFinalPrice(pickup.final_price?.toString() || '');
-    resetVerificationState();
+  const completeVerification = async () => {
+    if (!selectedPickup) return;
+    
+    setSigning(true);
+    try {
+      await updatePickupStatus(selectedPickup.id, 'completed');
+      toast.success('Upphämtning slutförd och signerad');
+      setActiveTab('assigned');
+      setSelectedPickup(null);
+      resetVerificationState();
+    } catch (error: any) {
+      console.error('Verification failed:', error);
+      toast.error('Signering misslyckades');
+    } finally {
+      setSigning(false);
+    }
   };
 
   const getCurrentTime = () => new Date().toLocaleTimeString('sv-SE', { 
@@ -323,152 +268,6 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  // Tab Navigation Component
-  const TabNavigation = () => (
-    <div className="bg-gray-100 rounded-lg p-1 mb-4 grid grid-cols-3 gap-1">
-      <button
-        className={`py-2 px-3 rounded-md text-xs font-medium transition-colors ${
-          activeTab === 'available'
-            ? 'bg-white text-blue-600 shadow-sm'
-            : 'text-gray-600 hover:text-gray-800'
-        }`}
-        onClick={() => setActiveTab('available')}
-      >
-        Tillgängliga
-        {availablePickups.length > 0 && (
-          <span className="ml-1 bg-blue-100 text-blue-600 text-xs px-1 py-0.5 rounded">
-            {availablePickups.length}
-          </span>
-        )}
-      </button>
-      <button
-        className={`py-2 px-3 rounded-md text-xs font-medium transition-colors ${
-          activeTab === 'assigned'
-            ? 'bg-white text-green-600 shadow-sm'
-            : 'text-gray-600 hover:text-gray-800'
-        }`}
-        onClick={() => setActiveTab('assigned')}
-      >
-        Mina upphämtningar
-        {assignedPickups.length > 0 && (
-          <span className="ml-1 bg-green-100 text-green-600 text-xs px-1 py-0.5 rounded">
-            {assignedPickups.length}
-          </span>
-        )}
-      </button>
-      <button
-        className={`py-2 px-3 rounded-md text-xs font-medium transition-colors ${
-          activeTab === 'completed'
-            ? 'bg-white text-gray-600 shadow-sm'
-            : 'text-gray-600 hover:text-gray-800'
-        }`}
-        onClick={() => setActiveTab('completed')}
-      >
-        Gjorda
-        {completedPickups.length > 0 && (
-          <span className="ml-1 bg-gray-100 text-gray-600 text-xs px-1 py-0.5 rounded">
-            {completedPickups.length}
-          </span>
-        )}
-      </button>
-    </div>
-  );
-
-  // Pickup Card Component
-  const PickupCard = ({ pickup, type }: { pickup: Pickup; type: 'available' | 'assigned' | 'completed' }) => (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
-            <a 
-              href={`tel:${pickup.phone_number}`}
-              className="flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1"
-            >
-              <Phone className="w-3 h-3 mr-1" />
-              {pickup.phone_number}
-            </a>
-          </div>
-          <Badge className={getStatusColor(pickup.status)}>
-            {getStatusText(pickup.status)}
-          </Badge>
-        </div>
-
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <Car className="w-4 h-4 mr-2" />
-            <span>{pickup.car_brand} {pickup.car_model} • {pickup.car_registration_number}</span>
-          </div>
-          
-          <div className="flex items-center text-sm text-gray-600">
-            <MapPin className="w-4 h-4 mr-2" />
-            <span>{pickup.pickup_address}</span>
-          </div>
-          
-          <div className="flex items-center text-sm text-gray-600">
-            <Calendar className="w-4 h-4 mr-2" />
-            <span>{formatDate(pickup.scheduled_pickup_date)}</span>
-          </div>
-
-          {pickup.final_price && (
-            <div className="flex items-center text-sm text-green-600">
-              <span className="w-4 h-4 mr-2">💰</span>
-              <span>{pickup.final_price.toLocaleString()} kr</span>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          {type === 'available' && (
-            <Button
-              onClick={() => updatePickupStatus(pickup.id, 'assigned')}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              Acceptera upphämtning
-            </Button>
-          )}
-
-          {type === 'assigned' && pickup.status === 'assigned' && (
-            <div className="space-y-2">
-              <Button
-                onClick={() => updatePickupStatus(pickup.id, 'in_progress')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                Starta upphämtning
-              </Button>
-              <Button
-                onClick={() => {
-                  const address = encodeURIComponent(pickup.pickup_address);
-                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank');
-                }}
-                variant="outline"
-                className="w-full"
-              >
-                <Navigation className="w-4 h-4 mr-2" />
-                Navigation
-              </Button>
-            </div>
-          )}
-
-          {type === 'assigned' && pickup.status === 'in_progress' && (
-            <Button
-              onClick={() => startVerification(pickup)}
-              className="w-full bg-orange-600 hover:bg-orange-700"
-            >
-              Verifiera upphämtning
-            </Button>
-          )}
-
-          {type === 'completed' && (
-            <div className="text-center py-2">
-              <span className="text-sm text-gray-500">Slutförd {formatDate(pickup.scheduled_pickup_date)}</span>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -486,19 +285,11 @@ const PantaBilenDriverApp = () => {
       <div className="min-h-screen bg-white">
         <div className="bg-gray-900 text-white p-4">
           <div className="flex items-center justify-between">
-            <button 
-              onClick={() => {
-                setActiveTab('assigned');
-                setSelectedPickup(null);
-              }}
-              className="text-white"
-            >
+            <button onClick={() => { setActiveTab('assigned'); setSelectedPickup(null); }} className="text-white">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-semibold">{selectedPickup.car_registration_number}</h1>
-            <div className="text-sm">
-              {verificationStep === 'checklist' ? 'Kontroll' : 'Signering'}
-            </div>
+            <div className="text-sm">{verificationStep === 'checklist' ? 'Kontroll' : 'Signering'}</div>
           </div>
         </div>
 
@@ -529,9 +320,7 @@ const PantaBilenDriverApp = () => {
                       }))}
                       className="w-5 h-5 text-blue-600"
                     />
-                    <span className={item.required ? 'font-semibold' : ''}>
-                      {item.label}
-                    </span>
+                    <span className={item.required ? 'font-semibold' : ''}>{item.label}</span>
                   </label>
                 ))}
               </div>
@@ -545,69 +334,17 @@ const PantaBilenDriverApp = () => {
                   className="w-full p-3 border rounded-lg h-24 resize-none"
                   maxLength={240}
                 />
-                <div className="text-right text-sm text-gray-500 mt-1">
-                  {driverNotes.length}/240
-                </div>
+                <div className="text-right text-sm text-gray-500 mt-1">{driverNotes.length}/240</div>
               </div>
 
               <div className="mb-6">
                 <h3 className="font-semibold mb-2">Bild (Valfri dokumentation)</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Ladda upp foton endast om du behöver dokumentera avvikelser.
-                </p>
+                <p className="text-sm text-gray-600 mb-4">Ladda upp foton endast om du behöver dokumentera avvikelser.</p>
                 
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) uploadPhoto(file);
-                  }}
-                  className="hidden"
-                  id="photo-upload"
-                  disabled={uploading}
-                />
-                
-                <label
-                  htmlFor="photo-upload"
-                  className={`w-full border-2 border-dashed rounded-lg p-8 text-center block cursor-pointer transition-colors ${
-                    uploading 
-                      ? 'border-gray-200 text-gray-400' 
-                      : 'border-gray-300 hover:border-blue-400 text-gray-600'
-                  }`}
-                >
-                  {uploading ? (
-                    <div className="flex flex-col items-center">
-                      <RefreshCw className="w-8 h-8 animate-spin mb-2" />
-                      <span>Laddar upp bild...</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <Camera className="w-8 h-8 mb-2" />
-                      <span>Ta bild för dokumentation</span>
-                    </div>
-                  )}
-                </label>
-
-                {photos.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">Uppladdade foton ({photos.length})</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {photos.map((photo, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={photo.url}
-                            alt={`Verification ${index + 1}`}
-                            className="w-full h-20 object-cover rounded border"
-                          />
-                          <div className="text-xs text-gray-500 mt-1 truncate">
-                            {photo.fileName}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="w-full border-2 border-dashed rounded-lg p-8 text-center border-gray-300">
+                  <Camera className="w-8 h-8 mb-2 mx-auto text-gray-400" />
+                  <span className="text-gray-600">Ta bild för dokumentation</span>
+                </div>
               </div>
 
               <div className="mb-8">
@@ -634,10 +371,7 @@ const PantaBilenDriverApp = () => {
                 </Button>
                 
                 <Button
-                  onClick={() => {
-                    setActiveTab('assigned');
-                    setSelectedPickup(null);
-                  }}
+                  onClick={() => { setActiveTab('assigned'); setSelectedPickup(null); }}
                   variant="outline"
                   className="w-full"
                 >
@@ -703,29 +437,18 @@ const PantaBilenDriverApp = () => {
   // Main Tabbed Interface
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Förare Panel</h1>
-              <p className="text-sm text-gray-600">
-                {user?.email} • Klockan {getCurrentTime()}
-              </p>
+              <p className="text-sm text-gray-600">{user?.email} • Klockan {getCurrentTime()}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={loadAllPickups}
-                variant="ghost"
-                size="sm"
-              >
+              <Button onClick={loadAllPickups} variant="ghost" size="sm">
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button
-                onClick={logout}
-                variant="ghost"
-                size="sm"
-              >
+              <Button onClick={logout} variant="ghost" size="sm">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -733,29 +456,108 @@ const PantaBilenDriverApp = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-md mx-auto px-4 py-6">
         {/* Driver Status and Stats - Only show on assigned tab */}
         {activeTab === 'assigned' && (
           <>
-            {renderDriverStatusCard()}
-            {renderDailyStatsCard()}
+            <Card className="mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${getDriverStatusColor(driverStatus)}`} />
+                    <div>
+                      <p className="font-medium text-gray-900">{getDriverStatusText(driverStatus)}</p>
+                      <p className="text-xs text-gray-500">Klicka för att ändra status</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {['available', 'busy', 'offline'].map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={driverStatus === status ? "default" : "outline"}
+                      onClick={() => updateDriverStatus(status as any)}
+                      className="text-xs px-3"
+                    >
+                      {getDriverStatusText(status)}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mb-4">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-gray-900 mb-3">Dagens översikt</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{dailyStats.completed}</div>
+                    <div className="text-sm text-gray-600">Klara</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{dailyStats.inProgress}</div>
+                    <div className="text-sm text-gray-600">Pågående</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">{dailyStats.pending}</div>
+                    <div className="text-sm text-gray-600">Väntande</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
 
         {/* Tab Navigation */}
-        <TabNavigation />
+        <div className="bg-gray-100 rounded-lg p-1 mb-4 grid grid-cols-3 gap-1">
+          <button
+            className={`py-2 px-3 rounded-md text-xs font-medium transition-colors ${
+              activeTab === 'available' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+            }`}
+            onClick={() => setActiveTab('available')}
+          >
+            Tillgängliga
+            {availablePickups.length > 0 && (
+              <span className="ml-1 bg-blue-100 text-blue-600 text-xs px-1 py-0.5 rounded">
+                {availablePickups.length}
+              </span>
+            )}
+          </button>
+          <button
+            className={`py-2 px-3 rounded-md text-xs font-medium transition-colors ${
+              activeTab === 'assigned' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+            }`}
+            onClick={() => setActiveTab('assigned')}
+          >
+            Mina upphämtningar
+            {assignedPickups.length > 0 && (
+              <span className="ml-1 bg-green-100 text-green-600 text-xs px-1 py-0.5 rounded">
+                {assignedPickups.length}
+              </span>
+            )}
+          </button>
+          <button
+            className={`py-2 px-3 rounded-md text-xs font-medium transition-colors ${
+              activeTab === 'completed' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+            }`}
+            onClick={() => setActiveTab('completed')}
+          >
+            Gjorda
+            {completedPickups.length > 0 && (
+              <span className="ml-1 bg-gray-100 text-gray-600 text-xs px-1 py-0.5 rounded">
+                {completedPickups.length}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Tab Content */}
         {activeTab === 'available' && (
           <div>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Tillgängliga upphämtningar
-              </h2>
-              <p className="text-sm text-gray-600">
-                Acceptera upphämtningar som passar dig
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">Tillgängliga upphämtningar</h2>
+              <p className="text-sm text-gray-600">Acceptera upphämtningar som passar dig</p>
             </div>
             
             {availablePickups.length === 0 ? (
@@ -767,7 +569,48 @@ const PantaBilenDriverApp = () => {
             ) : (
               <div>
                 {availablePickups.map((pickup) => (
-                  <PickupCard key={pickup.id} pickup={pickup} type="available" />
+                  <Card key={pickup.id} className="mb-3">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
+                          <a href={`tel:${pickup.phone_number}`} className="flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1">
+                            <Phone className="w-3 h-3 mr-1" />
+                            {pickup.phone_number}
+                          </a>
+                        </div>
+                        <Badge className={getStatusColor(pickup.status)}>{getStatusText(pickup.status)}</Badge>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Car className="w-4 h-4 mr-2" />
+                          <span>{pickup.car_brand} {pickup.car_model} • {pickup.car_registration_number}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          <span>{pickup.pickup_address}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          <span>{formatDate(pickup.scheduled_pickup_date)}</span>
+                        </div>
+                        {pickup.final_price && (
+                          <div className="flex items-center text-sm text-green-600">
+                            <span className="w-4 h-4 mr-2">💰</span>
+                            <span>{pickup.final_price.toLocaleString()} kr</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={() => updatePickupStatus(pickup.id, 'assigned')}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        Acceptera upphämtning
+                      </Button>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
@@ -777,12 +620,8 @@ const PantaBilenDriverApp = () => {
         {activeTab === 'assigned' && (
           <div>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Mina upphämtningar
-              </h2>
-              <p className="text-sm text-gray-600">
-                Upphämtningar tilldelade till dig
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">Mina upphämtningar</h2>
+              <p className="text-sm text-gray-600">Upphämtningar tilldelade till dig</p>
             </div>
             
             {assignedPickups.length === 0 ? (
@@ -794,7 +633,89 @@ const PantaBilenDriverApp = () => {
             ) : (
               <div>
                 {assignedPickups.map((pickup) => (
-                  <PickupCard key={pickup.id} pickup={pickup} type="assigned" />
+                  <Card key={pickup.id} className="mb-3">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
+                          <a href={`tel:${pickup.phone_number}`} className="flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1">
+                            <Phone className="w-3 h-3 mr-1" />
+                            {pickup.phone_number}
+                          </a>
+                        </div>
+                        <Badge className={getStatusColor(pickup.status)}>{getStatusText(pickup.status)}</Badge>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Car className="w-4 h-4 mr-2" />
+                          <span>{pickup.car_brand} {pickup.car_model} • {pickup.car_registration_number}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          <span>{pickup.pickup_address}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          <span>{formatDate(pickup.scheduled_pickup_date)}</span>
+                        </div>
+                        {pickup.final_price && (
+                          <div className="flex items-center text-sm text-green-600">
+                            <span className="w-4 h-4 mr-2">💰</span>
+                            <span>{pickup.final_price.toLocaleString()} kr</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        {pickup.status === 'assigned' && (
+                          <div className="space-y-2">
+                            <Button
+                              onClick={() => updatePickupStatus(pickup.id, 'in_progress')}
+                              className="w-full bg-blue-600 hover:bg-blue-700"
+                            >
+                              Starta upphämtning
+                            </Button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                onClick={() => reschedulePickup(pickup)}
+                                variant="outline"
+                                className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                              >
+                                Omschemalägg
+                              </Button>
+                              <Button
+                                onClick={() => rejectPickup(pickup.id)}
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-50"
+                              >
+                                Avvisa
+                              </Button>
+                            </div>
+                            <Button
+                              onClick={() => {
+                                const address = encodeURIComponent(pickup.pickup_address);
+                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank');
+                              }}
+                              className="w-full bg-green-600 hover:bg-green-700"
+                            >
+                              <Navigation className="w-4 h-4 mr-2" />
+                              Starta GPS Navigation
+                            </Button>
+                          </div>
+                        )}
+
+                        {pickup.status === 'in_progress' && (
+                          <Button
+                            onClick={() => startVerification(pickup)}
+                            className="w-full bg-orange-600 hover:bg-orange-700"
+                          >
+                            Verifiera upphämtning
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
@@ -804,12 +725,8 @@ const PantaBilenDriverApp = () => {
         {activeTab === 'completed' && (
           <div>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Gjorda upphämtningar
-              </h2>
-              <p className="text-sm text-gray-600">
-                Dina slutförda upphämtningar
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">Gjorda upphämtningar</h2>
+              <p className="text-sm text-gray-600">Dina slutförda upphämtningar</p>
             </div>
             
             {completedPickups.length === 0 ? (
@@ -821,7 +738,45 @@ const PantaBilenDriverApp = () => {
             ) : (
               <div>
                 {completedPickups.map((pickup) => (
-                  <PickupCard key={pickup.id} pickup={pickup} type="completed" />
+                  <Card key={pickup.id} className="mb-3">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{pickup.owner_name}</h3>
+                          <a href={`tel:${pickup.phone_number}`} className="flex items-center text-sm text-blue-600 hover:text-blue-800 mt-1">
+                            <Phone className="w-3 h-3 mr-1" />
+                            {pickup.phone_number}
+                          </a>
+                        </div>
+                        <Badge className={getStatusColor(pickup.status)}>{getStatusText(pickup.status)}</Badge>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Car className="w-4 h-4 mr-2" />
+                          <span>{pickup.car_brand} {pickup.car_model} • {pickup.car_registration_number}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          <span>{pickup.pickup_address}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          <span>{formatDate(pickup.scheduled_pickup_date)}</span>
+                        </div>
+                        {pickup.final_price && (
+                          <div className="flex items-center text-sm text-green-600">
+                            <span className="w-4 h-4 mr-2">💰</span>
+                            <span>{pickup.final_price.toLocaleString()} kr</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-center py-2">
+                        <span className="text-sm text-gray-500">Slutförd {formatDate(pickup.scheduled_pickup_date)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
