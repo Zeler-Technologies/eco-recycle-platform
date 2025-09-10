@@ -111,13 +111,27 @@ const Login = () => {
         setDebugInfo(`Login error: ${error.message}`);
       } else {
         toast.success('Logged in successfully!');
-        setDebugInfo('Login successful, waiting for profile...');
-        
-        // Wait a moment then check profile
-        setTimeout(() => {
-          refetchProfile();
+        setDebugInfo('Login successful, fetching role...');
+
+        try {
+          const userId = (data as any)?.user?.id;
+          if (userId) {
+            const { data: profileRow } = await supabase
+              .from('auth_users')
+              .select('role')
+              .eq('id', userId)
+              .single();
+
+            const role = profileRow?.role;
+            if (role === 'driver') navigate('/driver-app');
+            else if (role === 'customer') navigate('/customer-app');
+            else navigate('/');
+          } else {
+            navigate('/');
+          }
+        } catch (e) {
           navigate('/');
-        }, 1000);
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -165,17 +179,32 @@ const Login = () => {
     setPassword(password);
     
     try {
-      const { error } = await signIn(email, password);
+      const { data, error } = await signIn(email, password);
       
       if (error) {
         toast.error(error.message);
         setDebugInfo(`Quick login error: ${error.message}`);
       } else {
-        setDebugInfo('Quick login successful!');
-        setTimeout(() => {
-          refetchProfile();
+        setDebugInfo('Quick login successful! Fetching role...');
+        try {
+          const userId = (data as any)?.user?.id;
+          if (userId) {
+            const { data: profileRow } = await supabase
+              .from('auth_users')
+              .select('role')
+              .eq('id', userId)
+              .single();
+
+            const role = profileRow?.role;
+            if (role === 'driver') navigate('/driver-app');
+            else if (role === 'customer') navigate('/customer-app');
+            else navigate('/');
+          } else {
+            navigate('/');
+          }
+        } catch (e) {
           navigate('/');
-        }, 1000);
+        }
       }
     } catch (err) {
       toast.error('Login failed');
