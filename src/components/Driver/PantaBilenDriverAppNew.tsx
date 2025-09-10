@@ -1,6 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const PantaBilenDriverApp = () => {
+  const { user, logout } = useAuth();
+
   // All constants defined directly in component
   const STATUS_TEXTS = {
     'pending': 'Ny förfrågan',
@@ -64,7 +69,7 @@ const PantaBilenDriverApp = () => {
   };
 
   // State management
-  const [pickups] = useState([
+  const [pickups, setPickups] = useState([
     {
       pickup_id: '1',
       car_registration_number: 'ABC123',
@@ -72,6 +77,7 @@ const PantaBilenDriverApp = () => {
       car_model: 'XC60',
       car_year: '2018',
       owner_name: 'Erik Andersson',
+      phone_number: '070-123-4567',
       pickup_address: 'Storgatan 15, Stockholm',
       status: 'assigned',
       final_price: 15000,
@@ -84,6 +90,7 @@ const PantaBilenDriverApp = () => {
       car_model: 'X3',
       car_year: '2019',
       owner_name: 'Anna Svensson',
+      phone_number: '070-234-5678',
       pickup_address: 'Kungsgatan 42, Göteborg',
       status: 'in_progress',
       final_price: 18000,
@@ -97,10 +104,11 @@ const PantaBilenDriverApp = () => {
     driver_status: 'available'
   });
 
-  const [currentView, setCurrentView] = useState('list');
+  const [loading, setLoading] = useState(false);
+  const [currentView, setCurrentView] = useState<'list' | 'map'>('list');
   const [currentFilter, setCurrentFilter] = useState('all');
   const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [selectedPickup, setSelectedPickup] = useState(null);
+  const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showDetailView, setShowDetailView] = useState(false);
 
   // Driver verification state
@@ -115,13 +123,18 @@ const PantaBilenDriverApp = () => {
     inga_hushallssoppor: false
   });
   const [internalComments, setInternalComments] = useState('');
-  const [verificationPhotos, setVerificationPhotos] = useState([]);
+  const [verificationPhotos, setVerificationPhotos] = useState<any[]>([]);
   const [finalPrice, setFinalPrice] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   // Helper functions
-  const getStatusText = (status) => STATUS_TEXTS[status] || status;
-  const getStatusColor = (status) => STATUS_COLORS[status] || '#6c757d';
+  const getStatusText = (status: string) => STATUS_TEXTS[status] || status;
+  const getStatusColor = (status: string) => STATUS_COLORS[status] || '#6c757d';
   const getCurrentTime = () => new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('sv-SE');
+  };
 
   // Filter pickups
   const filteredPickups = useMemo(() => {
@@ -133,26 +146,62 @@ const PantaBilenDriverApp = () => {
   }, [pickups, currentFilter]);
 
   // Photo upload handler
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    files.forEach(file => {
-      if (file.type.startsWith('image/')) {
+    
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Endast bildfiler tillåtna');
+        continue;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Bilden är för stor. Max 10MB tillåtet');
+        continue;
+      }
+
+      setUploading(true);
+      try {
+        const timestamp = Date.now();
+        const sanitizedPickupId = selectedPickup?.pickup_id.replace(/[^a-zA-Z0-9-]/g, '');
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileName = `driver_verification/${sanitizedPickupId}/${timestamp}.${fileExt}`;
+
+        const { data, error: uploadError } = await supabase.storage
+          .from('pickup-photos')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('pickup-photos')
+          .getPublicUrl(fileName);
+
+        // Create preview
         const reader = new FileReader();
         reader.onload = (e) => {
           setVerificationPhotos(prev => [...prev, {
             id: Date.now() + Math.random(),
             file,
-            preview: e.target?.result as string,
+            preview: e.target?.result,
+            url: urlData.publicUrl,
             timestamp: new Date().toISOString()
           }]);
         };
         reader.readAsDataURL(file);
+        
+        toast.success('Foto uppladdad');
+      } catch (error: any) {
+        console.error('Photo upload failed:', error);
+        toast.error('Uppladdning misslyckades');
+      } finally {
+        setUploading(false);
       }
-    });
+    }
   };
 
   // Start pickup with verification
-  const startPickupWithVerification = (pickup) => {
+  const startPickupWithVerification = (pickup: any) => {
     setSelectedPickup(pickup);
     setVerificationData({
       reg_nr_verified: false,
@@ -167,6 +216,7 @@ const PantaBilenDriverApp = () => {
     setVerificationPhotos([]);
     setFinalPrice(pickup.final_price || 0);
     setShowVerificationModal(true);
+    setShowDetailView(false);
   };
 
   // Complete verification
@@ -178,6 +228,15 @@ const PantaBilenDriverApp = () => {
       photos: verificationPhotos.length,
       finalPrice
     });
+
+    // Update pickup status to completed
+    setPickups(prev => prev.map(p => 
+      p.pickup_id === selectedPickup.pickup_id 
+        ? { ...p, status: 'completed' } 
+        : p
+    ));
+
+    toast.success('Upphämtning slutförd och signerad');
 
     setShowVerificationModal(false);
     setSelectedPickup(null);
@@ -195,7 +254,7 @@ const PantaBilenDriverApp = () => {
   };
 
   // Status update function
-  const updateDriverStatus = async (newStatus) => {
+  const updateDriverStatus = async (newStatus: string) => {
     setCurrentDriver(prev => ({ ...prev, driver_status: newStatus }));
     setShowStatusMenu(false);
     
@@ -204,11 +263,19 @@ const PantaBilenDriverApp = () => {
       'busy': 'Du är nu markerad som upptagen',
       'offline': 'Du är nu offline'
     };
-    console.log(messages[newStatus]);
+    toast.success(messages[newStatus as keyof typeof messages]);
+  };
+
+  // Update pickup status
+  const updatePickupStatus = async (pickupId: string, newStatus: string) => {
+    setPickups(prev => prev.map(p => 
+      p.pickup_id === pickupId ? { ...p, status: newStatus } : p
+    ));
+    toast.success(`Status uppdaterad till ${getStatusText(newStatus)}`);
   };
 
   // Component functions
-  const DriverStatusBadge = ({ status }) => {
+  const DriverStatusBadge = ({ status }: { status: string }) => {
     const statusInfo = DRIVER_STATUS_MAP[status] || DRIVER_STATUS_MAP['offline'];
     return (
       <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs ${statusInfo.badgeClass}`}>
@@ -218,7 +285,7 @@ const PantaBilenDriverApp = () => {
     );
   };
 
-  const DriverStatusDropdown = ({ currentStatus, onChange }) => (
+  const DriverStatusDropdown = ({ currentStatus, onChange }: { currentStatus: string, onChange: (status: string) => void }) => (
     <div className="flex flex-col py-2">
       {DRIVER_STATUS_OPTIONS.map((opt) => (
         <button
@@ -237,6 +304,17 @@ const PantaBilenDriverApp = () => {
       ))}
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laddar förarpanel...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
@@ -292,8 +370,19 @@ const PantaBilenDriverApp = () => {
             )}
           </div>
           
-          <div className="w-11 h-11 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-            {currentDriver.full_name?.charAt(0) || 'D'}
+          <div className="flex items-center gap-2">
+            <div className="w-11 h-11 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+              {currentDriver.full_name?.charAt(0) || 'D'}
+            </div>
+            <button
+              onClick={logout}
+              className="text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+              title="Logga ut"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -349,83 +438,92 @@ const PantaBilenDriverApp = () => {
       </div>
       
       {/* Content area */}
-      <div className="px-4 py-6 pb-20">
-        {filteredPickups.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-gray-300 text-8xl mb-6">📋</div>
-            <div className="text-2xl font-semibold text-gray-600 mb-2">Inga uppdrag</div>
-            <p className="text-lg text-gray-500">Inga uppdrag matchar det valda filtret</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {filteredPickups.map(pickup => (
-              <div 
-                key={pickup.pickup_id}
-                className="bg-white rounded-2xl shadow-sm mb-6 p-6 cursor-pointer border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-98"
-                onClick={() => {
-                  setSelectedPickup(pickup);
-                  setShowDetailView(true);
-                }}
-              >
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="text-2xl font-bold text-indigo-600 mb-1">
-                        {pickup.car_registration_number}
-                      </div>
-                      <div className="text-base text-gray-600 font-medium">
-                        {pickup.car_year} {pickup.car_brand} {pickup.car_model}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600 mb-1">
-                        {pickup.final_price ? `${pickup.final_price.toLocaleString()} kr` : 'Pris ej satt'}
-                      </div>
-                      <div 
-                        className="inline-block px-4 py-2 rounded-full text-sm font-semibold"
-                        style={{ 
-                          backgroundColor: getStatusColor(pickup.status) + '20',
-                          color: getStatusColor(pickup.status)
-                        }}
-                      >
-                        {getStatusText(pickup.status)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 pt-2 border-t border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <span className="text-gray-600 font-bold">👤</span>
-                      </div>
+      {currentView === 'list' ? (
+        <div className="px-4 py-6 pb-20">
+          {filteredPickups.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="text-gray-300 text-8xl mb-6">📋</div>
+              <div className="text-2xl font-semibold text-gray-600 mb-2">Inga uppdrag</div>
+              <p className="text-lg text-gray-500">Inga uppdrag matchar det valda filtret</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filteredPickups.map(pickup => (
+                <div 
+                  key={pickup.pickup_id}
+                  className="bg-white rounded-2xl shadow-sm mb-6 p-6 cursor-pointer border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-98"
+                  onClick={() => {
+                    setSelectedPickup(pickup);
+                    setShowDetailView(true);
+                  }}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-sm text-gray-500 font-medium">Kund</div>
-                        <div className="text-lg font-semibold text-gray-900">{pickup.owner_name}</div>
+                        <div className="text-2xl font-bold text-indigo-600 mb-1">
+                          {pickup.car_registration_number}
+                        </div>
+                        <div className="text-base text-gray-600 font-medium">
+                          {pickup.car_year} {pickup.car_brand} {pickup.car_model}
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <span className="text-gray-600 font-bold">📍</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-500 font-medium">Upphämtningsadress</div>
-                        <div className="text-base font-medium text-gray-900 leading-relaxed">
-                          {pickup.pickup_address}
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-green-600 mb-1">
+                          {pickup.final_price ? `${pickup.final_price.toLocaleString()} kr` : 'Pris ej satt'}
+                        </div>
+                        <div 
+                          className="inline-block px-4 py-2 rounded-full text-sm font-semibold"
+                          style={{ 
+                            backgroundColor: getStatusColor(pickup.status) + '20',
+                            color: getStatusColor(pickup.status)
+                          }}
+                        >
+                          {getStatusText(pickup.status)}
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-center pt-3 border-t border-gray-100">
-                    <div className="text-indigo-600 text-base font-medium">Tryck för detaljer →</div>
+                    
+                    <div className="space-y-3 pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                          <span className="text-gray-600 font-bold">👤</span>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500 font-medium">Kund</div>
+                          <div className="text-lg font-semibold text-gray-900">{pickup.owner_name}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-gray-600 font-bold">📍</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-500 font-medium">Upphämtningsadress</div>
+                          <div className="text-base font-medium text-gray-900 leading-relaxed">
+                            {pickup.pickup_address}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-center pt-3 border-t border-gray-100">
+                      <div className="text-indigo-600 text-base font-medium">Tryck för detaljer →</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-96 text-gray-500">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🗺️</div>
+            <p className="text-xl">Kartvy kommer snart</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Detail View Modal */}
       {showDetailView && selectedPickup && (
@@ -473,6 +571,18 @@ const PantaBilenDriverApp = () => {
                   </div>
                 </div>
                 
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-gray-600 text-xl">📞</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm text-gray-500 font-medium">Telefon</div>
+                    <a href={`tel:${selectedPickup.phone_number}`} className="text-lg font-semibold text-blue-600">
+                      {selectedPickup.phone_number}
+                    </a>
+                  </div>
+                </div>
+                
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-gray-600 text-xl">📍</span>
@@ -488,12 +598,23 @@ const PantaBilenDriverApp = () => {
             </div>
 
             <div className="space-y-4 pb-8">
-              <button 
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
-                onClick={() => startPickupWithVerification(selectedPickup)}
-              >
-                ✅ Påbörja upphämtning
-              </button>
+              {selectedPickup.status === 'assigned' && (
+                <button 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                  onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'in_progress')}
+                >
+                  ▶️ Starta upphämtning
+                </button>
+              )}
+              
+              {selectedPickup.status === 'in_progress' && (
+                <button 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                  onClick={() => startPickupWithVerification(selectedPickup)}
+                >
+                  ✅ Påbörja verifiering
+                </button>
+              )}
               
               <button 
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
@@ -502,7 +623,8 @@ const PantaBilenDriverApp = () => {
                   if (address) {
                     window.open(
                       `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, 
-                      '_blank'
+                      '_blank',
+                      'noopener,noreferrer'
                     );
                   }
                 }}
@@ -512,7 +634,7 @@ const PantaBilenDriverApp = () => {
               
               <button 
                 className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
-                onClick={() => console.log('Ring kund')}
+                onClick={() => window.open(`tel:${selectedPickup.phone_number}`, '_self')}
               >
                 📞 Ring kunden
               </button>
@@ -559,7 +681,7 @@ const PantaBilenDriverApp = () => {
                   <input
                     type="checkbox"
                     id={item.key}
-                    checked={verificationData[item.key]}
+                    checked={verificationData[item.key as keyof typeof verificationData]}
                     onChange={(e) => setVerificationData(prev => ({
                       ...prev,
                       [item.key]: e.target.checked
@@ -600,11 +722,25 @@ const PantaBilenDriverApp = () => {
                   accept="image/*"
                   onChange={handlePhotoUpload}
                   className="hidden"
+                  disabled={uploading}
                 />
-                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 transition-colors">
-                  <div className="text-gray-400 text-6xl mb-4">📷</div>
-                  <div className="text-xl font-semibold text-gray-700">Ta bild för dokumentation</div>
-                  <div className="text-base text-gray-500 mt-2">Tryck för att öppna kamera</div>
+                <div className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
+                  uploading 
+                    ? 'border-gray-300 bg-gray-50' 
+                    : 'border-gray-300 hover:border-blue-400'
+                }`}>
+                  {uploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <div className="text-xl font-semibold text-gray-700">Laddar upp...</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-gray-400 text-6xl mb-4">📷</div>
+                      <div className="text-xl font-semibold text-gray-700">Ta bild för dokumentation</div>
+                      <div className="text-base text-gray-500 mt-2">Tryck för att öppna kamera</div>
+                    </>
+                  )}
                 </div>
               </label>
 
@@ -648,7 +784,8 @@ const PantaBilenDriverApp = () => {
             <div className="space-y-4 pb-8">
               <button
                 onClick={completeVerification}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                disabled={!verificationData.reg_nr_verified || !finalPrice}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
               >
                 Fortsätt till signering
               </button>
