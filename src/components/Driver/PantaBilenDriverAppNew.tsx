@@ -256,15 +256,42 @@ const PantaBilenDriverApp = () => {
 
   // Status update function
   const updateDriverStatus = async (newStatus: string) => {
-    setCurrentDriver(prev => ({ ...prev, driver_status: newStatus }));
-    setShowStatusMenu(false);
-    
-    const messages = {
-      'available': 'Du är nu tillgänglig för nya uppdrag',
-      'busy': 'Du är nu markerad som upptagen',
-      'offline': 'Du är nu offline'
-    };
-    toast.success(messages[newStatus as keyof typeof messages]);
+    try {
+      if (!currentDriver?.driver_id) {
+        toast.error('Driver ID saknas');
+        return;
+      }
+
+      // Update database via edge function
+      const { data, error } = await supabase.functions.invoke('update-driver-status', {
+        body: {
+          driverId: currentDriver.driver_id,
+          newStatus: newStatus,
+          reason: 'Driver status change from mobile app'
+        }
+      });
+
+      if (error) {
+        console.error('Error updating driver status:', error);
+        toast.error('Kunde inte uppdatera status');
+        return;
+      }
+
+      // Update local state
+      setCurrentDriver(prev => ({ ...prev, driver_status: newStatus }));
+      setShowStatusMenu(false);
+      
+      const messages = {
+        'available': 'Du är nu tillgänglig för nya uppdrag',
+        'busy': 'Du är nu markerad som upptagen',
+        'offline': 'Du är nu offline',
+        'break': 'Du är nu på paus'
+      };
+      toast.success(messages[newStatus as keyof typeof messages] || 'Status uppdaterad');
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      toast.error('Kunde inte uppdatera status');
+    }
   };
 
   // Update pickup status

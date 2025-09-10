@@ -69,6 +69,36 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     fetchScrapyards();
   }, [selectedTenant]);
 
+  // Set up real-time subscription for driver status updates
+  useEffect(() => {
+    const subscription = supabase
+      .channel('admin-driver-updates')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'drivers'
+      }, (payload) => {
+        console.log('Admin received driver status update:', payload);
+        const updatedDriver = payload.new as any;
+        setDrivers(prev => prev.map(driver => 
+          driver.id === updatedDriver.id 
+            ? { 
+                ...driver, 
+                driver_status: updatedDriver.driver_status, 
+                current_status: updatedDriver.current_status, 
+                last_activity_update: updatedDriver.last_activity_update,
+                status_updated_at: updatedDriver.status_updated_at
+              }
+            : driver
+        ));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   const fetchDrivers = async () => {
     try {
       setLoading(true);
@@ -115,8 +145,12 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     if (!drivers.length) return drivers;
 
     try {
-      const driverIds = drivers.map(d => d.id);
+      const driverIds = drivers.map(d => d.id).filter(id => id); // Filter out null/undefined IDs
       
+      if (driverIds.length === 0) {
+        return drivers.map(driver => ({ ...driver, currentAssignments: [] }));
+      }
+
       // Fetch active assignments for all drivers using a simpler approach
       const { data: assignments, error } = await supabase
         .from('driver_assignments')
@@ -125,15 +159,16 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
           pickup_order_id
         `)
         .in('driver_id', driverIds)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .not('pickup_order_id', 'is', null); // Exclude null pickup_order_ids
 
       if (error) {
         console.error('Error fetching assignments:', error);
-        return drivers;
+        return drivers.map(driver => ({ ...driver, currentAssignments: [] }));
       }
 
       // Get pickup order details for each assignment
-      const pickupOrderIds = assignments?.map(a => a.pickup_order_id) || [];
+      const pickupOrderIds = assignments?.map(a => a.pickup_order_id).filter(id => id) || [];
       
       if (pickupOrderIds.length === 0) {
         return drivers.map(driver => ({ ...driver, currentAssignments: [] }));
@@ -145,11 +180,12 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
           id,
           customer_request_id
         `)
-        .in('id', pickupOrderIds);
+        .in('id', pickupOrderIds)
+        .not('customer_request_id', 'is', null); // Exclude null customer_request_ids
 
       if (pickupError) {
         console.error('Error fetching pickup orders:', pickupError);
-        return drivers;
+        return drivers.map(driver => ({ ...driver, currentAssignments: [] }));
       }
 
       // Get customer request details
@@ -259,6 +295,31 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
     } catch (error) {
       console.error('Error deleting driver:', error);
       toast.error('Failed to delete driver');
+    }
+  };
+
+  const handleDriverStatusChange = async (driverId: string, newStatus: string) => {
+    try {
+      // Update via edge function for consistency
+      const { data, error } = await supabase.functions.invoke('update-driver-status', {
+        body: {
+          driverId: driverId,
+          newStatus: newStatus,
+          reason: 'Status change from admin panel'
+        }
+      });
+
+      if (error) {
+        console.error('Error updating driver status:', error);
+        toast.error('Failed to update driver status');
+        return;
+      }
+
+      toast.success('Driver status updated successfully');
+      fetchDrivers(); // Refresh the driver list
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      toast.error('Failed to update driver status');
     }
   };
 
@@ -790,6 +851,18 @@ const DriverManagement: React.FC<DriverManagementProps> = ({ onBack, embedded = 
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <select
+                        value={driver.driver_status}
+                        onChange={(e) => handleDriverStatusChange(driver.id, e.target.value)}
+                        className="px-2 py-1 text-xs border rounded"
+                        disabled={!driver.is_active}
+                      >
+                        <option value="available">Available</option>
+                        <option value="busy">Busy</option>
+                        <option value="break">Break</option>
+                        <option value="offline">Offline</option>
+                      </select>
+
                       <Button
                         variant="outline"
                         size="sm"

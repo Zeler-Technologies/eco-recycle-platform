@@ -82,6 +82,33 @@ const TenantDashboard = () => {
     if (error) throw error;
     setDrivers(data || []);
   };
+
+  // Set up real-time subscription for driver status updates
+  useEffect(() => {
+    if (!user?.tenant_id) return;
+
+    const subscription = supabase
+      .channel(`tenant-drivers-${user.tenant_id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'drivers',
+        filter: `tenant_id=eq.${user.tenant_id}`
+      }, (payload) => {
+        console.log('Driver status update received:', payload);
+        const updatedDriver = payload.new as any;
+        setDrivers(prev => prev.map(driver => 
+          driver.id === updatedDriver.id 
+            ? { ...driver, driver_status: updatedDriver.driver_status, current_status: updatedDriver.current_status, last_activity_update: updatedDriver.last_activity_update }
+            : driver
+        ));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user?.tenant_id]);
   const formatDriverName = (order) => {
     if (order.driver_name) {
       const driver = drivers.find(d => d.id === order.assigned_driver_id);

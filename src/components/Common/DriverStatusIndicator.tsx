@@ -16,23 +16,39 @@ const DriverStatusIndicator: React.FC<DriverStatusIndicatorProps> = ({ driver, s
   const [lastSeen, setLastSeen] = useState(driver.last_activity_update);
 
   useEffect(() => {
+    if (!driver?.id) return;
+
+    // Subscribe to real-time updates for this driver
     const subscription = supabase
-      .channel(`driver_${driver.id}`)
+      .channel(`driver-status-${driver.id}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'drivers',
         filter: `id=eq.${driver.id}`
       }, (payload) => {
-        setStatus(payload.new.driver_status || payload.new.current_status);
-        setLastSeen(payload.new.last_activity_update);
+        console.log('Driver status real-time update:', payload);
+        const newData = payload.new as any;
+        setStatus(newData.driver_status || newData.current_status);
+        setLastSeen(newData.last_activity_update || newData.status_updated_at);
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'driver_status_history',
+        filter: `driver_id=eq.${driver.id}`
+      }, (payload) => {
+        console.log('Driver status history update:', payload);
+        const newData = payload.new as any;
+        setStatus(newData.new_status);
+        setLastSeen(newData.changed_at);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [driver.id]);
+  }, [driver?.id]);
 
   const getStatusInfo = (status: string, lastSeen?: string) => {
     const now = new Date();
