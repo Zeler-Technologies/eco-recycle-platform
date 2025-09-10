@@ -129,12 +129,12 @@ const PantaBilenDriverApp = () => {
     if (currentFilter !== 'all') {
       filtered = filtered.filter(pickup => pickup.status === currentFilter);
     }
-    return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [pickups, currentFilter]);
 
   // Photo upload handler
-  const handlePhotoUpload = (event) => {
-    const files = Array.from(event.target.files);
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
     files.forEach(file => {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
@@ -142,7 +142,7 @@ const PantaBilenDriverApp = () => {
           setVerificationPhotos(prev => [...prev, {
             id: Date.now() + Math.random(),
             file,
-            preview: e.target.result,
+            preview: e.target?.result as string,
             timestamp: new Date().toISOString()
           }]);
         };
@@ -181,7 +181,15 @@ const PantaBilenDriverApp = () => {
 
     setShowVerificationModal(false);
     setSelectedPickup(null);
-    setVerificationData({});
+    setVerificationData({
+      reg_nr_verified: false,
+      motor_finns: false,
+      vaxellada_finns: false,
+      katalysator_finns: false,
+      hjul_monterat: false,
+      batteri_finns: false,
+      inga_hushallssoppor: false
+    });
     setInternalComments('');
     setVerificationPhotos([]);
   };
