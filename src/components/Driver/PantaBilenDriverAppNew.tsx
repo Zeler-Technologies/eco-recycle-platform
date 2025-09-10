@@ -278,27 +278,27 @@ const PantaBilenDriverApp = () => {
   const DriverStatusBadge = ({ status }: { status: string }) => {
     const statusInfo = DRIVER_STATUS_MAP[status] || DRIVER_STATUS_MAP['offline'];
     return (
-      <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs ${statusInfo.badgeClass}`}>
-        <span className={`h-2 w-2 rounded-full ${statusInfo.dotClass}`} />
+      <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium ${statusInfo.badgeClass}`}>
+        <span className={`h-2.5 w-2.5 rounded-full ${statusInfo.dotClass}`} />
         {statusInfo.label}
       </span>
     );
   };
 
   const DriverStatusDropdown = ({ currentStatus, onChange }: { currentStatus: string, onChange: (status: string) => void }) => (
-    <div className="flex flex-col py-2">
+    <div className="flex flex-col py-1">
       {DRIVER_STATUS_OPTIONS.map((opt) => (
         <button
           key={opt.value}
-          className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 text-base w-full text-left transition-colors min-h-[56px] ${
+          className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 active:bg-gray-100 text-base w-full text-left transition-colors min-h-[60px] ${
             currentStatus === opt.value ? 'bg-blue-50 border-l-4 border-blue-500' : ''
           }`}
           onClick={() => onChange(opt.value)}
         >
-          <span className={`h-4 w-4 rounded-full ${opt.dotClass} flex-shrink-0`} />
-          <span className="text-gray-900 font-medium">{opt.label}</span>
+          <span className={`h-5 w-5 rounded-full ${opt.dotClass} flex-shrink-0`} />
+          <span className="text-gray-900 font-medium text-lg">{opt.label}</span>
           {currentStatus === opt.value && (
-            <span className="ml-auto text-blue-500 font-bold">✓</span>
+            <span className="ml-auto text-blue-500 text-2xl">✓</span>
           )}
         </button>
       ))}
@@ -309,105 +309,113 @@ const PantaBilenDriverApp = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Laddar förarpanel...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
+          <p className="text-gray-600 text-lg">Laddar förarpanel...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile Status Bar */}
-      <div className="bg-gray-900 text-white px-3 py-2 flex justify-between items-center text-sm font-medium">
-        <span>{getCurrentTime()}</span>
-        <div className="flex gap-1 items-center">
-          <div className="w-4 h-3 bg-white rounded-sm"></div>
-          <div className="w-4 h-3 bg-white rounded-sm"></div>
-          <div className="w-4 h-3 bg-white rounded-sm"></div>
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* Status Bar - Mobile optimized */}
+      <div className="bg-gray-900 text-white px-4 py-2 flex justify-between items-center text-base font-semibold safe-top">
+        <span className="text-lg">{getCurrentTime()}</span>
+        <div className="flex gap-1.5 items-center">
+          <div className="w-5 h-4 bg-white rounded-sm"></div>
+          <div className="w-5 h-4 bg-white rounded-sm"></div>
+          <div className="w-5 h-4 bg-white rounded-sm"></div>
         </div>
       </div>
 
-      {/* Mobile App Header */}
-      <div className="bg-gray-900 text-white px-3 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold">PantaBilen</h1>
+      {/* App Header - Touch optimized */}
+      <div className="bg-gray-900 text-white px-4 py-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold tracking-tight">PantaBilen</h1>
+        <div className="flex items-center gap-2">
+          {/* View toggle - Larger touch targets */}
+          <div className="flex rounded-full p-0.5 border border-white/30 bg-black/20">
+            <button
+              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all min-w-[80px] ${
+                currentView === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-white active:bg-white/20'
+              }`}
+              onClick={() => setCurrentView('list')}
+            >
+              Lista
+            </button>
+            <button
+              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all min-w-[80px] ${
+                currentView === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-white active:bg-white/20'
+              }`}
+              onClick={() => setCurrentView('map')}
+            >
+              Karta
+            </button>
+          </div>
+          
+          {/* Status menu - Larger touch target */}
+          <div className="relative">
+            <button
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-white/30 text-sm font-semibold text-white hover:bg-white/10 active:bg-white/20 min-h-[48px] min-w-[48px]"
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+            >
+              <DriverStatusBadge status={currentDriver.driver_status} />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {showStatusMenu && (
+              <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl min-w-[240px] z-50">
+                <DriverStatusDropdown
+                  currentStatus={currentDriver.driver_status}
+                  onChange={updateDriverStatus}
+                />
+              </div>
+            )}
+          </div>
+          
+          {/* Profile & Logout - Touch optimized */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
               {currentDriver.full_name?.charAt(0) || 'D'}
             </div>
             <button
               onClick={logout}
-              className="text-white p-1 hover:bg-white/10 rounded-lg transition-colors"
+              className="text-white p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors"
               title="Logga ut"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>
           </div>
         </div>
-        
-        {/* Mobile View Toggle */}
-        <div className="flex rounded-full p-1 border border-white/30 bg-black/20 mb-3">
-          <button
-            className={`flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-all ${
-              currentView === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-white'
-            }`}
-            onClick={() => setCurrentView('list')}
-          >
-            Lista
-          </button>
-          <button
-            className={`flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-all ${
-              currentView === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-white'
-            }`}
-            onClick={() => setCurrentView('map')}
-          >
-            Karta
-          </button>
-        </div>
-        
-        {/* Mobile Status Dropdown */}
-        <div className="relative">
-          <button
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-white/30 text-sm font-semibold text-white hover:bg-white/10"
-            onClick={() => setShowStatusMenu(!showStatusMenu)}
-          >
-            <DriverStatusBadge status={currentDriver.driver_status} />
-            <span className="text-sm">▼</span>
-          </button>
-          
-          {showStatusMenu && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
-              <DriverStatusDropdown
-                currentStatus={currentDriver.driver_status}
-                onChange={updateDriverStatus}
-              />
-            </div>
-          )}
-        </div>
       </div>
       
-      {/* Mobile Tab Bar */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-3 py-3">
-          <div className="text-center">
-            <div className="text-lg font-bold text-gray-900 border-b-2 border-indigo-500 pb-1 inline-block">
-              Mina uppdrag ({filteredPickups.length})
+      {/* Tab bar - Mobile optimized */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+        <div className="px-4 py-3">
+          <div className="flex">
+            <div className="flex-1 py-3 text-center">
+              <div className="text-2xl font-bold text-gray-900 border-b-4 border-indigo-500 pb-3">
+                Mina uppdrag ({filteredPickups.length})
+              </div>
             </div>
           </div>
         </div>
       </div>
       
-      {/* Mobile Filter Header */}
-      <div className="bg-white px-3 py-4 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-base font-semibold text-gray-900">{filteredPickups.length} uppdrag</span>
-          <button className="text-indigo-600 text-sm font-medium">Uppdatera</button>
+      {/* Filter Header - Touch optimized */}
+      <div className="bg-white px-4 py-4 border-b border-gray-200 sticky top-[88px] z-10">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-lg font-semibold text-gray-900">{filteredPickups.length} uppdrag</span>
+          <button className="text-indigo-600 text-lg font-medium p-2 -m-2 active:bg-indigo-50 rounded-lg">
+            Uppdatera
+          </button>
         </div>
         
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3">
+        {/* Horizontal scroll with snap points */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
           {[
             { value: 'all', label: 'Alla', count: pickups.length },
             { value: 'assigned', label: 'Tilldelade', count: pickups.filter(p => p.status === 'assigned').length },
@@ -416,17 +424,17 @@ const PantaBilenDriverApp = () => {
           ].map(filter => (
             <button
               key={filter.value}
-              className={`flex-shrink-0 px-3 py-2 text-sm font-medium rounded-full border transition-all min-h-[36px] whitespace-nowrap ${
+              className={`flex-shrink-0 px-6 py-3.5 text-base font-medium rounded-full border-2 transition-all min-h-[56px] snap-center ${
                 currentFilter === filter.value
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-105'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 active:scale-95'
               }`}
               onClick={() => setCurrentFilter(filter.value)}
             >
               {filter.label} {filter.count > 0 && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                <span className={`ml-2 px-2.5 py-1 rounded-full text-sm font-bold ${
                   currentFilter === filter.value 
-                    ? 'bg-indigo-500 text-white' 
+                    ? 'bg-indigo-700 text-white' 
                     : 'bg-gray-100 text-gray-600'
                 }`}>
                   {filter.count}
@@ -437,42 +445,43 @@ const PantaBilenDriverApp = () => {
         </div>
       </div>
       
-      {/* Mobile Content Area */}
+      {/* Content area - Mobile optimized */}
       {currentView === 'list' ? (
-        <div className="px-3 py-4 pb-20">
+        <div className="px-4 py-4 pb-24">
           {filteredPickups.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-24">
               <div className="text-gray-300 text-8xl mb-6">📋</div>
-              <div className="text-2xl font-semibold text-gray-600 mb-2">Inga uppdrag</div>
+              <div className="text-2xl font-semibold text-gray-600 mb-3">Inga uppdrag</div>
               <p className="text-lg text-gray-500">Inga uppdrag matchar det valda filtret</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredPickups.map(pickup => (
-                <div 
+                <button 
                   key={pickup.pickup_id}
-                  className="bg-white rounded-xl shadow-sm p-4 cursor-pointer border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-[0.98]"
+                  className="w-full bg-white rounded-2xl shadow-sm p-5 text-left border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                   onClick={() => {
                     setSelectedPickup(pickup);
                     setShowDetailView(true);
                   }}
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
+                  <div className="space-y-4">
+                    {/* Header with registration and status */}
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <div className="text-lg font-bold text-indigo-600 mb-1">
+                        <div className="text-2xl font-bold text-indigo-600 mb-1 tracking-tight">
                           {pickup.car_registration_number}
                         </div>
-                        <div className="text-sm text-gray-600 font-medium">
+                        <div className="text-base text-gray-600 font-medium">
                           {pickup.car_year} {pickup.car_brand} {pickup.car_model}
                         </div>
                       </div>
-                      <div className="text-right ml-2">
-                        <div className="text-lg font-bold text-green-600 mb-1">
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-2xl font-bold text-green-600 mb-2">
                           {pickup.final_price ? `${pickup.final_price.toLocaleString()} kr` : 'Pris ej satt'}
                         </div>
                         <div 
-                          className="inline-block px-2 py-1 rounded-full text-xs font-semibold"
+                          className="inline-block px-4 py-2.5 rounded-full text-sm font-bold"
                           style={{ 
                             backgroundColor: getStatusColor(pickup.status) + '20',
                             color: getStatusColor(pickup.status)
@@ -483,112 +492,123 @@ const PantaBilenDriverApp = () => {
                       </div>
                     </div>
                     
-                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-gray-600 text-sm">👤</span>
+                    {/* Customer and address info */}
+                    <div className="space-y-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-2xl">👤</span>
                         </div>
-                        <div>
-                          <div className="text-xs text-gray-500 font-medium">Kund</div>
-                          <div className="text-sm font-semibold text-gray-900">{pickup.owner_name}</div>
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-500 font-medium">Kund</div>
+                          <div className="text-lg font-semibold text-gray-900">{pickup.owner_name}</div>
                         </div>
                       </div>
                       
-                      <div className="flex items-start gap-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className="text-gray-600 text-sm">📍</span>
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-2xl">📍</span>
                         </div>
                         <div className="flex-1">
-                          <div className="text-xs text-gray-500 font-medium">Upphämtningsadress</div>
-                          <div className="text-sm font-medium text-gray-900 leading-tight">
+                          <div className="text-sm text-gray-500 font-medium">Upphämtningsadress</div>
+                          <div className="text-base font-medium text-gray-900 leading-relaxed">
                             {pickup.pickup_address}
                           </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-center pt-2 border-t border-gray-100">
-                      <div className="text-indigo-600 text-sm font-medium">Tryck för detaljer →</div>
+                    {/* Call to action */}
+                    <div className="flex items-center justify-center pt-3 border-t border-gray-100">
+                      <div className="text-indigo-600 text-base font-semibold flex items-center gap-2">
+                        Tryck för detaljer 
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-64 text-gray-500">
-          <div className="text-center">
-            <div className="text-4xl mb-3">🗺️</div>
-            <p className="text-base">Kartvy kommer snart</p>
+        <div className="flex items-center justify-center h-[calc(100vh-280px)] text-gray-500">
+          <div className="text-center p-8">
+            <div className="text-8xl mb-4">🗺️</div>
+            <p className="text-2xl font-medium">Kartvy kommer snart</p>
           </div>
         </div>
       )}
 
-      {/* Detail View Modal */}
+      {/* Detail View Modal - Full screen mobile */}
       {showDetailView && selectedPickup && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto">
-          <div className="bg-indigo-600 text-white px-3 py-4">
-            <div className="flex items-center gap-3">
+          {/* Header */}
+          <div className="bg-indigo-600 text-white px-4 py-5 sticky top-0 z-10 shadow-lg">
+            <div className="flex items-center gap-4">
               <button
-                className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-lg font-bold hover:bg-indigo-400 transition-colors"
+                className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold hover:bg-white/30 active:bg-white/40 transition-colors"
                 onClick={() => setShowDetailView(false)}
               >
-                ←
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
               <div className="flex-1">
-                <div className="text-sm font-semibold opacity-90">Upphämtningsdetaljer</div>
-                <div className="text-lg font-bold">{selectedPickup.car_registration_number}</div>
+                <div className="text-base font-medium opacity-90">Upphämtningsdetaljer</div>
+                <div className="text-2xl font-bold">{selectedPickup.car_registration_number}</div>
               </div>
             </div>
           </div>
           
-          <div className="px-3 py-4 space-y-4">
-            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-indigo-600 mb-1">
-                  {selectedPickup.car_registration_number}
-                </div>
-                <div className="text-base text-gray-700 font-medium">
-                  {selectedPickup.car_year} {selectedPickup.car_brand} {selectedPickup.car_model}
-                </div>
-                <div className="mt-3 text-2xl font-bold text-green-600">
-                  {selectedPickup.final_price ? `${selectedPickup.final_price.toLocaleString()} kr` : 'Pris ej fastställt'}
-                </div>
+          {/* Content */}
+          <div className="px-4 py-6 space-y-5">
+            {/* Car info card */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-6 text-center">
+              <div className="text-3xl font-bold text-indigo-600 mb-2">
+                {selectedPickup.car_registration_number}
+              </div>
+              <div className="text-xl text-gray-700 font-medium mb-4">
+                {selectedPickup.car_year} {selectedPickup.car_brand} {selectedPickup.car_model}
+              </div>
+              <div className="text-3xl font-bold text-green-600">
+                {selectedPickup.final_price ? `${selectedPickup.final_price.toLocaleString()} kr` : 'Pris ej fastställt'}
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Kundinformation</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 text-lg">👤</span>
+            {/* Customer info card */}
+            <div className="bg-white rounded-2xl border-2 border-gray-100 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-5">Kundinformation</h3>
+              <div className="space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">👤</span>
                   </div>
                   <div className="flex-1">
-                    <div className="text-xs text-gray-500 font-medium">Namn</div>
-                    <div className="text-base font-semibold text-gray-900">{selectedPickup.owner_name}</div>
+                    <div className="text-sm text-gray-500 font-medium">Namn</div>
+                    <div className="text-lg font-semibold text-gray-900">{selectedPickup.owner_name}</div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 text-lg">📞</span>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📞</span>
                   </div>
                   <div className="flex-1">
-                    <div className="text-xs text-gray-500 font-medium">Telefon</div>
-                    <a href={`tel:${selectedPickup.phone_number}`} className="text-base font-semibold text-blue-600">
+                    <div className="text-sm text-gray-500 font-medium">Telefon</div>
+                    <a href={`tel:${selectedPickup.phone_number}`} className="text-lg font-semibold text-blue-600 active:text-blue-800">
                       {selectedPickup.phone_number}
                     </a>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-gray-600 text-xl">📍</span>
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📍</span>
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm text-gray-500 font-medium">Upphämtningsadress</div>
+                    <div className="text-sm text-gray-500 font-medium mb-1">Upphämtningsadress</div>
                     <div className="text-lg font-semibold text-gray-900 leading-relaxed">
                       {selectedPickup.pickup_address}
                     </div>
@@ -597,27 +617,34 @@ const PantaBilenDriverApp = () => {
               </div>
             </div>
 
-            <div className="space-y-4 pb-8">
+            {/* Action buttons - Mobile optimized */}
+            <div className="space-y-3 pb-8">
               {selectedPickup.status === 'assigned' && (
                 <button 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
                   onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'in_progress')}
                 >
-                  ▶️ Starta upphämtning
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="text-2xl">▶️</span>
+                    Starta upphämtning
+                  </span>
                 </button>
               )}
               
               {selectedPickup.status === 'in_progress' && (
                 <button 
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                  className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
                   onClick={() => startPickupWithVerification(selectedPickup)}
                 >
-                  ✅ Påbörja verifiering
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="text-2xl">✅</span>
+                    Påbörja verifiering
+                  </span>
                 </button>
               )}
               
               <button 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
                 onClick={() => {
                   const address = selectedPickup.pickup_address;
                   if (address) {
@@ -629,18 +656,24 @@ const PantaBilenDriverApp = () => {
                   }
                 }}
               >
-                🗺️ Navigera till adressen
+                <span className="flex items-center justify-center gap-3">
+                  <span className="text-2xl">🗺️</span>
+                  Navigera till adressen
+                </span>
               </button>
               
               <button 
-                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
                 onClick={() => window.open(`tel:${selectedPickup.phone_number}`, '_self')}
               >
-                📞 Ring kunden
+                <span className="flex items-center justify-center gap-3">
+                  <span className="text-2xl">📞</span>
+                  Ring kunden
+                </span>
               </button>
               
               <button 
-                className="w-full bg-gray-500 hover:bg-gray-600 text-white py-4 rounded-2xl text-lg font-semibold transition-colors active:scale-95"
+                className="w-full bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-700 py-4 rounded-2xl text-lg font-semibold transition-colors active:scale-[0.98] mt-6"
                 onClick={() => setShowDetailView(false)}
               >
                 Stäng
@@ -650,26 +683,28 @@ const PantaBilenDriverApp = () => {
         </div>
       )}
 
-      {/* Driver Verification Modal */}
+      {/* Driver Verification Modal - Mobile optimized */}
       {showVerificationModal && selectedPickup && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto">
-          <div className="bg-gray-900 text-white px-4 py-6">
+          {/* Header */}
+          <div className="bg-gray-900 text-white px-4 py-5 sticky top-0 z-10 shadow-lg">
             <div className="text-center">
-              <div className="text-3xl font-bold mb-2">{selectedPickup.car_registration_number}</div>
+              <div className="text-3xl font-bold mb-1">{selectedPickup.car_registration_number}</div>
               <div className="text-lg opacity-90">Verifiering av fordon</div>
             </div>
           </div>
 
-          <div className="px-4 py-6">
+          <div className="px-4 py-6 pb-safe">
             <div className="bg-blue-50 rounded-2xl p-6 mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
                 Jag intygar härmed att jag har kontrollerat följande:
               </h2>
             </div>
 
-            <div className="space-y-4 mb-6">
+            {/* Checklist - Touch optimized */}
+            <div className="space-y-3 mb-6">
               {[
-                { key: 'reg_nr_verified', label: `Reg.nr: ${selectedPickup.car_registration_number}` },
+                { key: 'reg_nr_verified', label: `Reg.nr: ${selectedPickup.car_registration_number}`, required: true },
                 { key: 'motor_finns', label: 'Motor finns' },
                 { key: 'vaxellada_finns', label: 'Växellåda finns' },
                 { key: 'katalysator_finns', label: 'Original-katalysator finns' },
@@ -677,7 +712,7 @@ const PantaBilenDriverApp = () => {
                 { key: 'batteri_finns', label: 'Batteri finns' },
                 { key: 'inga_hushallssoppor', label: 'Inga hushållssoppor eller grovskräp finns i bilen' }
               ].map(item => (
-                <div key={item.key} className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-gray-200">
+                <label key={item.key} className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-gray-200 active:bg-gray-50 transition-colors cursor-pointer">
                   <input
                     type="checkbox"
                     id={item.key}
@@ -686,17 +721,18 @@ const PantaBilenDriverApp = () => {
                       ...prev,
                       [item.key]: e.target.checked
                     }))}
-                    className="w-6 h-6 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-6 h-6 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-offset-2"
                   />
-                  <label htmlFor={item.key} className="text-lg font-medium text-gray-900 flex-1">
+                  <span className={`text-lg font-medium text-gray-900 flex-1 select-none ${item.required ? 'font-semibold' : ''}`}>
                     {item.label}
-                  </label>
-                </div>
+                  </span>
+                </label>
               ))}
             </div>
 
+            {/* Comments */}
             <div className="mb-6">
-              <label className="block text-xl font-bold text-gray-900 mb-4">Intern kommentar</label>
+              <label className="block text-xl font-bold text-gray-900 mb-3">Intern kommentar</label>
               <textarea
                 value={internalComments}
                 onChange={(e) => setInternalComments(e.target.value)}
@@ -709,8 +745,9 @@ const PantaBilenDriverApp = () => {
               </div>
             </div>
 
+            {/* Photo upload - Mobile optimized */}
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Bild (Valfri dokumentation)</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Bild (Valfri dokumentation)</h3>
               <p className="text-base text-gray-600 mb-4">
                 Ladda upp foton endast om du behöver dokumentera avvikelser.
               </p>
@@ -720,23 +757,24 @@ const PantaBilenDriverApp = () => {
                   type="file"
                   multiple
                   accept="image/*"
+                  capture="environment"
                   onChange={handlePhotoUpload}
                   className="hidden"
                   disabled={uploading}
                 />
-                <div className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
+                <div className={`border-3 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
                   uploading 
                     ? 'border-gray-300 bg-gray-50' 
-                    : 'border-gray-300 hover:border-blue-400'
+                    : 'border-gray-300 hover:border-blue-400 active:border-blue-500 active:bg-blue-50'
                 }`}>
                   {uploading ? (
                     <>
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
                       <div className="text-xl font-semibold text-gray-700">Laddar upp...</div>
                     </>
                   ) : (
                     <>
-                      <div className="text-gray-400 text-6xl mb-4">📷</div>
+                      <div className="text-6xl mb-4">📷</div>
                       <div className="text-xl font-semibold text-gray-700">Ta bild för dokumentation</div>
                       <div className="text-base text-gray-500 mt-2">Tryck för att öppna kamera</div>
                     </>
@@ -744,8 +782,9 @@ const PantaBilenDriverApp = () => {
                 </div>
               </label>
 
+              {/* Photo grid */}
               {verificationPhotos.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-4">
+                <div className="mt-4 grid grid-cols-2 gap-3">
                   {verificationPhotos.map(photo => (
                     <div key={photo.id} className="relative">
                       <img 
@@ -757,7 +796,7 @@ const PantaBilenDriverApp = () => {
                         onClick={() => setVerificationPhotos(prev => 
                           prev.filter(p => p.id !== photo.id)
                         )}
-                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold"
+                        className="absolute -top-2 -right-2 w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg active:scale-95"
                       >
                         ×
                       </button>
@@ -767,8 +806,9 @@ const PantaBilenDriverApp = () => {
               )}
             </div>
 
+            {/* Price input - Mobile optimized */}
             <div className="mb-8">
-              <label className="block text-xl font-bold text-gray-900 mb-4">Slutligt pris</label>
+              <label className="block text-xl font-bold text-gray-900 mb-3">Slutligt pris</label>
               <div className="flex items-center gap-4">
                 <input
                   type="number"
@@ -776,23 +816,28 @@ const PantaBilenDriverApp = () => {
                   onChange={(e) => setFinalPrice(Number(e.target.value))}
                   className="flex-1 text-2xl font-bold p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="0"
+                  inputMode="numeric"
                 />
                 <span className="text-2xl font-bold text-gray-600">kr</span>
               </div>
             </div>
 
-            <div className="space-y-4 pb-8">
+            {/* Action buttons */}
+            <div className="space-y-3 pb-8">
               <button
                 onClick={completeVerification}
                 disabled={!verificationData.reg_nr_verified || !finalPrice}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-95"
+                className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
               >
-                Fortsätt till signering
+                <span className="flex items-center justify-center gap-3">
+                  <span className="text-2xl">✍️</span>
+                  Fortsätt till signering
+                </span>
               </button>
               
               <button
                 onClick={() => setShowVerificationModal(false)}
-                className="w-full bg-gray-500 hover:bg-gray-600 text-white py-4 rounded-2xl text-lg font-semibold transition-colors active:scale-95"
+                className="w-full bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-700 py-4 rounded-2xl text-lg font-semibold transition-colors active:scale-[0.98]"
               >
                 Avbryt
               </button>
@@ -809,9 +854,9 @@ const PantaBilenDriverApp = () => {
         />
       )}
       
-      {/* Bottom safe area */}
-      <div className="fixed bottom-0 left-0 right-0">
-        <div className="bg-white/80 backdrop-blur-sm h-2"></div>
+      {/* Bottom safe area with home indicator */}
+      <div className="fixed bottom-0 left-0 right-0 pointer-events-none">
+        <div className="bg-gradient-to-t from-white via-white/80 to-transparent h-20"></div>
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-36 h-1.5 bg-gray-900 rounded-full opacity-60"></div>
       </div>
     </div>
