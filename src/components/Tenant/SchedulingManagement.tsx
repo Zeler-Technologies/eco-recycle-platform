@@ -160,8 +160,10 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
         id: driver.id,
         name: driver.full_name,
         phone: driver.phone_number,
-        status: driver.driver_status === 'available' || driver.driver_status === 'on_duty' ? 'Tillgänglig' : 'Upptagen'
+        status: 'Tillgänglig' // Show all active drivers as available for now
       }));
+
+      console.log('📊 Fetched drivers for scheduling:', formattedDrivers);
 
       setDrivers(formattedDrivers);
     } catch (error) {
