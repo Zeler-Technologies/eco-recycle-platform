@@ -56,22 +56,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
   const canProceed = completedPhotos === totalRequired;
   const progressPercentage = (completedPhotos / totalRequired) * 100;
 
-  // Ensure 'pickup-photos' storage bucket exists for driver verification photos
-  const ensurePickupPhotosBucket = async () => {
-    console.log('[Storage] Checking for bucket "pickup-photos"...');
-    const { data: bucketData, error: getBucketError } = await supabase.storage.getBucket('pickup-photos');
-    if (getBucketError) {
-      console.warn('[Storage] getBucket error:', getBucketError);
-    }
-    if (bucketData) {
-      console.log('[Storage] Bucket "pickup-photos" exists:', bucketData);
-      return;
-    }
-
-    // Bucket should exist from migration, this is an error condition
-    console.error('[Storage] pickup-photos bucket missing - should exist from migration');
-    throw new Error('pickup-photos bucket not found. Contact support.');
-  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -209,10 +193,6 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
         carId = newCar.id;
         console.log('Created new car with ID:', carId);
       }
-
-      // Step 5: Ensure pickup-photos bucket exists for driver verification
-      console.log('[Storage] Ensuring "pickup-photos" bucket exists for driver upload...');
-      await ensurePickupPhotosBucket();
 
       // Step 5: Upload image to pickup-photos storage
       const fileExt = file.name.split('.').pop() || 'jpg';
