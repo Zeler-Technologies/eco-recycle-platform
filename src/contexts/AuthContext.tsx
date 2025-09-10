@@ -205,28 +205,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setLoading(true);
+      console.log('Starting sign out process...');
       
-      // Sign out from Supabase first
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Sign out error:', error);
-        setError(error.message);
-        return;
-      }
-      
-      // Clear all state
+      // Clear local state first to prevent UI hanging
       setUser(null);
       setProfile(null);
       setSession(null);
       setError(null);
+      
+      // Try to sign out from Supabase, but don't fail if session is invalid
+      try {
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
+          console.warn('Sign out warning (but continuing):', error);
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase sign out error (but continuing):', supabaseError);
+      }
+      
+      // Force clear any remaining auth state in localStorage
+      try {
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.clear(); // Clear all localStorage to be safe
+      } catch (storageError) {
+        console.warn('Storage clear error:', storageError);
+      }
+      
+      console.log('Sign out completed, redirecting...');
       
       // Force navigation to login page
       window.location.href = '/login';
       
     } catch (error) {
       console.error('Sign out error:', error);
-      setError(error.message);
+      // Even if there's an error, clear state and redirect
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      setError(null);
+      window.location.href = '/login';
     } finally {
       setLoading(false);
     }
