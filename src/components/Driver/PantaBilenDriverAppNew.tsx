@@ -317,97 +317,97 @@ const PantaBilenDriverApp = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* Status Bar */}
-      <div className="bg-gray-900 text-white px-4 py-3 flex justify-between items-center text-lg font-semibold">
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile Status Bar */}
+      <div className="bg-gray-900 text-white px-3 py-2 flex justify-between items-center text-sm font-medium">
         <span>{getCurrentTime()}</span>
         <div className="flex gap-1 items-center">
-          <div className="w-5 h-4 bg-white rounded-sm"></div>
-          <div className="w-5 h-4 bg-white rounded-sm"></div>
-          <div className="w-5 h-4 bg-white rounded-sm"></div>
+          <div className="w-4 h-3 bg-white rounded-sm"></div>
+          <div className="w-4 h-3 bg-white rounded-sm"></div>
+          <div className="w-4 h-3 bg-white rounded-sm"></div>
         </div>
       </div>
 
-      {/* App Header */}
-      <div className="bg-gray-900 text-white px-4 py-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">PantaBilen</h1>
-        <div className="flex items-center gap-3">
-          <div className="flex rounded-full p-1 border border-white/30 bg-black/20">
-            <button
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all min-w-[60px] ${
-                currentView === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-white'
-              }`}
-              onClick={() => setCurrentView('list')}
-            >
-              Lista
-            </button>
-            <button
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all min-w-[60px] ${
-                currentView === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-white'
-              }`}
-              onClick={() => setCurrentView('map')}
-            >
-              Karta
-            </button>
-          </div>
-          
-          <div className="relative">
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-white/30 text-sm font-semibold text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
-              onClick={() => setShowStatusMenu(!showStatusMenu)}
-            >
-              <DriverStatusBadge status={currentDriver.driver_status} />
-              <span className="text-lg">▼</span>
-            </button>
-            
-            {showStatusMenu && (
-              <div className="absolute top-full right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl min-w-48 z-50">
-                <DriverStatusDropdown
-                  currentStatus={currentDriver.driver_status}
-                  onChange={updateDriverStatus}
-                />
-              </div>
-            )}
-          </div>
-          
+      {/* Mobile App Header */}
+      <div className="bg-gray-900 text-white px-3 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold">PantaBilen</h1>
           <div className="flex items-center gap-2">
-            <div className="w-11 h-11 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
               {currentDriver.full_name?.charAt(0) || 'D'}
             </div>
             <button
               onClick={logout}
-              className="text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="text-white p-1 hover:bg-white/10 rounded-lg transition-colors"
               title="Logga ut"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>
           </div>
         </div>
+        
+        {/* Mobile View Toggle */}
+        <div className="flex rounded-full p-1 border border-white/30 bg-black/20 mb-3">
+          <button
+            className={`flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-all ${
+              currentView === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-white'
+            }`}
+            onClick={() => setCurrentView('list')}
+          >
+            Lista
+          </button>
+          <button
+            className={`flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-all ${
+              currentView === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-white'
+            }`}
+            onClick={() => setCurrentView('map')}
+          >
+            Karta
+          </button>
+        </div>
+        
+        {/* Mobile Status Dropdown */}
+        <div className="relative">
+          <button
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-white/30 text-sm font-semibold text-white hover:bg-white/10"
+            onClick={() => setShowStatusMenu(!showStatusMenu)}
+          >
+            <DriverStatusBadge status={currentDriver.driver_status} />
+            <span className="text-sm">▼</span>
+          </button>
+          
+          {showStatusMenu && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
+              <DriverStatusDropdown
+                currentStatus={currentDriver.driver_status}
+                onChange={updateDriverStatus}
+              />
+            </div>
+          )}
+        </div>
       </div>
       
-      {/* Tab bar */}
+      {/* Mobile Tab Bar */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-4 py-1">
-          <div className="flex">
-            <div className="flex-1 py-5 text-center">
-              <div className="text-2xl font-bold text-gray-900 border-b-4 border-indigo-500 pb-2">
-                Mina uppdrag ({filteredPickups.length})
-              </div>
+        <div className="px-3 py-3">
+          <div className="text-center">
+            <div className="text-lg font-bold text-gray-900 border-b-2 border-indigo-500 pb-1 inline-block">
+              Mina uppdrag ({filteredPickups.length})
             </div>
           </div>
         </div>
       </div>
       
-      {/* Filter Header */}
-      <div className="bg-white px-4 py-5 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-lg font-semibold text-gray-900">{filteredPickups.length} uppdrag</span>
-          <button className="text-indigo-600 text-base font-medium">Uppdatera</button>
+      {/* Mobile Filter Header */}
+      <div className="bg-white px-3 py-4 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-base font-semibold text-gray-900">{filteredPickups.length} uppdrag</span>
+          <button className="text-indigo-600 text-sm font-medium">Uppdatera</button>
         </div>
         
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3">
           {[
             { value: 'all', label: 'Alla', count: pickups.length },
             { value: 'assigned', label: 'Tilldelade', count: pickups.filter(p => p.status === 'assigned').length },
@@ -416,15 +416,15 @@ const PantaBilenDriverApp = () => {
           ].map(filter => (
             <button
               key={filter.value}
-              className={`flex-shrink-0 px-5 py-3 text-base font-medium rounded-full border-2 transition-all min-h-[48px] ${
+              className={`flex-shrink-0 px-3 py-2 text-sm font-medium rounded-full border transition-all min-h-[36px] whitespace-nowrap ${
                 currentFilter === filter.value
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
                   : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300'
               }`}
               onClick={() => setCurrentFilter(filter.value)}
             >
               {filter.label} {filter.count > 0 && (
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-sm ${
+                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
                   currentFilter === filter.value 
                     ? 'bg-indigo-500 text-white' 
                     : 'bg-gray-100 text-gray-600'
@@ -437,9 +437,9 @@ const PantaBilenDriverApp = () => {
         </div>
       </div>
       
-      {/* Content area */}
+      {/* Mobile Content Area */}
       {currentView === 'list' ? (
-        <div className="px-4 py-6 pb-20">
+        <div className="px-3 py-4 pb-20">
           {filteredPickups.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-gray-300 text-8xl mb-6">📋</div>
@@ -447,32 +447,32 @@ const PantaBilenDriverApp = () => {
               <p className="text-lg text-gray-500">Inga uppdrag matchar det valda filtret</p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-3">
               {filteredPickups.map(pickup => (
                 <div 
                   key={pickup.pickup_id}
-                  className="bg-white rounded-2xl shadow-sm mb-6 p-6 cursor-pointer border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-98"
+                  className="bg-white rounded-xl shadow-sm p-4 cursor-pointer border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-[0.98]"
                   onClick={() => {
                     setSelectedPickup(pickup);
                     setShowDetailView(true);
                   }}
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-indigo-600 mb-1">
+                      <div className="flex-1">
+                        <div className="text-lg font-bold text-indigo-600 mb-1">
                           {pickup.car_registration_number}
                         </div>
-                        <div className="text-base text-gray-600 font-medium">
+                        <div className="text-sm text-gray-600 font-medium">
                           {pickup.car_year} {pickup.car_brand} {pickup.car_model}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600 mb-1">
+                      <div className="text-right ml-2">
+                        <div className="text-lg font-bold text-green-600 mb-1">
                           {pickup.final_price ? `${pickup.final_price.toLocaleString()} kr` : 'Pris ej satt'}
                         </div>
                         <div 
-                          className="inline-block px-4 py-2 rounded-full text-sm font-semibold"
+                          className="inline-block px-2 py-1 rounded-full text-xs font-semibold"
                           style={{ 
                             backgroundColor: getStatusColor(pickup.status) + '20',
                             color: getStatusColor(pickup.status)
@@ -483,32 +483,32 @@ const PantaBilenDriverApp = () => {
                       </div>
                     </div>
                     
-                    <div className="space-y-3 pt-2 border-t border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-gray-600 font-bold">👤</span>
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                          <span className="text-gray-600 text-sm">👤</span>
                         </div>
                         <div>
-                          <div className="text-sm text-gray-500 font-medium">Kund</div>
-                          <div className="text-lg font-semibold text-gray-900">{pickup.owner_name}</div>
+                          <div className="text-xs text-gray-500 font-medium">Kund</div>
+                          <div className="text-sm font-semibold text-gray-900">{pickup.owner_name}</div>
                         </div>
                       </div>
                       
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                          <span className="text-gray-600 font-bold">📍</span>
+                      <div className="flex items-start gap-2">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-gray-600 text-sm">📍</span>
                         </div>
                         <div className="flex-1">
-                          <div className="text-sm text-gray-500 font-medium">Upphämtningsadress</div>
-                          <div className="text-base font-medium text-gray-900 leading-relaxed">
+                          <div className="text-xs text-gray-500 font-medium">Upphämtningsadress</div>
+                          <div className="text-sm font-medium text-gray-900 leading-tight">
                             {pickup.pickup_address}
                           </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-center pt-3 border-t border-gray-100">
-                      <div className="text-indigo-600 text-base font-medium">Tryck för detaljer →</div>
+                    <div className="flex items-center justify-center pt-2 border-t border-gray-100">
+                      <div className="text-indigo-600 text-sm font-medium">Tryck för detaljer →</div>
                     </div>
                   </div>
                 </div>
@@ -517,10 +517,10 @@ const PantaBilenDriverApp = () => {
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-96 text-gray-500">
+        <div className="flex items-center justify-center h-64 text-gray-500">
           <div className="text-center">
-            <div className="text-6xl mb-4">🗺️</div>
-            <p className="text-xl">Kartvy kommer snart</p>
+            <div className="text-4xl mb-3">🗺️</div>
+            <p className="text-base">Kartvy kommer snart</p>
           </div>
         </div>
       )}
@@ -528,56 +528,56 @@ const PantaBilenDriverApp = () => {
       {/* Detail View Modal */}
       {showDetailView && selectedPickup && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto">
-          <div className="bg-indigo-600 text-white px-4 py-6">
-            <div className="flex items-center gap-4">
+          <div className="bg-indigo-600 text-white px-3 py-4">
+            <div className="flex items-center gap-3">
               <button
-                className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-2xl font-bold hover:bg-indigo-400 transition-colors"
+                className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-lg font-bold hover:bg-indigo-400 transition-colors"
                 onClick={() => setShowDetailView(false)}
               >
                 ←
               </button>
               <div className="flex-1">
-                <div className="text-lg font-semibold opacity-90">Upphämtningsdetaljer</div>
-                <div className="text-2xl font-bold">{selectedPickup.car_registration_number}</div>
+                <div className="text-sm font-semibold opacity-90">Upphämtningsdetaljer</div>
+                <div className="text-lg font-bold">{selectedPickup.car_registration_number}</div>
               </div>
             </div>
           </div>
           
-          <div className="px-4 py-6 space-y-6">
-            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-6">
+          <div className="px-3 py-4 space-y-4">
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">
+                <div className="text-2xl font-bold text-indigo-600 mb-1">
                   {selectedPickup.car_registration_number}
                 </div>
-                <div className="text-xl text-gray-700 font-medium">
+                <div className="text-base text-gray-700 font-medium">
                   {selectedPickup.car_year} {selectedPickup.car_brand} {selectedPickup.car_model}
                 </div>
-                <div className="mt-4 text-3xl font-bold text-green-600">
+                <div className="mt-3 text-2xl font-bold text-green-600">
                   {selectedPickup.final_price ? `${selectedPickup.final_price.toLocaleString()} kr` : 'Pris ej fastställt'}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Kundinformation</h3>
-              <div className="space-y-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 text-xl">👤</span>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Kundinformation</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-gray-600 text-lg">👤</span>
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm text-gray-500 font-medium">Namn</div>
-                    <div className="text-lg font-semibold text-gray-900">{selectedPickup.owner_name}</div>
+                    <div className="text-xs text-gray-500 font-medium">Namn</div>
+                    <div className="text-base font-semibold text-gray-900">{selectedPickup.owner_name}</div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 text-xl">📞</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-gray-600 text-lg">📞</span>
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm text-gray-500 font-medium">Telefon</div>
-                    <a href={`tel:${selectedPickup.phone_number}`} className="text-lg font-semibold text-blue-600">
+                    <div className="text-xs text-gray-500 font-medium">Telefon</div>
+                    <a href={`tel:${selectedPickup.phone_number}`} className="text-base font-semibold text-blue-600">
                       {selectedPickup.phone_number}
                     </a>
                   </div>
