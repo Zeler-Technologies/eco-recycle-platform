@@ -70,8 +70,9 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      setError('Endast bildfiler är tillåtna.');
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Endast JPEG, PNG eller WebP är tillåtna.');
       return;
     }
 
@@ -194,26 +195,33 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
         console.log('Created new car with ID:', carId);
       }
 
-      // Step 5: Upload image to pickup-photos storage
-      const fileExt = file.name.split('.').pop() || 'jpg';
+      // Step 5: Upload image to pickup-photos storage with secure path
       const timestamp = Date.now();
-      const fileName = `driver_verification_${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
+      const safeOrderId = pickupOrderId.replace(/[^a-zA-Z0-9-]/g, '');
+      const filePath = `driver_verification/${safeOrderId}/${timestamp}.jpg`;
 
-      console.log('[Storage] Uploading driver verification to pickup-photos bucket:', fileName);
+      console.log('[Storage] Uploading driver verification to pickup-photos bucket:', filePath);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('pickup-photos')
-        .upload(fileName, file);
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
-        throw new Error(`Fel vid uppladdning: ${uploadError.message}`);
+        const msg = (uploadError as any)?.message?.toLowerCase() || '';
+        const status = (uploadError as any)?.status;
+        if (status === 403 || msg.includes('row level security') || msg.includes('permission')) {
+          throw new Error('Endast tilldelade förare kan ladda upp verifieringsfoton');
+        } else if (status === 401) {
+          throw new Error('Du har inte behörighet att ladda upp foton för denna upphämtning');
+        }
+        throw new Error(`Fel vid uppladdning: ${(uploadError as any)?.message || ''}`);
       }
 
       // Step 6: Get public URL
       const { data: urlData } = supabase.storage
         .from('pickup-photos')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
 
       const imageUrl = urlData.publicUrl;
       console.log('Image uploaded to storage successfully:', imageUrl);
@@ -225,7 +233,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
         pnr_num: numericPnr,
         car_registration_number: customerRequest.car_registration_number,
         image_type: `verification_${currentPhotoType}`,
-        file_name: fileName,
+        file_name: filePath.split("/").pop() as string,
         file_size: file.size,
         uploaded_by: 'driver'
       });
@@ -238,7 +246,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
           pnr_num: numericPnr, // Required field (NOT NULL)
           car_registration_number: customerRequest.car_registration_number,
           image_type: `verification_${currentPhotoType}`, // Driver verification type
-          file_name: fileName,
+          file_name: filePath.split("/").pop() as string,
           file_size: file.size,
           uploaded_by: 'driver' // Mark as driver uploaded for comparison
           // Note: pnr_num_norm removed - it may be auto-generated or cause conflicts
@@ -400,7 +408,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           capture="environment"
           onChange={handleFileSelect}
           className="hidden"

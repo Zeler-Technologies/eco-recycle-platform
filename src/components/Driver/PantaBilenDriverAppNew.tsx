@@ -410,31 +410,55 @@ const PantaBilenDriverAppNew = () => {
     }
   };
 
-  // Photo upload handler - direct upload like customer component
+  // Photo upload handler - direct upload with security-aware validation
   const handlePhotoUpload = async (pickupOrderId: string, file: File) => {
     setUploadingPhoto(true);
     try {
+      // Validate file type and size
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Endast JPEG, PNG eller WebP är tillåtna.');
+        throw new Error('Ogiltig filtyp');
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Filen är för stor. Max 10MB.');
+        throw new Error('Fil för stor');
+      }
 
-      const fileName = `driver_pickup_${pickupOrderId}_${Date.now()}.jpg`;
+      // Sanitize order id and build path
+      const safeOrderId = pickupOrderId.replace(/[^a-zA-Z0-9-]/g, '');
+      const filePath = `driver_verification/${safeOrderId}/${Date.now()}.jpg`;
+
       const { data, error } = await supabase.storage
         .from('pickup-photos')
-        .upload(fileName, file);
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-      if (error) throw error;
+      if (error) {
+        const msg = (error as any)?.message?.toLowerCase() || '';
+        const status = (error as any)?.status;
+        if (status === 403 || msg.includes('row level security') || msg.includes('permission')) {
+          // RLS/permission error: driver not assigned
+          toast.error('Endast tilldelade förare kan ladda upp verifieringsfoton');
+        } else if (status === 401) {
+          toast.error('Du har inte behörighet att ladda upp foton för denna upphämtning');
+        } else {
+          toast.error('Kunde inte ladda upp foto');
+        }
+        throw error;
+      }
 
       const { data: urlData } = await supabase.storage
         .from('pickup-photos')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
 
       return urlData.publicUrl;
     } catch (error) {
-      toast.error('Kunde inte ladda upp foto');
+      // Error toasts already shown above where applicable
       throw error;
     } finally {
       setUploadingPhoto(false);
     }
   };
-
   // Self-assignment handler
   const handleSelfAssign = async (pickupOrderId: string, customerName: string) => {
     setIsAssigning(true);
