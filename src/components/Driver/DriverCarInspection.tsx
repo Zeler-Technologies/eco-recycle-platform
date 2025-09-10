@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Camera, Upload, X, CheckCircle } from 'lucide-react';
 
 interface PhotoUploadProps {
-  customerRequestId: string;
+  pickupOrderId: string;
   onNext: () => void;
   onBack: () => void;
 }
@@ -17,7 +17,7 @@ interface PhotoRequirement {
   completed: boolean;
 }
 
-const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, onBack }) => {
+const PhotoUpload: React.FC<PhotoUploadProps> = ({ pickupOrderId, onNext, onBack }) => {
   const [currentPhotoType, setCurrentPhotoType] = useState<string>('engine');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +117,24 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     try {
       console.log('Starting RLS-compliant photo upload for type:', currentPhotoType);
 
-      // Step 1: Get customer request details including scrapyard_id for RLS
+      // Step 1: Get pickup order details first, then customer request details
+      const { data: pickupOrder, error: pickupError } = await supabase
+        .from('pickup_orders')
+        .select(`
+          customer_request_id,
+          tenant_id
+        `)
+        .eq('id', pickupOrderId)
+        .single();
+
+      if (pickupError || !pickupOrder) {
+        console.error('Pickup order lookup failed:', pickupError);
+        throw new Error('Kunde inte hitta hämtningsorder');
+      }
+
+      console.log('Pickup order data:', pickupOrder);
+
+      // Step 2: Get customer request details including scrapyard_id for RLS
       const { data: customerRequest, error: requestError } = await supabase
         .from('customer_requests')
         .select(`
@@ -128,7 +145,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
           car_model,
           car_year
         `)
-        .eq('id', customerRequestId)
+        .eq('id', pickupOrder.customer_request_id)
         .single();
 
       if (requestError || !customerRequest) {
@@ -138,7 +155,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Customer request data:', customerRequest);
 
-      // Step 2: Validate required data
+      // Step 3: Validate required data
       if (!customerRequest.car_registration_number) {
         throw new Error('Bilregistreringsnummer saknas');
       }
@@ -157,7 +174,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Using PNR:', numericPnr, 'for registration:', customerRequest.car_registration_number);
 
-      // Step 3: Create or find car record (required for RLS policy)
+      // Step 4: Create or find car record (required for RLS policy)
       console.log('Creating/finding car record for RLS compliance...');
       
       let carId = null;
@@ -213,7 +230,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       console.log('[Storage] Ensuring "car-images" bucket exists before upload...');
       await ensureCarImagesBucket();
 
-      // Step 4: Upload image to storage
+      // Step 5: Upload image to storage
       const fileExt = file.name.split('.').pop() || 'jpg';
       const timestamp = Date.now();
       const fileName = `${currentPhotoType}_${customerRequest.car_registration_number}_${timestamp}.${fileExt}`;
@@ -230,7 +247,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error(`Fel vid uppladdning: ${uploadError.message}`);
       }
 
-      // Step 5: Get public URL
+      // Step 6: Get public URL
       const { data: urlData } = supabase.storage
         .from('car-images')
         .getPublicUrl(filePath);
@@ -238,7 +255,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const imageUrl = urlData.publicUrl;
       console.log('Image uploaded to storage successfully:', imageUrl);
 
-      // Step 6: Insert into car_images table with RLS-compliant car_id
+      // Step 7: Insert into car_images table with RLS-compliant car_id
       console.log('Inserting to car_images table with car_id for RLS compliance:', {
         car_id: carId,
         image_url: imageUrl,
@@ -300,7 +317,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Photo uploaded successfully with ID:', photoRecord.id);
 
-      // Step 7: Mark current photo requirement as completed
+      // Step 8: Mark current photo requirement as completed
       setPhotoRequirements(prev => 
         prev.map(req => 
           req.id === currentPhotoType 
