@@ -778,7 +778,7 @@ const PantaBilenDriverApp = () => {
                   
                   <button 
                     className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
-                    onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'scheduled')}
+                    onClick={() => setShowRescheduleModal(true)}
                   >
                     <span className="flex items-center justify-center gap-3">
                       <span className="text-2xl">📅</span>
