@@ -128,10 +128,11 @@ const PantaBilenDriverApp = () => {
       if (!tenantId) return;
 
       try {
-        // For now, let's show all pickups regardless of tenant until tenant_id is properly set
+        // SECURITY: Only show pickups from the driver's tenant
         const { data: customerRequests, error } = await supabase
           .from('customer_requests')
           .select('*')
+          .eq('tenant_id', tenantId)
           .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
           .order('created_at', { ascending: false });
 
@@ -396,7 +397,7 @@ const PantaBilenDriverApp = () => {
           scrapyards(name, tenant_id)
         `)
         .eq('status', 'pending')
-        .or(`tenant_id.eq.${currentDriver.tenant_id},scrapyards.tenant_id.eq.${currentDriver.tenant_id}`)
+        .eq('tenant_id', currentDriver.tenant_id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -422,6 +423,7 @@ const PantaBilenDriverApp = () => {
           *,
           scrapyards(name, tenant_id)
         `)
+        .eq('tenant_id', currentDriver.tenant_id)
         .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
         .order('created_at', { ascending: false });
 
