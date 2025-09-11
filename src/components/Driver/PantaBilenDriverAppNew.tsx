@@ -76,6 +76,7 @@ const PantaBilenDriverApp = () => {
   const [currentDriver, setCurrentDriver] = useState({
     driver_id: null,
     id: null,
+    tenant_id: null,
     full_name: 'Loading...',
     driver_status: 'offline'
   });
@@ -93,7 +94,7 @@ const PantaBilenDriverApp = () => {
       try {
         const { data: driver, error } = await supabase
           .from('drivers')
-          .select('id, full_name, driver_status, current_status')
+          .select('id, full_name, driver_status, current_status, tenant_id')
           .eq('auth_user_id', user.id)
           .single();
 
@@ -107,6 +108,7 @@ const PantaBilenDriverApp = () => {
           setCurrentDriver({
             driver_id: driver.id, // Keep for compatibility
             id: driver.id,
+            tenant_id: driver.tenant_id || null,
             full_name: driver.full_name,
             driver_status: driver.driver_status || driver.current_status || 'offline'
           });
@@ -119,11 +121,14 @@ const PantaBilenDriverApp = () => {
 
     const loadPickups = async () => {
       if (!user) return;
+      const tenantId = currentDriver?.tenant_id;
+      if (!tenantId) return;
 
       try {
         const { data: customerRequests, error } = await supabase
           .from('customer_requests')
           .select('*')
+          .eq('tenant_id', tenantId)
           .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
           .order('created_at', { ascending: false });
 
@@ -158,7 +163,7 @@ const PantaBilenDriverApp = () => {
 
     loadDriverInfo();
     loadPickups();
-  }, [user]);
+  }, [user, currentDriver?.tenant_id]);
   const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showDetailView, setShowDetailView] = useState(false);
 
