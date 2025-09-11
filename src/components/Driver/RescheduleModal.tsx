@@ -29,6 +29,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
   );
   const [selectedTime, setSelectedTime] = useState('09:00');
   const [notes, setNotes] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const handleConfirm = () => {
     if (!selectedDate) return;
@@ -58,7 +59,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
           
           <div className="space-y-2">
             <Label htmlFor="date">Nytt datum</Label>
-            <Popover>
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -75,7 +76,10 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={setSelectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    setIsCalendarOpen(false);
+                  }}
                   disabled={(date) => date < new Date()}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
