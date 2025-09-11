@@ -72,6 +72,9 @@ const PantaBilenDriverApp = () => {
 
   // State management
   const [pickups, setPickups] = useState([]);
+  
+  // RACE-SAFE CLAIMING: Add state for tracking which request is being claimed
+  const [claimingRequestId, setClaimingRequestId] = useState<string | null>(null);
 
   const [currentDriver, setCurrentDriver] = useState({
     driver_id: null,
@@ -381,40 +384,150 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  // Assign pickup to driver
-  const assignPickupToDriver = async (pickupId: string) => {
-    if (!currentDriver?.id) {
-      toast.error('Förarerinformation saknas');
-      return;
-    }
+  // RACE-SAFE CLAIMING: Fetch available pickups
+  const fetchAvailablePickups = async () => {
+    if (!user || !currentDriver?.tenant_id) return;
 
     try {
-      // Update the customer request to assign it to this driver
-      const { error } = await supabase
+      const { data: customerRequests, error } = await supabase
         .from('customer_requests')
-        .update({ 
-          status: 'assigned',
-          // Note: You may need to add a driver_id field to customer_requests table
-          // For now, we'll just update the status
-        })
-        .eq('id', pickupId);
+        .select(`
+          *,
+          scrapyards(name, tenant_id)
+        `)
+        .eq('status', 'pending')
+        .or(`tenant_id.eq.${currentDriver.tenant_id},scrapyards.tenant_id.eq.${currentDriver.tenant_id}`)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error assigning pickup:', error);
-        toast.error('Kunde inte tilldela uppdrag');
+        console.error('Error loading available pickups:', error);
         return;
       }
 
-      // Update local state
-      setPickups(prev => prev.map(p => 
-        p.pickup_id === pickupId ? { ...p, status: 'assigned' } : p
-      ));
-      
-      toast.success('Uppdrag tilldelat!');
+      return customerRequests || [];
     } catch (error) {
-      console.error('Error assigning pickup:', error);
-      toast.error('Kunde inte tilldela uppdrag');
+      console.error('Error loading available pickups:', error);
+      return [];
     }
+  };
+
+  // RACE-SAFE CLAIMING: Fetch assigned pickups
+  const fetchAssignedPickups = async () => {
+    if (!user || !currentDriver?.id) return;
+
+    try {
+      const { data: customerRequests, error } = await supabase
+        .from('customer_requests')
+        .select(`
+          *,
+          scrapyards(name, tenant_id)
+        `)
+        .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading assigned pickups:', error);
+        return;
+      }
+
+      return customerRequests || [];
+    } catch (error) {
+      console.error('Error loading assigned pickups:', error);
+      return [];
+    }
+  };
+
+  // RACE-SAFE CLAIMING: New implementation using RPC function
+  const handleClaimRequest = async (requestId: string) => {
+    try {
+      setClaimingRequestId(requestId);
+      
+      const { data, error } = await supabase.rpc('claim_customer_request' as any, {
+        p_customer_request_id: requestId
+      });
+
+      if (error) {
+        console.error('Error claiming request:', error);
+        toast.error('Något gick fel. Försök igen.');
+        return;
+      }
+
+      const result = data as { success: boolean; message?: string; reason?: string };
+
+      if (result.success) {
+        toast.success(result.message || 'Uppdraget tilldelades dig!');
+        // Refresh pickup lists by reloading all pickups
+        const [availableRequests, assignedRequests] = await Promise.all([
+          fetchAvailablePickups(),
+          fetchAssignedPickups()
+        ]);
+
+        const allRequests = [...(availableRequests || []), ...(assignedRequests || [])];
+        const transformedPickups = allRequests.map(request => ({
+          pickup_id: request.id,
+          car_registration_number: request.car_registration_number,
+          car_brand: request.car_brand || 'Okänd',
+          car_model: request.car_model || 'Okänd',
+          car_year: request.car_year?.toString() || 'Okänt',
+          owner_name: request.owner_name,
+          phone_number: request.contact_phone || 'Ingen telefon',
+          pickup_address: request.pickup_address || request.pickup_location || 'Ingen adress',
+          status: request.status,
+          final_price: request.quote_amount || 0,
+          created_at: request.created_at,
+          scheduled_date: request.pickup_date
+        }));
+        setPickups(transformedPickups);
+      } else {
+        // Handle race conditions and other errors gracefully
+        switch (result.reason) {
+          case 'already_claimed':
+            toast.info('Uppdraget togs precis av en annan förare');
+            break;
+          case 'not_pending':
+            toast.warning('Uppdraget är inte längre tillgängligt');
+            break;
+          case 'wrong_tenant':
+            toast.error('Du har inte behörighet för detta uppdrag');
+            break;
+          case 'no_driver_found':
+            toast.error('Din förarprofil hittades inte');
+            break;
+          default:
+            toast.error(result.message || 'Kunde inte ta uppdraget');
+        }
+        // Refresh available pickups to remove claimed ones
+        const availableRequests = await fetchAvailablePickups();
+        const assignedRequests = await fetchAssignedPickups();
+        const allRequests = [...(availableRequests || []), ...(assignedRequests || [])];
+        const transformedPickups = allRequests.map(request => ({
+          pickup_id: request.id,
+          car_registration_number: request.car_registration_number,
+          car_brand: request.car_brand || 'Okänd',
+          car_model: request.car_model || 'Okänd',
+          car_year: request.car_year?.toString() || 'Okänt',
+          owner_name: request.owner_name,
+          phone_number: request.contact_phone || 'Ingen telefon',
+          pickup_address: request.pickup_address || request.pickup_location || 'Ingen adress',
+          status: request.status,
+          final_price: request.quote_amount || 0,
+          created_at: request.created_at,
+          scheduled_date: request.pickup_date
+        }));
+        setPickups(transformedPickups);
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error('Oväntat fel uppstod');
+    } finally {
+      setClaimingRequestId(null);
+    }
+  };
+
+  // DEPRECATED: Keep for reference - will be removed after testing
+  const assignPickupToDriver = async (pickupId: string) => {
+    console.warn('assignPickupToDriver is deprecated, use handleClaimRequest instead');
+    return handleClaimRequest(pickupId);
   };
 
   // Handle reschedule confirm
@@ -808,13 +921,28 @@ const PantaBilenDriverApp = () => {
             <div className="space-y-3 pb-8">
               {selectedPickup.status === 'pending' && (
                 <button 
-                  className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
-                  onClick={() => assignPickupToDriver(selectedPickup.pickup_id)}
+                  onClick={() => handleClaimRequest(selectedPickup.pickup_id)}
+                  disabled={claimingRequestId === selectedPickup.pickup_id || selectedPickup.status !== 'pending'}
+                  className={`w-full py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98] ${
+                    claimingRequestId === selectedPickup.pickup_id 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
+                  }`}
                 >
-                  <span className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">✋</span>
-                    Ta uppdrag
-                  </span>
+                  {claimingRequestId === selectedPickup.pickup_id ? (
+                    <span className="flex items-center justify-center gap-3">
+                      <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Tar uppdrag...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-3">
+                      <span className="text-2xl">✋</span>
+                      Ta uppdrag
+                    </span>
+                  )}
                 </button>
               )}
 
