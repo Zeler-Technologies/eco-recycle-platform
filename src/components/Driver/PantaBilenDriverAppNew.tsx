@@ -138,49 +138,52 @@ const PantaBilenDriverApp = () => {
       console.log('Loading pickups for tenant:', tenantId);
 
       try {
-        // First, get the scrapyard IDs that belong to this tenant
-        const { data: tenantScrapyards, error: scrapyardError } = await supabase
-          .from('scrapyards')
-          .select('id')
-          .eq('tenant_id', tenantId);
-
-        if (scrapyardError) {
-          console.error('Error loading tenant scrapyards:', scrapyardError);
-        }
-
-        const scrapyardIds = tenantScrapyards?.map(s => s.id) || [];
-        console.log('Scrapyard IDs for tenant:', scrapyardIds);
-
-        // Now get customer requests that either:
-        // 1. Have tenant_id matching directly, OR
-        // 2. Have scrapyard_id in our tenant's scrapyards
-        let query = supabase
+        // 1. Get pending customer_requests (no pickup_order needed)
+        const { data: pendingRequests, error: pendingError } = await supabase
           .from('customer_requests')
           .select('*')
-          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
+          .eq('status', 'pending')
+          .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false });
 
-        // Build OR condition
-        if (scrapyardIds.length > 0) {
-          query = query.or(`tenant_id.eq.${tenantId},scrapyard_id.in.(${scrapyardIds.join(',')})`);
-        } else {
-          // If no scrapyards, just filter by tenant_id
-          query = query.eq('tenant_id', tenantId);
+        if (pendingError) {
+          console.error('Error loading pending requests:', pendingError);
         }
 
-        const { data: requests, error } = await query;
+        // 2. Get scheduled pickup_orders with their customer_request data
+        const { data: pickupOrders, error: ordersError } = await supabase
+          .from('pickup_orders')
+          .select(`
+            *,
+            customer_requests!inner(
+              car_registration_number,
+              car_brand,
+              car_model,
+              car_year,
+              owner_name,
+              contact_phone,
+              pickup_address,
+              pickup_location
+            ),
+            driver_assignments!left(
+              driver_id,
+              is_active,
+              status
+            )
+          `)
+          .eq('tenant_id', tenantId)
+          .in('status', ['scheduled', 'assigned', 'in_progress'])
+          .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error loading requests:', error);
-          toast.error('Kunde inte ladda uppdrag');
-          return;
+        if (ordersError) {
+          console.error('Error loading pickup orders:', ordersError);
         }
 
-        console.log(`Found ${requests?.length || 0} pickups for tenant ${tenantId}`);
-        
-        // Transform to pickup format
-        const transformedPickups = (requests || []).map((request: any) => ({
+        // Transform and combine both types
+        const transformedRequests = (pendingRequests || []).map((request: any) => ({
+          id: request.id,
           pickup_id: request.id,
+          type: 'customer_request',
           car_registration_number: request.car_registration_number,
           car_brand: request.car_brand || 'Okänd',
           car_model: request.car_model || 'Okänd',
@@ -194,7 +197,31 @@ const PantaBilenDriverApp = () => {
           scheduled_date: request.pickup_date
         }));
 
-        setPickups(transformedPickups);
+        const transformedOrders = (pickupOrders || []).map((order: any) => ({
+          id: order.id,
+          pickup_id: order.id,
+          pickup_order_id: order.id,
+          type: 'pickup_order',
+          customer_request_id: order.customer_request_id,
+          status: order.status,
+          final_price: order.final_price,
+          scheduled_date: order.scheduled_pickup_date,
+          car_registration_number: order.customer_requests?.car_registration_number,
+          car_brand: order.customer_requests?.car_brand || 'Okänd',
+          car_model: order.customer_requests?.car_model || 'Okänd',
+          car_year: order.customer_requests?.car_year?.toString() || 'Okänt',
+          owner_name: order.customer_requests?.owner_name,
+          phone_number: order.customer_requests?.contact_phone || 'Ingen telefon',
+          pickup_address: order.customer_requests?.pickup_address || order.customer_requests?.pickup_location || 'Ingen adress',
+          created_at: order.created_at,
+          driver_id: order.driver_id,
+          is_assigned: !!order.driver_id || order.driver_assignments?.some((da: any) => da.is_active)
+        }));
+
+        const allPickups = [...transformedRequests, ...transformedOrders];
+        console.log(`Found ${allPickups.length} total pickups (${transformedRequests.length} pending requests + ${transformedOrders.length} pickup orders)`);
+        
+        setPickups(allPickups);
       } catch (error) {
         console.error('Error loading pickups:', error);
         toast.error('Kunde inte ladda uppdrag');
@@ -505,61 +532,62 @@ const PantaBilenDriverApp = () => {
     }
   };
 
-  // RACE-SAFE CLAIMING: New implementation using RPC function
-  const handleClaimRequest = async (requestId: string) => {
+  // RACE-SAFE CLAIMING: New implementation with dual-system support
+  const handleClaimRequest = async (pickup: any) => {
     try {
-      setClaimingRequestId(requestId);
+      setClaimingRequestId(pickup.pickup_id);
       
-      // Add debug logging
-      console.log('Selected pickup for claiming:', selectedPickup);
-      console.log('Request ID:', requestId);
-      console.log('Pickup status:', selectedPickup?.status);
+      console.log('Claiming pickup:', pickup);
+      console.log('Pickup type:', pickup.type);
+      console.log('Pickup status:', pickup.status);
       
-      const { data, error } = await supabase.rpc('claim_customer_request' as any, {
-        p_customer_request_id: requestId
-      });
+      let result;
+      
+      if (pickup.type === 'customer_request') {
+        // Use existing claim_customer_request for pending requests
+        const { data, error } = await supabase.rpc('claim_customer_request' as any, {
+          p_customer_request_id: pickup.pickup_id
+        });
 
-      if (error) {
-        console.error('Error claiming request:', error);
-        toast.error('Något gick fel. Försök igen.');
+        if (error) {
+          console.error('Error claiming customer request:', error);
+          toast.error('Något gick fel vid hämtning av förfrågan. Försök igen.');
+          return;
+        }
+
+        result = data as { success: boolean; message?: string; reason?: string };
+      } else if (pickup.type === 'pickup_order') {
+        // Use driver_self_assign_pickup for scheduled pickup orders
+        const { data, error } = await supabase.rpc('driver_self_assign_pickup' as any, {
+          pickup_order_id: pickup.pickup_order_id,
+          notes: 'Claimed via driver app'
+        });
+
+        if (error) {
+          console.error('Error claiming pickup order:', error);
+          toast.error('Något gick fel vid hämtning av uppdraget. Försök igen.');
+          return;
+        }
+
+        result = data as { success: boolean; message?: string; reason?: string };
+      } else {
+        toast.error('Okänd uppdragstyp');
         return;
       }
 
-      const result = data as { success: boolean; message?: string; reason?: string };
-
       if (result.success) {
         toast.success(result.message || 'Uppdraget tilldelades dig!');
-        // Refresh pickup lists by reloading all pickups
-        const [availableRequests, assignedRequests] = await Promise.all([
-          fetchAvailablePickups(),
-          fetchAssignedPickups()
-        ]);
-
-        const allRequests = [...(availableRequests || []), ...(assignedRequests || [])];
-        const transformedPickups = allRequests.map(request => ({
-          pickup_id: request.id,
-          car_registration_number: request.car_registration_number,
-          car_brand: request.car_brand || 'Okänd',
-          car_model: request.car_model || 'Okänd',
-          car_year: request.car_year?.toString() || 'Okänt',
-          owner_name: request.owner_name,
-          phone_number: request.contact_phone || 'Ingen telefon',
-          pickup_address: request.pickup_address || request.pickup_location || 'Ingen adress',
-          status: request.status,
-          final_price: request.quote_amount || 0,
-          created_at: request.created_at,
-          scheduled_date: request.pickup_date
-        }));
-        setPickups(transformedPickups);
-        // Close detail view after successful claim
-        setShowDetailView(false);
+        // Reload all pickups to reflect changes
+        window.location.reload(); // Simple reload to ensure fresh data
       } else {
         // Handle race conditions and other errors gracefully
         switch (result.reason) {
           case 'already_claimed':
+          case 'already_assigned':
             toast.info('Uppdraget togs precis av en annan förare');
             break;
           case 'not_pending':
+          case 'not_scheduled':
             toast.warning('Uppdraget är inte längre tillgängligt');
             break;
           case 'wrong_tenant':
@@ -571,25 +599,8 @@ const PantaBilenDriverApp = () => {
           default:
             toast.error(result.message || 'Kunde inte ta uppdraget');
         }
-        // Refresh available pickups to remove claimed ones
-        const availableRequests = await fetchAvailablePickups();
-        const assignedRequests = await fetchAssignedPickups();
-        const allRequests = [...(availableRequests || []), ...(assignedRequests || [])];
-        const transformedPickups = allRequests.map(request => ({
-          pickup_id: request.id,
-          car_registration_number: request.car_registration_number,
-          car_brand: request.car_brand || 'Okänd',
-          car_model: request.car_model || 'Okänd',
-          car_year: request.car_year?.toString() || 'Okänt',
-          owner_name: request.owner_name,
-          phone_number: request.contact_phone || 'Ingen telefon',
-          pickup_address: request.pickup_address || request.pickup_location || 'Ingen adress',
-          status: request.status,
-          final_price: request.quote_amount || 0,
-          created_at: request.created_at,
-          scheduled_date: request.pickup_date
-        }));
-        setPickups(transformedPickups);
+        // Reload to get fresh data
+        window.location.reload();
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -991,10 +1002,12 @@ const PantaBilenDriverApp = () => {
 
             {/* Action buttons - Mobile optimized */}
             <div className="space-y-3 pb-8">
-              {selectedPickup.status === 'pending' && (
+              {/* Show "Ta uppdrag" button for both pending customer_requests and unassigned scheduled pickup_orders */}
+              {((selectedPickup.type === 'customer_request' && selectedPickup.status === 'pending') ||
+                (selectedPickup.type === 'pickup_order' && selectedPickup.status === 'scheduled' && !selectedPickup.is_assigned)) && (
                 <button 
-                  onClick={() => handleClaimRequest(selectedPickup.pickup_id)}
-                  disabled={claimingRequestId === selectedPickup.pickup_id || selectedPickup.status !== 'pending'}
+                  onClick={() => handleClaimRequest(selectedPickup)}
+                  disabled={claimingRequestId === selectedPickup.pickup_id}
                   className={`w-full py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98] ${
                     claimingRequestId === selectedPickup.pickup_id 
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
