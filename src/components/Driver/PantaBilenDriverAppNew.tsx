@@ -984,16 +984,6 @@ const PantaBilenDriverApp = () => {
           
           {/* Content */}
           <div className="px-4 py-6 space-y-5">
-            {/* Debug info - REMOVE IN PRODUCTION */}
-            <div className="bg-card border shadow-custom-sm rounded-md p-3">
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Debug info</div>
-              <div className="grid grid-cols-2 gap-y-1 text-xs font-mono">
-                <div className="text-muted-foreground">Type</div><div className="text-foreground">{selectedPickup.type}</div>
-                <div className="text-muted-foreground">Status</div><div className="text-foreground">{selectedPickup.status}</div>
-                <div className="text-muted-foreground">Is Assigned</div><div className="text-foreground">{selectedPickup.is_assigned ? 'Yes' : 'No'}</div>
-                <div className="text-muted-foreground">Driver ID</div><div className="text-foreground">{selectedPickup.driver_id || 'None'}</div>
-              </div>
-            </div>
 
             {/* Car info card */}
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-6 text-center">
