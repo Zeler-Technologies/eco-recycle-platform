@@ -71,34 +71,7 @@ const PantaBilenDriverApp = () => {
   };
 
   // State management
-  const [pickups, setPickups] = useState([
-    {
-      pickup_id: '1',
-      car_registration_number: 'ABC123',
-      car_brand: 'Volvo',
-      car_model: 'XC60',
-      car_year: '2018',
-      owner_name: 'Erik Andersson',
-      phone_number: '070-123-4567',
-      pickup_address: 'Storgatan 15, Stockholm',
-      status: 'assigned',
-      final_price: 15000,
-      created_at: new Date().toISOString()
-    },
-    {
-      pickup_id: '2', 
-      car_registration_number: 'XYZ789',
-      car_brand: 'BMW',
-      car_model: 'X3',
-      car_year: '2019',
-      owner_name: 'Anna Svensson',
-      phone_number: '070-234-5678',
-      pickup_address: 'Kungsgatan 42, Göteborg',
-      status: 'in_progress',
-      final_price: 18000,
-      created_at: new Date().toISOString()
-    }
-  ]);
+  const [pickups, setPickups] = useState([]);
 
   const [currentDriver, setCurrentDriver] = useState({
     driver_id: null,
@@ -112,7 +85,7 @@ const PantaBilenDriverApp = () => {
   const [currentFilter, setCurrentFilter] = useState('all');
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
-  // Load current driver information on component mount
+  // Load current driver information and pickups on component mount
   useEffect(() => {
     const loadDriverInfo = async () => {
       if (!user) return;
@@ -144,7 +117,47 @@ const PantaBilenDriverApp = () => {
       }
     };
 
+    const loadPickups = async () => {
+      if (!user) return;
+
+      try {
+        const { data: customerRequests, error } = await supabase
+          .from('customer_requests')
+          .select('*')
+          .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading pickups:', error);
+          toast.error('Kunde inte ladda uppdrag');
+          return;
+        }
+
+        // Transform customer_requests to pickup format
+        const transformedPickups = customerRequests.map(request => ({
+          pickup_id: request.id,
+          car_registration_number: request.car_registration_number,
+          car_brand: request.car_brand || 'Okänd',
+          car_model: request.car_model || 'Okänd',
+          car_year: request.car_year?.toString() || 'Okänt',
+          owner_name: request.owner_name,
+          phone_number: request.contact_phone || 'Ingen telefon',
+          pickup_address: request.pickup_address || request.pickup_location || 'Ingen adress',
+          status: request.status,
+          final_price: request.quote_amount || 0,
+          created_at: request.created_at,
+          scheduled_date: request.pickup_date
+        }));
+
+        setPickups(transformedPickups);
+      } catch (error) {
+        console.error('Error loading pickups:', error);
+        toast.error('Kunde inte ladda uppdrag');
+      }
+    };
+
     loadDriverInfo();
+    loadPickups();
   }, [user]);
   const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showDetailView, setShowDetailView] = useState(false);
@@ -339,10 +352,28 @@ const PantaBilenDriverApp = () => {
 
   // Update pickup status
   const updatePickupStatus = async (pickupId: string, newStatus: string) => {
-    setPickups(prev => prev.map(p => 
-      p.pickup_id === pickupId ? { ...p, status: newStatus } : p
-    ));
-    toast.success(`Status uppdaterad till ${getStatusText(newStatus)}`);
+    try {
+      // Update the database
+      const { error } = await supabase
+        .from('customer_requests')
+        .update({ status: newStatus })
+        .eq('id', pickupId);
+
+      if (error) {
+        console.error('Error updating status:', error);
+        toast.error('Kunde inte uppdatera status');
+        return;
+      }
+
+      // Update local state
+      setPickups(prev => prev.map(p => 
+        p.pickup_id === pickupId ? { ...p, status: newStatus } : p
+      ));
+      toast.success(`Status uppdaterad till ${getStatusText(newStatus)}`);
+    } catch (error) {
+      console.error('Error updating pickup status:', error);
+      toast.error('Kunde inte uppdatera status');
+    }
   };
 
   // Handle reschedule confirm
@@ -351,9 +382,23 @@ const PantaBilenDriverApp = () => {
     
     setRescheduleLoading(true);
     try {
-      // Here you would typically call your API to reschedule the pickup
-      // For now, we'll just update the local state and show a success message
+      // Update the database with new scheduled date
+      const { error } = await supabase
+        .from('customer_requests')
+        .update({ 
+          pickup_date: newDate,
+          status: 'scheduled',
+          special_instructions: notes ? `${selectedPickup.special_instructions || ''}\nOmschemalagd: ${notes}`.trim() : selectedPickup.special_instructions
+        })
+        .eq('id', selectedPickup.pickup_id);
+
+      if (error) {
+        console.error('Error updating database:', error);
+        toast.error('Kunde inte spara omschemaläggningen');
+        return;
+      }
       
+      // Update local state
       setPickups(prev => prev.map(p => 
         p.pickup_id === selectedPickup.pickup_id 
           ? { ...p, status: 'scheduled', scheduled_date: newDate }
