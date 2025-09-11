@@ -1030,7 +1030,9 @@ const BillingDashboard = ({ onBack }: BillingDashboardProps) => {
               <Card className="p-6">
                 <h4 className="text-lg font-semibold mb-4">Individual Tenant Generation</h4>
                 <div className="space-y-4">
-                  {Object.entries(tenantConfigs).map(([tenantId, config]) => {
+                  {Object.entries(tenantConfigs)
+                    .filter(([tenantId]) => selectedTenant === 'all' || tenantId === selectedTenant)
+                    .map(([tenantId, config]) => {
                     const estimate = calculateMonthlyEstimate();
                     return (
                       <div key={tenantId} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
