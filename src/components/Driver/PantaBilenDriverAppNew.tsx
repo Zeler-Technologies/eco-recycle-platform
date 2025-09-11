@@ -138,52 +138,48 @@ const PantaBilenDriverApp = () => {
       console.log('Loading pickups for tenant:', tenantId);
 
       try {
-        // Get direct tenant matches
-        const { data: directTenantRequests, error: directError } = await supabase
-          .from('customer_requests')
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
-          .order('created_at', { ascending: false });
-
-        if (directError) {
-          console.error('Error loading direct tenant requests:', directError);
-        }
-
-        // Get scrapyard tenant matches with inner join
-        const { data: scrapyardRequests, error: scrapyardError } = await supabase
-          .from('customer_requests')
-          .select(`
-            *,
-            scrapyards!inner(
-              id,
-              name,
-              tenant_id
-            )
-          `)
-          .eq('scrapyards.tenant_id', tenantId)
-          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
-          .order('created_at', { ascending: false });
+        // First, get the scrapyard IDs that belong to this tenant
+        const { data: tenantScrapyards, error: scrapyardError } = await supabase
+          .from('scrapyards')
+          .select('id')
+          .eq('tenant_id', tenantId);
 
         if (scrapyardError) {
-          console.error('Error loading scrapyard requests:', scrapyardError);
+          console.error('Error loading tenant scrapyards:', scrapyardError);
         }
 
-        // Combine and deduplicate
-        const allRequests = [
-          ...(directTenantRequests || []),
-          ...(scrapyardRequests || [])
-        ];
+        const scrapyardIds = tenantScrapyards?.map(s => s.id) || [];
+        console.log('Scrapyard IDs for tenant:', scrapyardIds);
+
+        // Now get customer requests that either:
+        // 1. Have tenant_id matching directly, OR
+        // 2. Have scrapyard_id in our tenant's scrapyards
+        let query = supabase
+          .from('customer_requests')
+          .select('*')
+          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
+          .order('created_at', { ascending: false });
+
+        // Build OR condition
+        if (scrapyardIds.length > 0) {
+          query = query.or(`tenant_id.eq.${tenantId},scrapyard_id.in.(${scrapyardIds.join(',')})`);
+        } else {
+          // If no scrapyards, just filter by tenant_id
+          query = query.eq('tenant_id', tenantId);
+        }
+
+        const { data: requests, error } = await query;
+
+        if (error) {
+          console.error('Error loading requests:', error);
+          toast.error('Kunde inte ladda uppdrag');
+          return;
+        }
+
+        console.log(`Found ${requests?.length || 0} pickups for tenant ${tenantId}`);
         
-        // Remove duplicates by ID
-        const uniqueRequests = Array.from(
-          new Map(allRequests.map(req => [req.id, req])).values()
-        );
-
-        console.log(`Found ${uniqueRequests.length} pickups for tenant ${tenantId}`);
-
         // Transform to pickup format
-        const transformedPickups = uniqueRequests.map((request: any) => ({
+        const transformedPickups = (requests || []).map((request: any) => ({
           pickup_id: request.id,
           car_registration_number: request.car_registration_number,
           car_brand: request.car_brand || 'Okänd',
@@ -245,10 +241,6 @@ const PantaBilenDriverApp = () => {
     let filtered = pickups;
     if (currentFilter !== 'all') {
       filtered = filtered.filter(pickup => pickup.status === currentFilter);
-    }
-    // Add pending filter to show "Ta uppdrag" button
-    if (currentFilter === 'pending') {
-      filtered = filtered.filter(pickup => pickup.status === 'pending');
     }
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [pickups, currentFilter]);
@@ -436,43 +428,35 @@ const PantaBilenDriverApp = () => {
     const tenantId = currentDriver.tenant_id;
 
     try {
-      // Get direct tenant matches
-      const { data: directTenantRequests, error: directError } = await supabase
+      // Get tenant's scrapyard IDs
+      const { data: tenantScrapyards } = await supabase
+        .from('scrapyards')
+        .select('id')
+        .eq('tenant_id', tenantId);
+
+      const scrapyardIds = tenantScrapyards?.map(s => s.id) || [];
+
+      // Build query with OR condition
+      let query = supabase
         .from('customer_requests')
         .select('*')
-        .eq('tenant_id', tenantId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (directError) {
-        console.error('Error loading direct tenant requests:', directError);
+      if (scrapyardIds.length > 0) {
+        query = query.or(`tenant_id.eq.${tenantId},scrapyard_id.in.(${scrapyardIds.join(',')})`);
+      } else {
+        query = query.eq('tenant_id', tenantId);
       }
 
-      // Get scrapyard tenant matches with inner join
-      const { data: scrapyardRequests, error: scrapyardError } = await supabase
-        .from('customer_requests')
-        .select(`
-          *,
-          scrapyards!inner(
-            id,
-            name,
-            tenant_id
-          )
-        `)
-        .eq('scrapyards.tenant_id', tenantId)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      const { data, error } = await query;
 
-      if (scrapyardError) {
-        console.error('Error loading scrapyard requests:', scrapyardError);
+      if (error) {
+        console.error('Error loading available pickups:', error);
+        return [];
       }
 
-      const combined = [
-        ...(directTenantRequests || []),
-        ...(scrapyardRequests || [])
-      ];
-      const uniqueById = Array.from(new Map(combined.map((r: any) => [r.id, r])).values());
-      return uniqueById;
+      return data || [];
     } catch (error) {
       console.error('Error loading available pickups:', error);
       return [];
@@ -486,43 +470,35 @@ const PantaBilenDriverApp = () => {
     const tenantId = currentDriver.tenant_id;
 
     try {
-      // Get direct tenant matches
-      const { data: directTenantRequests, error: directError } = await supabase
+      // Get tenant's scrapyard IDs
+      const { data: tenantScrapyards } = await supabase
+        .from('scrapyards')
+        .select('id')
+        .eq('tenant_id', tenantId);
+
+      const scrapyardIds = tenantScrapyards?.map(s => s.id) || [];
+
+      // Build query with OR condition
+      let query = supabase
         .from('customer_requests')
         .select('*')
-        .eq('tenant_id', tenantId)
         .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
         .order('created_at', { ascending: false });
 
-      if (directError) {
-        console.error('Error loading direct tenant requests:', directError);
+      if (scrapyardIds.length > 0) {
+        query = query.or(`tenant_id.eq.${tenantId},scrapyard_id.in.(${scrapyardIds.join(',')})`);
+      } else {
+        query = query.eq('tenant_id', tenantId);
       }
 
-      // Get scrapyard tenant matches with inner join
-      const { data: scrapyardRequests, error: scrapyardError } = await supabase
-        .from('customer_requests')
-        .select(`
-          *,
-          scrapyards!inner(
-            id,
-            name,
-            tenant_id
-          )
-        `)
-        .eq('scrapyards.tenant_id', tenantId)
-        .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
-        .order('created_at', { ascending: false });
+      const { data, error } = await query;
 
-      if (scrapyardError) {
-        console.error('Error loading scrapyard requests:', scrapyardError);
+      if (error) {
+        console.error('Error loading assigned pickups:', error);
+        return [];
       }
 
-      const combined = [
-        ...(directTenantRequests || []),
-        ...(scrapyardRequests || [])
-      ];
-      const uniqueById = Array.from(new Map(combined.map((r: any) => [r.id, r])).values());
-      return uniqueById;
+      return data || [];
     } catch (error) {
       console.error('Error loading assigned pickups:', error);
       return [];
@@ -533,6 +509,11 @@ const PantaBilenDriverApp = () => {
   const handleClaimRequest = async (requestId: string) => {
     try {
       setClaimingRequestId(requestId);
+      
+      // Add debug logging
+      console.log('Selected pickup for claiming:', selectedPickup);
+      console.log('Request ID:', requestId);
+      console.log('Pickup status:', selectedPickup?.status);
       
       const { data, error } = await supabase.rpc('claim_customer_request' as any, {
         p_customer_request_id: requestId
@@ -570,6 +551,8 @@ const PantaBilenDriverApp = () => {
           scheduled_date: request.pickup_date
         }));
         setPickups(transformedPickups);
+        // Close detail view after successful claim
+        setShowDetailView(false);
       } else {
         // Handle race conditions and other errors gracefully
         switch (result.reason) {
@@ -845,6 +828,8 @@ const PantaBilenDriverApp = () => {
                   key={pickup.pickup_id}
                   className="w-full bg-white rounded-2xl shadow-sm p-5 text-left border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                   onClick={() => {
+                    console.log('Pickup clicked:', pickup); // Debug log
+                    console.log('Pickup status:', pickup.status); // Debug log
                     setSelectedPickup(pickup);
                     setShowDetailView(true);
                   }}
