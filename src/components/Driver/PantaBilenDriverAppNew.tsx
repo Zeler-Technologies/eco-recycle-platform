@@ -985,7 +985,7 @@ const PantaBilenDriverApp = () => {
           {/* Content */}
           <div className="px-4 py-6 space-y-5">
             {/* Debug info - REMOVE IN PRODUCTION */}
-            <div className="bg-gray-100 p-3 rounded text-xs font-mono">
+            <div className="bg-muted p-3 rounded-md text-xs font-mono text-muted-foreground border">
               <div>Type: {selectedPickup.type}</div>
               <div>Status: {selectedPickup.status}</div>
               <div>Is Assigned: {selectedPickup.is_assigned ? 'Yes' : 'No'}</div>
