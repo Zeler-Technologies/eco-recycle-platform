@@ -125,10 +125,10 @@ const PantaBilenDriverApp = () => {
       if (!tenantId) return;
 
       try {
+        // For now, let's show all pickups regardless of tenant until tenant_id is properly set
         const { data: customerRequests, error } = await supabase
           .from('customer_requests')
           .select('*')
-          .eq('tenant_id', tenantId)
           .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
           .order('created_at', { ascending: false });
 
