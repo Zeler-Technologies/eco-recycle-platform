@@ -138,12 +138,20 @@ const PantaBilenDriverApp = () => {
       console.log('Loading pickups for tenant:', tenantId);
 
       try {
-        // 1. Get pending customer_requests (no pickup_order needed)
+        // 1. First get scrapyard IDs for this tenant
+        const { data: scrapyards } = await supabase
+          .from('scrapyards')
+          .select('id')
+          .eq('tenant_id', tenantId);
+
+        const scrapyardIds = scrapyards?.map(s => s.id) || [];
+
+        // 2. Get pending customer_requests from those scrapyards
         const { data: pendingRequests, error: pendingError } = await supabase
           .from('customer_requests')
           .select('*')
           .eq('status', 'pending')
-          .eq('tenant_id', tenantId)
+          .in('scrapyard_id', scrapyardIds)
           .order('created_at', { ascending: false });
 
         if (pendingError) {
