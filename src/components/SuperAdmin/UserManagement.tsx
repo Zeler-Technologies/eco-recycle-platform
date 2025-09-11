@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Plus, Edit, Trash2, ArrowLeft, Settings, Truck, Loader2 } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, ArrowLeft, Settings, Truck, Loader2, Package, XCircle, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import DriverManagement from './DriverManagement';
@@ -39,6 +39,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [pickupStats, setPickupStats] = useState({
+    pickedUp: 0,
+    rejected: 0,
+    rescheduled: 0
+  });
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
@@ -171,9 +176,44 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
     }
   };
 
+  // Fetch pickup statistics
+  const fetchPickupStats = async () => {
+    try {
+      const currentUserProfile = await getCurrentUser();
+      if (!currentUserProfile) return;
+
+      let query = supabase
+        .from('pickup_orders')
+        .select('status');
+
+      // Filter by tenant if not super admin
+      if (currentUserProfile.role !== 'super_admin' && currentUserProfile.tenant_id) {
+        query = query.eq('tenant_id', currentUserProfile.tenant_id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching pickup stats:', error);
+        return;
+      }
+
+      const stats = {
+        pickedUp: data?.filter(p => p.status === 'completed').length || 0,
+        rejected: data?.filter(p => p.status === 'cancelled').length || 0,
+        rescheduled: data?.filter(p => p.status === 'rescheduled').length || 0
+      };
+
+      setPickupStats(stats);
+    } catch (error) {
+      console.error('Error fetching pickup stats:', error);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchTenants();
+    fetchPickupStats();
   }, []);
 
   const getRoleColor = (role: User['role']) => {
@@ -772,6 +812,57 @@ const UserManagement: React.FC<UserManagementProps> = ({ onBack }) => {
                   <p className="text-sm text-green-600">Drivers</p>
                 </div>
               </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Pickup Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+              <Card className="bg-white shadow-md border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <Package className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {pickupStats.pickedUp}
+                      </p>
+                      <p className="text-sm text-green-600">Cars Picked Up</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white shadow-md border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-red-100 rounded-full">
+                      <XCircle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">
+                        {pickupStats.rejected}
+                      </p>
+                      <p className="text-sm text-green-600">Cars Rejected</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white shadow-md border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-yellow-100 rounded-full">
+                      <Calendar className="h-6 w-6 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-yellow-600">
+                        {pickupStats.rescheduled}
+                      </p>
+                      <p className="text-sm text-green-600">Cars Rescheduled</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
