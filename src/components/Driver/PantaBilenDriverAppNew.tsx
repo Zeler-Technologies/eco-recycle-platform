@@ -172,7 +172,7 @@ const PantaBilenDriverApp = () => {
             )
           `)
           .eq('tenant_id', tenantId)
-          .in('status', ['scheduled', 'assigned', 'in_progress'])
+          .in('status', ['scheduled', 'assigned', 'in_progress', 'completed'])
           .order('created_at', { ascending: false });
 
         if (ordersError) {
@@ -220,6 +220,12 @@ const PantaBilenDriverApp = () => {
 
         const allPickups = [...transformedRequests, ...transformedOrders];
         console.log(`Found ${allPickups.length} total pickups (${transformedRequests.length} pending requests + ${transformedOrders.length} pickup orders)`);
+        
+        // Debug log to check scheduled pickups
+        const scheduledUnassigned = transformedOrders.filter((p: any) => 
+          p.status === 'scheduled' && !p.is_assigned
+        );
+        console.log('Scheduled unassigned pickup_orders:', scheduledUnassigned);
         
         setPickups(allPickups);
       } catch (error) {
@@ -540,48 +546,63 @@ const PantaBilenDriverApp = () => {
       console.log('Claiming pickup:', pickup);
       console.log('Pickup type:', pickup.type);
       console.log('Pickup status:', pickup.status);
+      console.log('Pickup is_assigned:', pickup.is_assigned);
       
-      let result;
+      let result: { success: boolean; message?: string; reason?: string } | null = null;
+      let error: any = null;
       
       if (pickup.type === 'customer_request') {
         // Use existing claim_customer_request for pending requests
-        const { data, error } = await supabase.rpc('claim_customer_request' as any, {
+        const response = await supabase.rpc('claim_customer_request', {
           p_customer_request_id: pickup.pickup_id
         });
 
-        if (error) {
-          console.error('Error claiming customer request:', error);
-          toast.error('Något gick fel vid hämtning av förfrågan. Försök igen.');
-          return;
-        }
-
-        result = data as { success: boolean; message?: string; reason?: string };
+        error = response.error;
+        result = response.data;
       } else if (pickup.type === 'pickup_order') {
         // Use driver_self_assign_pickup for scheduled pickup orders
-        const { data, error } = await supabase.rpc('driver_self_assign_pickup' as any, {
-          pickup_order_id: pickup.pickup_order_id,
-          notes: 'Claimed via driver app'
-        });
+        try {
+          const { data: assignmentId, error: assignError } = await supabase.rpc('driver_self_assign_pickup', {
+            pickup_order_id: pickup.pickup_order_id,
+            notes: 'Claimed via driver app'
+          });
 
-        if (error) {
-          console.error('Error claiming pickup order:', error);
-          toast.error('Något gick fel vid hämtning av uppdraget. Försök igen.');
-          return;
+          error = assignError;
+          if (!error && assignmentId) {
+            result = { success: true, message: 'Uppdraget tilldelades dig!' };
+          } else if (error) {
+            // Parse error message for better user feedback
+            if (error.message.includes('already has an active assignment')) {
+              result = { success: false, reason: 'already_assigned', message: 'Uppdraget är redan tilldelat' };
+            } else if (error.message.includes('Driver not found')) {
+              result = { success: false, reason: 'no_driver_found', message: 'Din förarprofil hittades inte' };
+            } else {
+              result = { success: false, message: error.message };
+            }
+          }
+        } catch (e: any) {
+          console.error('Error in driver_self_assign_pickup:', e);
+          error = e;
+          result = { success: false, message: 'Något gick fel' };
         }
-
-        result = data as { success: boolean; message?: string; reason?: string };
       } else {
         toast.error('Okänd uppdragstyp');
         return;
       }
 
-      if (result.success) {
+      if (error && !result) {
+        console.error('Error claiming request:', error);
+        toast.error('Något gick fel. Försök igen.');
+        return;
+      }
+
+      if (result?.success) {
         toast.success(result.message || 'Uppdraget tilldelades dig!');
         // Reload all pickups to reflect changes
         window.location.reload(); // Simple reload to ensure fresh data
       } else {
         // Handle race conditions and other errors gracefully
-        switch (result.reason) {
+        switch (result?.reason) {
           case 'already_claimed':
           case 'already_assigned':
             toast.info('Uppdraget togs precis av en annan förare');
@@ -597,7 +618,7 @@ const PantaBilenDriverApp = () => {
             toast.error('Din förarprofil hittades inte');
             break;
           default:
-            toast.error(result.message || 'Kunde inte ta uppdraget');
+            toast.error(result?.message || 'Kunde inte ta uppdraget');
         }
         // Reload to get fresh data
         window.location.reload();
@@ -796,6 +817,7 @@ const PantaBilenDriverApp = () => {
           {[
             { value: 'all', label: 'Alla', count: pickups.length },
             { value: 'pending', label: 'Nya', count: pickups.filter(p => p.status === 'pending').length },
+            { value: 'scheduled', label: 'Schemalagda', count: pickups.filter(p => p.status === 'scheduled').length },
             { value: 'assigned', label: 'Tilldelade', count: pickups.filter(p => p.status === 'assigned').length },
             { value: 'in_progress', label: 'Pågående', count: pickups.filter(p => p.status === 'in_progress').length },
             { value: 'completed', label: 'Slutförda', count: pickups.filter(p => p.status === 'completed').length }
@@ -855,6 +877,12 @@ const PantaBilenDriverApp = () => {
                         <div className="text-base text-gray-600 font-medium">
                           {pickup.car_year} {pickup.car_brand} {pickup.car_model}
                         </div>
+                        {/* Show assignment info if available */}
+                        {pickup.is_assigned && pickup.driver_id && (
+                          <div className="text-sm text-orange-600 font-medium mt-1">
+                            Tilldelad förare
+                          </div>
+                        )}
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="text-2xl font-bold text-green-600 mb-2">
@@ -947,6 +975,14 @@ const PantaBilenDriverApp = () => {
           
           {/* Content */}
           <div className="px-4 py-6 space-y-5">
+            {/* Debug info - REMOVE IN PRODUCTION */}
+            <div className="bg-gray-100 p-3 rounded text-xs font-mono">
+              <div>Type: {selectedPickup.type}</div>
+              <div>Status: {selectedPickup.status}</div>
+              <div>Is Assigned: {selectedPickup.is_assigned ? 'Yes' : 'No'}</div>
+              <div>Driver ID: {selectedPickup.driver_id || 'None'}</div>
+            </div>
+
             {/* Car info card */}
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-6 text-center">
               <div className="text-3xl font-bold text-indigo-600 mb-2">
