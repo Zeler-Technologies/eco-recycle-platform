@@ -298,13 +298,12 @@ const PantaBilenDriverApp = () => {
         return;
       }
 
-      // Update database via edge function
-      const { data, error } = await supabase.functions.invoke('update-driver-status', {
-        body: {
-          driverId: currentDriver.id,
-          newStatus: newStatus,
-          reason: 'Driver status change from mobile app'
-        }
+      setLoading(true);
+
+      // Call the database function directly instead of edge function
+      const { data, error } = await supabase.rpc('update_driver_status', {
+        new_driver_status: newStatus,
+        reason_param: 'Manual status change from driver app'
       });
 
       if (error) {
@@ -320,13 +319,16 @@ const PantaBilenDriverApp = () => {
       const messages = {
         'available': 'Du är nu tillgänglig för nya uppdrag',
         'busy': 'Du är nu markerad som upptagen',
-        'offline': 'Du är nu offline',
-        'break': 'Du är nu på paus'
+        'offline': 'Du är nu offline'
       };
+      
       toast.success(messages[newStatus as keyof typeof messages] || 'Status uppdaterad');
+
     } catch (error) {
       console.error('Error updating driver status:', error);
       toast.error('Kunde inte uppdatera status');
+    } finally {
+      setLoading(false);
     }
   };
 
