@@ -124,7 +124,7 @@ const PantaBilenDriverApp = () => {
         const { data: customerRequests, error } = await supabase
           .from('customer_requests')
           .select('*')
-          .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
+          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -373,6 +373,42 @@ const PantaBilenDriverApp = () => {
     } catch (error) {
       console.error('Error updating pickup status:', error);
       toast.error('Kunde inte uppdatera status');
+    }
+  };
+
+  // Assign pickup to driver
+  const assignPickupToDriver = async (pickupId: string) => {
+    if (!currentDriver?.id) {
+      toast.error('Förarerinformation saknas');
+      return;
+    }
+
+    try {
+      // Update the customer request to assign it to this driver
+      const { error } = await supabase
+        .from('customer_requests')
+        .update({ 
+          status: 'assigned',
+          // Note: You may need to add a driver_id field to customer_requests table
+          // For now, we'll just update the status
+        })
+        .eq('id', pickupId);
+
+      if (error) {
+        console.error('Error assigning pickup:', error);
+        toast.error('Kunde inte tilldela uppdrag');
+        return;
+      }
+
+      // Update local state
+      setPickups(prev => prev.map(p => 
+        p.pickup_id === pickupId ? { ...p, status: 'assigned' } : p
+      ));
+      
+      toast.success('Uppdrag tilldelat!');
+    } catch (error) {
+      console.error('Error assigning pickup:', error);
+      toast.error('Kunde inte tilldela uppdrag');
     }
   };
 
@@ -765,6 +801,18 @@ const PantaBilenDriverApp = () => {
 
             {/* Action buttons - Mobile optimized */}
             <div className="space-y-3 pb-8">
+              {selectedPickup.status === 'pending' && (
+                <button 
+                  className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
+                  onClick={() => assignPickupToDriver(selectedPickup.pickup_id)}
+                >
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="text-2xl">✋</span>
+                    Ta uppdrag
+                  </span>
+                </button>
+              )}
+
               {selectedPickup.status === 'assigned' && (
                 <>
                   <button 
