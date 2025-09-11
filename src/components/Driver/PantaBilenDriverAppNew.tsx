@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -100,15 +100,51 @@ const PantaBilenDriverApp = () => {
   ]);
 
   const [currentDriver, setCurrentDriver] = useState({
-    driver_id: '1',
-    full_name: 'Lars Johansson',
-    driver_status: 'available'
+    driver_id: null,
+    id: null,
+    full_name: 'Loading...',
+    driver_status: 'offline'
   });
 
   const [loading, setLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'list' | 'map'>('list');
   const [currentFilter, setCurrentFilter] = useState('all');
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+
+  // Load current driver information on component mount
+  useEffect(() => {
+    const loadDriverInfo = async () => {
+      if (!user) return;
+
+      try {
+        const { data: driver, error } = await supabase
+          .from('drivers')
+          .select('id, full_name, driver_status, current_status')
+          .eq('auth_user_id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error loading driver info:', error);
+          toast.error('Kunde inte ladda förarerinformation');
+          return;
+        }
+
+        if (driver) {
+          setCurrentDriver({
+            driver_id: driver.id, // Keep for compatibility
+            id: driver.id,
+            full_name: driver.full_name,
+            driver_status: driver.driver_status || driver.current_status || 'offline'
+          });
+        }
+      } catch (error) {
+        console.error('Error loading driver info:', error);
+        toast.error('Kunde inte ladda förarerinformation');
+      }
+    };
+
+    loadDriverInfo();
+  }, [user]);
   const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showDetailView, setShowDetailView] = useState(false);
 
@@ -257,7 +293,7 @@ const PantaBilenDriverApp = () => {
   // Status update function
   const updateDriverStatus = async (newStatus: string) => {
     try {
-      if (!currentDriver?.driver_id) {
+      if (!currentDriver?.id) {
         toast.error('Driver ID saknas');
         return;
       }
@@ -265,7 +301,7 @@ const PantaBilenDriverApp = () => {
       // Update database via edge function
       const { data, error } = await supabase.functions.invoke('update-driver-status', {
         body: {
-          driverId: currentDriver.driver_id,
+          driverId: currentDriver.id,
           newStatus: newStatus,
           reason: 'Driver status change from mobile app'
         }
