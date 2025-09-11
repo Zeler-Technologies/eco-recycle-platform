@@ -164,11 +164,6 @@ const PantaBilenDriverApp = () => {
               contact_phone,
               pickup_address,
               pickup_location
-            ),
-            driver_assignments!left(
-              driver_id,
-              is_active,
-              status
             )
           `)
           .eq('tenant_id', tenantId)
@@ -214,8 +209,8 @@ const PantaBilenDriverApp = () => {
           phone_number: order.customer_requests?.contact_phone || 'Ingen telefon',
           pickup_address: order.customer_requests?.pickup_address || order.customer_requests?.pickup_location || 'Ingen adress',
           created_at: order.created_at,
-          driver_id: order.driver_id,
-          is_assigned: !!order.driver_id || order.driver_assignments?.some((da: any) => da.is_active)
+          driver_id: order.assigned_driver_id,
+          is_assigned: !!order.assigned_driver_id
         }));
 
         const allPickups = [...transformedRequests, ...transformedOrders];
