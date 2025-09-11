@@ -553,12 +553,18 @@ const PantaBilenDriverApp = () => {
       
       if (pickup.type === 'customer_request') {
         // Use existing claim_customer_request for pending requests
-        const response = await supabase.rpc('claim_customer_request', {
+        const { data, error: rpcError } = await (supabase.rpc as any)('claim_customer_request', {
           p_customer_request_id: pickup.pickup_id
         });
 
-        error = response.error;
-        result = response.data;
+        if (rpcError) {
+          console.error('Error claiming customer request:', rpcError);
+          toast.error('Något gick fel vid hämtning av förfrågan. Försök igen.');
+          return;
+        }
+
+        error = null;
+        result = (data as { success: boolean; message?: string; reason?: string }) || { success: false };
       } else if (pickup.type === 'pickup_order') {
         // Use driver_self_assign_pickup for scheduled pickup orders
         try {
