@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import DriverMapView from './DriverMapView';
+import { RescheduleModal } from './RescheduleModal';
 
 const PantaBilenDriverApp = () => {
   const { user, logout } = useAuth();
@@ -163,6 +164,10 @@ const PantaBilenDriverApp = () => {
   const [verificationPhotos, setVerificationPhotos] = useState<any[]>([]);
   const [finalPrice, setFinalPrice] = useState(0);
   const [uploading, setUploading] = useState(false);
+  
+  // Reschedule modal state
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
   // Helper functions
   const getStatusText = (status: string) => STATUS_TEXTS[status] || status;
@@ -338,6 +343,33 @@ const PantaBilenDriverApp = () => {
       p.pickup_id === pickupId ? { ...p, status: newStatus } : p
     ));
     toast.success(`Status uppdaterad till ${getStatusText(newStatus)}`);
+  };
+
+  // Handle reschedule confirm
+  const handleRescheduleConfirm = async (newDate: string, notes: string) => {
+    if (!selectedPickup) return;
+    
+    setRescheduleLoading(true);
+    try {
+      // Here you would typically call your API to reschedule the pickup
+      // For now, we'll just update the local state and show a success message
+      
+      setPickups(prev => prev.map(p => 
+        p.pickup_id === selectedPickup.pickup_id 
+          ? { ...p, status: 'scheduled', scheduled_date: newDate }
+          : p
+      ));
+      
+      const scheduleDate = new Date(newDate);
+      toast.success(`Upphämtning omschemalagd till ${scheduleDate.toLocaleDateString('sv-SE')}`);
+      setShowRescheduleModal(false);
+      setShowDetailView(false);
+    } catch (error) {
+      console.error('Error rescheduling pickup:', error);
+      toast.error('Kunde inte schemalägga om upphämtningen');
+    } finally {
+      setRescheduleLoading(false);
+    }
   };
 
   // Component functions
@@ -712,7 +744,7 @@ const PantaBilenDriverApp = () => {
                   
                   <button 
                     className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white py-5 rounded-2xl text-xl font-bold transition-colors shadow-lg active:scale-[0.98]"
-                    onClick={() => updatePickupStatus(selectedPickup.pickup_id, 'scheduled')}
+                    onClick={() => setShowRescheduleModal(true)}
                   >
                     <span className="flex items-center justify-center gap-3">
                       <span className="text-2xl">📅</span>
@@ -958,6 +990,15 @@ const PantaBilenDriverApp = () => {
           </div>
         </div>
       )}
+      
+      {/* Reschedule Modal */}
+      <RescheduleModal
+        isOpen={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        onConfirm={handleRescheduleConfirm}
+        pickup={selectedPickup}
+        isLoading={rescheduleLoading}
+      />
       
       {/* Status menu overlay */}
       {showStatusMenu && (
