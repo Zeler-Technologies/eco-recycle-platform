@@ -129,24 +129,37 @@ const PantaBilenDriverApp = () => {
 
       try {
         // SECURITY: Only show pickups from the driver's tenant
-        const { data: customerRequests, error } = await supabase
-          .from('customer_requests')
-          .select(`
-            *,
-            scrapyards(name, tenant_id)
-          `)
-          .in('status', ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'])
-          .or(`tenant_id.eq.${tenantId},scrapyards.tenant_id.eq.${tenantId}`)
-          .order('created_at', { ascending: false });
+        // Fetch by request tenant OR by scrapyard tenant, then merge uniquely
+        const statuses = ['pending', 'assigned', 'in_progress', 'scheduled', 'completed'];
+        const [byTenant, byScrapyard] = await Promise.all([
+          supabase
+            .from('customer_requests')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .in('status', statuses)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('customer_requests')
+            .select(`*, scrapyards(name, tenant_id)`) 
+            .eq('scrapyards.tenant_id', tenantId)
+            .in('status', statuses)
+            .order('created_at', { ascending: false })
+        ]);
 
-        if (error) {
-          console.error('Error loading pickups:', error);
+        if (byTenant.error || byScrapyard.error) {
+          console.error('Error loading pickups:', byTenant.error || byScrapyard.error);
           toast.error('Kunde inte ladda uppdrag');
           return;
         }
 
-        // Transform customer_requests to pickup format
-        const transformedPickups = customerRequests.map(request => ({
+        const combined = [
+          ...((byTenant.data as any[]) || []),
+          ...((byScrapyard.data as any[]) || [])
+        ];
+        const uniqueById = Array.from(new Map(combined.map((r: any) => [r.id, r])).values());
+
+        // Transform to pickup format
+        const transformedPickups = uniqueById.map((request: any) => ({
           pickup_id: request.id,
           car_registration_number: request.car_registration_number,
           car_brand: request.car_brand || 'Okänd',
@@ -393,22 +406,32 @@ const PantaBilenDriverApp = () => {
     if (!user || !currentDriver?.tenant_id) return;
 
     try {
-      const { data: customerRequests, error } = await supabase
-        .from('customer_requests')
-        .select(`
-          *,
-          scrapyards(name, tenant_id)
-        `)
-        .eq('status', 'pending')
-        .or(`tenant_id.eq.${currentDriver.tenant_id},scrapyards.tenant_id.eq.${currentDriver.tenant_id}`)
-        .order('created_at', { ascending: false });
+      const [byTenant, byScrapyard] = await Promise.all([
+        supabase
+          .from('customer_requests')
+          .select('*')
+          .eq('tenant_id', currentDriver.tenant_id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('customer_requests')
+          .select(`*, scrapyards(name, tenant_id)`) 
+          .eq('scrapyards.tenant_id', currentDriver.tenant_id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error('Error loading available pickups:', error);
-        return;
+      if (byTenant.error || byScrapyard.error) {
+        console.error('Error loading available pickups:', byTenant.error || byScrapyard.error);
+        return [];
       }
 
-      return customerRequests || [];
+      const combined = [
+        ...((byTenant.data as any[]) || []),
+        ...((byScrapyard.data as any[]) || [])
+      ];
+      const uniqueById = Array.from(new Map(combined.map((r: any) => [r.id, r])).values());
+      return uniqueById;
     } catch (error) {
       console.error('Error loading available pickups:', error);
       return [];
@@ -420,22 +443,32 @@ const PantaBilenDriverApp = () => {
     if (!user || !currentDriver?.id) return;
 
     try {
-      const { data: customerRequests, error } = await supabase
-        .from('customer_requests')
-        .select(`
-          *,
-          scrapyards(name, tenant_id)
-        `)
-        .or(`tenant_id.eq.${currentDriver.tenant_id},scrapyards.tenant_id.eq.${currentDriver.tenant_id}`)
-        .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
-        .order('created_at', { ascending: false });
+      const [byTenant, byScrapyard] = await Promise.all([
+        supabase
+          .from('customer_requests')
+          .select('*')
+          .eq('tenant_id', currentDriver.tenant_id)
+          .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('customer_requests')
+          .select(`*, scrapyards(name, tenant_id)`) 
+          .eq('scrapyards.tenant_id', currentDriver.tenant_id)
+          .in('status', ['assigned', 'in_progress', 'scheduled', 'completed'])
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error('Error loading assigned pickups:', error);
-        return;
+      if (byTenant.error || byScrapyard.error) {
+        console.error('Error loading assigned pickups:', byTenant.error || byScrapyard.error);
+        return [];
       }
 
-      return customerRequests || [];
+      const combined = [
+        ...((byTenant.data as any[]) || []),
+        ...((byScrapyard.data as any[]) || [])
+      ];
+      const uniqueById = Array.from(new Map(combined.map((r: any) => [r.id, r])).values());
+      return uniqueById;
     } catch (error) {
       console.error('Error loading assigned pickups:', error);
       return [];
