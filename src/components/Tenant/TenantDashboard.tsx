@@ -16,6 +16,7 @@ import { CustomerMessageManagement } from './CustomerMessageManagement';
 import { NewCustomerRequestModal } from './NewCustomerRequestModal';
 import { PickupEditModal } from './PickupEditModal';
 import { PickupAssignmentModal } from './PickupAssignmentModal';
+import { PickupAnalytics } from './PickupAnalytics';
 
 const TenantDashboard = () => {
   const { user, logout } = useAuth();
@@ -26,6 +27,7 @@ const TenantDashboard = () => {
   const [showServiceZoneManagement, setShowServiceZoneManagement] = useState(false);
   const [showCustomerMessages, setShowCustomerMessages] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [showPickupAnalytics, setShowPickupAnalytics] = useState(false);
   const [showPickupAssignment, setShowPickupAssignment] = useState(false);
   const [selectedPickup, setSelectedPickup] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -141,6 +143,10 @@ const TenantDashboard = () => {
 
   if (showCustomerMessages) {
     return <CustomerMessageManagement onBack={() => setShowCustomerMessages(false)} />;
+  }
+
+  if (showPickupAnalytics) {
+    return <PickupAnalytics onBack={() => setShowPickupAnalytics(false)} />;
   }
 
   // Create display stats array from fetched data
@@ -411,6 +417,14 @@ const TenantDashboard = () => {
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Meddelanden till kund
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setShowPickupAnalytics(true)}
+              >
+                <Car className="h-4 w-4 mr-2" />
+                Upphämtningsanalys
               </Button>
               <Button
                 onClick={() => setShowPickupAssignment(true)}
