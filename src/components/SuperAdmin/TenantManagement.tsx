@@ -1198,13 +1198,13 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                               <h3 className="text-lg font-semibold">🏢 Business Information</h3>
                             </div>
                            <div className="flex gap-2">
-                             <Button 
-                               size="sm" 
-                               variant="ghost"
-                               onClick={() => selectedTenant && checkAddressConsistency(selectedTenant)}
-                             >
-                               Check Consistency
-                             </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => selectedTenant && checkAddressConsistency(selectedTenant)}
+                              >
+                                Check Consistency
+                              </Button>
                              <Button 
                                size="sm" 
                                variant="outline"
