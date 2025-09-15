@@ -1317,6 +1317,55 @@ export type Database = {
           },
         ]
       }
+      driver_assignment_attempts: {
+        Row: {
+          attempt_at: string | null
+          customer_request_id: string | null
+          driver_id: string | null
+          id: string
+          result: string | null
+          tenant_id: number | null
+        }
+        Insert: {
+          attempt_at?: string | null
+          customer_request_id?: string | null
+          driver_id?: string | null
+          id?: string
+          result?: string | null
+          tenant_id?: number | null
+        }
+        Update: {
+          attempt_at?: string | null
+          customer_request_id?: string | null
+          driver_id?: string | null
+          id?: string
+          result?: string | null
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_assignment_attempts_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["customer_request_id"]
+          },
+          {
+            foreignKeyName: "driver_assignment_attempts_customer_request_id_fkey"
+            columns: ["customer_request_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_assignment_attempts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_assignments: {
         Row: {
           accepted_at: string | null
@@ -1324,13 +1373,15 @@ export type Database = {
           actual_start: string | null
           assigned_at: string | null
           assignment_type: string | null
+          claim_source: string | null
+          claimed_at: string | null
           completed_at: string | null
           customer_request_id: string | null
           driver_id: string
           id: string
           is_active: boolean | null
           notes: string | null
-          pickup_order_id: string | null
+          pickup_order_id: string
           role: string | null
           scheduled_end: string | null
           scheduled_start: string | null
@@ -1344,13 +1395,15 @@ export type Database = {
           actual_start?: string | null
           assigned_at?: string | null
           assignment_type?: string | null
+          claim_source?: string | null
+          claimed_at?: string | null
           completed_at?: string | null
           customer_request_id?: string | null
           driver_id: string
           id?: string
           is_active?: boolean | null
           notes?: string | null
-          pickup_order_id?: string | null
+          pickup_order_id: string
           role?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
@@ -1364,13 +1417,15 @@ export type Database = {
           actual_start?: string | null
           assigned_at?: string | null
           assignment_type?: string | null
+          claim_source?: string | null
+          claimed_at?: string | null
           completed_at?: string | null
           customer_request_id?: string | null
           driver_id?: string
           id?: string
           is_active?: boolean | null
           notes?: string | null
-          pickup_order_id?: string | null
+          pickup_order_id?: string
           role?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
@@ -2166,6 +2221,13 @@ export type Database = {
             columns: ["pickup_order_id"]
             isOneToOne: false
             referencedRelation: "pickup_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_pickup_analytics"
             referencedColumns: ["id"]
           },
           {
@@ -3019,6 +3081,13 @@ export type Database = {
             foreignKeyName: "sms_logs_pickup_order_id_fkey"
             columns: ["pickup_order_id"]
             isOneToOne: false
+            referencedRelation: "v_pickup_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_pickup_order_id_fkey"
+            columns: ["pickup_order_id"]
+            isOneToOne: false
             referencedRelation: "v_pickup_orders_enriched"
             referencedColumns: ["id"]
           },
@@ -3799,6 +3868,67 @@ export type Database = {
         }
         Relationships: []
       }
+      v_pickup_analytics: {
+        Row: {
+          actual_pickup_date: string | null
+          car_brand: string | null
+          car_model: string | null
+          car_registration_number: string | null
+          car_year: number | null
+          created_at: string | null
+          customer_name: string | null
+          distance_km: number | null
+          driver_id: string | null
+          driver_name: string | null
+          driver_notes: string | null
+          final_price: number | null
+          id: string | null
+          pickup_address: string | null
+          pickup_date: string | null
+          pickup_latitude: number | null
+          pickup_longitude: number | null
+          pickup_month: number | null
+          pickup_month_key: string | null
+          pickup_quarter: number | null
+          pickup_quarter_key: string | null
+          pickup_week: number | null
+          pickup_year: number | null
+          scheduled_pickup_date: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_customer_requests_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_complete_view"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_customer_requests_registration"
+            columns: ["car_registration_number"]
+            isOneToOne: false
+            referencedRelation: "car_registrations"
+            referencedColumns: ["car_registration_number"]
+          },
+          {
+            foreignKeyName: "fk_pickup_orders_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "scrapyard_invoice_summaries"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_pickup_orders_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["tenants_id"]
+          },
+        ]
+      }
       v_pickup_orders_enriched: {
         Row: {
           actual_pickup_date: string | null
@@ -4315,7 +4445,7 @@ export type Database = {
         Args:
           | { p_scrapyard_id: number; p_tenant_id: number; p_user_id: string }
           | { p_tenant_id: number; p_user_id: string }
-        Returns: Json
+        Returns: undefined
       }
       assign_user_to_scrapyard: {
         Args: { p_role: string; p_scrapyard_id: number; p_user_id: string }
@@ -4429,6 +4559,10 @@ export type Database = {
         Args: { p_table_name: string }
         Returns: boolean
       }
+      claim_customer_request: {
+        Args: { p_customer_request_id: string }
+        Returns: Json
+      }
       cleanup_old_driver_locations: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -4469,17 +4603,27 @@ export type Database = {
         Returns: number
       }
       create_tenant_complete: {
-        Args: {
-          p_address?: string
-          p_admin_email: string
-          p_admin_name: string
-          p_city?: string
-          p_country: string
-          p_invoice_email?: string
-          p_name: string
-          p_postal_code?: string
-          p_service_type?: string
-        }
+        Args:
+          | {
+              billing_address?: string
+              contact_email?: string
+              setup_user_email?: string
+              setup_user_phone?: string
+              tenant_address?: string
+              tenant_name: string
+              tenant_phone?: string
+            }
+          | {
+              p_address?: string
+              p_admin_email: string
+              p_admin_name: string
+              p_city?: string
+              p_country: string
+              p_invoice_email?: string
+              p_name: string
+              p_postal_code?: string
+              p_service_type?: string
+            }
         Returns: Json
       }
       create_tenant_complete_correct: {
@@ -4990,15 +5134,10 @@ export type Database = {
         Returns: {
           address: string
           city: string
-          contact_email: string
-          contact_person: string
-          contact_phone: string
-          created_at: string
           id: number
+          is_active: boolean
           name: string
-          postal_code: string
-          role: string
-          updated_at: string
+          tenant_id: number
         }[]
       }
       get_active_tenant_bids: {
@@ -5184,6 +5323,49 @@ export type Database = {
       get_my_requests: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_pickup_analytics: {
+        Args: {
+          p_driver_id?: string
+          p_end_date?: string
+          p_start_date?: string
+          p_tenant_id: number
+        }
+        Returns: {
+          car_brand: string
+          car_model: string
+          car_registration_number: string
+          car_year: string
+          created_at: string
+          customer_name: string
+          distance_km: number
+          driver_id: string
+          driver_name: string
+          final_price: number
+          id: string
+          pickup_address: string
+          pickup_date: string
+          pickup_latitude: number
+          pickup_longitude: number
+          status: string
+        }[]
+      }
+      get_pickup_analytics_summary: {
+        Args: {
+          p_driver_id?: string
+          p_end_date?: string
+          p_start_date?: string
+          p_tenant_id: number
+        }
+        Returns: {
+          average_distance: number
+          average_price: number
+          total_distance: number
+          total_paid_pickups: number
+          total_pickups: number
+          total_revenue: number
+          unique_drivers: number
+        }[]
       }
       get_platform_stats: {
         Args: Record<PropertyKey, never>
@@ -5536,7 +5718,7 @@ export type Database = {
         Args:
           | { tbl_oid: unknown; use_typmod?: boolean }
           | { use_typmod?: boolean }
-        Returns: number
+        Returns: string
       }
       postgis_addbbox: {
         Args: { "": unknown }
@@ -6796,6 +6978,10 @@ export type Database = {
           p_pickup_address: string
           p_pickup_postal_code: string
         }
+        Returns: Json
+      }
+      test_driver_auth: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       test_driver_status_manager: {
