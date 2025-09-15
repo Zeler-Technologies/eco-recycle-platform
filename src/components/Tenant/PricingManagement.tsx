@@ -424,6 +424,16 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
               <h1 className="text-2xl font-bold">Prishantering</h1>
             </div>
             <div className="flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                onClick={handleReset} 
+                className="border border-white/30 bg-transparent text-white hover:bg-white/20 hover:text-white flex items-center space-x-2"
+                disabled={isSaving}
+                size="sm"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>Återställ till standard</span>
+              </Button>
               {hasChanges && (
                 <span className="text-sm text-yellow-200">
                   Osparade ändringar
@@ -810,17 +820,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
               </CardContent>
             </Card>
 
-            <div className="flex justify-center pt-6">
-              <Button 
-                variant="outline" 
-                onClick={handleReset} 
-                className="flex items-center space-x-2"
-                disabled={isSaving}
-              >
-                <RotateCcw className="h-4 w-4" />
-                <span>Återställ till standard</span>
-              </Button>
-            </div>
           </TabsContent>
 
         </Tabs>
