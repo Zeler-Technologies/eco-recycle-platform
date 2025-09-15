@@ -698,20 +698,39 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
 
   const syncBusinessAddressWithMainLocation = async (tenantId: number) => {
     try {
-      // Get main location address
-      const { data: mainLocation } = await supabase
+      // First try to get the primary location
+      let { data: mainLocation, error: primaryError } = await supabase
         .from('scrapyards')
         .select('address, postal_code, city')
         .eq('tenant_id', tenantId)
         .eq('is_primary', true)
-        .single();
+        .maybeSingle();
 
-      if (!mainLocation) throw new Error('No main location found');
+      // If no primary location, get the first scrapyard
+      if (!mainLocation) {
+        const { data: firstLocation, error: firstError } = await supabase
+          .from('scrapyards')
+          .select('address, postal_code, city')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (firstError) throw firstError;
+        if (!firstLocation) throw new Error('No scrapyard locations found for this tenant');
+        
+        mainLocation = firstLocation;
+      }
+
+      // Combine full address
+      const fullAddress = [mainLocation.address, mainLocation.postal_code, mainLocation.city]
+        .filter(Boolean)
+        .join(', ');
 
       // Update business headquarters address
       const { error } = await supabase
         .from('tenants')  
-        .update({ base_address: mainLocation.address })
+        .update({ base_address: fullAddress })
         .eq('tenants_id', tenantId);
 
       if (error) throw error;
