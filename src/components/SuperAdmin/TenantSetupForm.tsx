@@ -347,6 +347,7 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         
         console.log('Creating tenant with data:', data);
         
+        console.log('About to call create_tenant_complete function...');
         const { data: result, error } = await supabase.rpc('create_tenant_complete', {
           p_name: data.companyName,
           p_country: data.country,
@@ -359,7 +360,10 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           p_city: data.city || null,
         }) as { data: any; error: any };
 
+        console.log('Function call completed. Result:', result, 'Error:', error);
+
         if (error) {
+          console.error('Supabase RPC error:', error);
           throw new Error(error.message || 'Failed to create tenant');
         }
 
