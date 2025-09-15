@@ -189,12 +189,68 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
   }, [editTenant, form]);
 
   const onSubmit = async (data: TenantFormData) => {
-    console.log('=== TENANT UPDATE STARTED ===');
+    console.log('=== TENANT OPERATION STARTED ===');
     console.log('Form data submitted:', data);
     console.log('Editing tenant:', editTenant);
     
     setLoading(true);
     try {
+      // === AUTHENTICATION DEBUGGING ===
+      console.log('=== CHECKING AUTHENTICATION ===');
+      
+      // Check if user is authenticated
+      const { data: authUser } = await supabase.auth.getUser();
+      console.log('Current auth user:', authUser?.user?.id, authUser?.user?.email);
+      
+      if (!authUser?.user) {
+        console.error('No authenticated user found');
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to perform this action",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Check user role from auth_users table
+      const { data: currentUser, error: userError } = await supabase
+        .from('auth_users')
+        .select('id, email, role, tenant_id')
+        .eq('id', authUser.user.id)
+        .single();
+      
+      console.log('Current user from auth_users:', currentUser);
+      console.log('User fetch error:', userError);
+      
+      if (userError || !currentUser) {
+        console.error('Failed to fetch user role:', userError);
+        toast({
+          title: "Authentication Error", 
+          description: "Unable to verify user permissions",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // For tenant creation, verify super_admin role
+      if (!isEditing && currentUser.role !== 'super_admin') {
+        console.error('User is not super_admin:', currentUser);
+        toast({
+          title: "Permission Denied",
+          description: "You must be a super admin to create tenants",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      console.log('=== AUTHENTICATION CHECK PASSED ===');
+      console.log('User role:', currentUser.role, 'Tenant ID:', currentUser.tenant_id);
+      
+      // === END AUTHENTICATION DEBUGGING ===
+      
       if (isEditing) {
         // Validate admin fields for editing as well
         if (!data.adminFirstName || data.adminFirstName.length < 2) {
@@ -367,7 +423,25 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
           throw new Error(error.message || 'Failed to create tenant');
         }
 
+        console.log('=== FUNCTION RESPONSE ANALYSIS ===');
+        console.log('Function response data:', result);
+        console.log('Function response success:', result?.success);
+        console.log('Function response error:', result?.error);
+        
+        if (result && result.success === false) {
+          console.error('Function returned success=false:', result.error);
+          toast({
+            title: "Error",
+            description: result.error || "Failed to create tenant",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        
         if (!result?.success) {
+          console.error('Function result validation failed:', result);
+          setLoading(false);
           throw new Error(result?.error || 'Failed to create tenant');
         }
 
@@ -408,13 +482,20 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
       }
 
     } catch (error) {
-      console.error('Error with tenant operation:', error);
+      console.error('=== ERROR IN TENANT OPERATION ===');
+      console.error('Error details:', error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      
       toast({
         title: isEditing ? "Error Updating Tenant" : "Error Creating Tenant",
         description: error instanceof Error ? error.message : "There was an error. Please try again.",
         variant: "destructive",
       });
+      
+      // Ensure loading state is reset on error
+      setLoading(false);
     } finally {
+      // Double-ensure loading state is always reset
       setLoading(false);
     }
   };
