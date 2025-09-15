@@ -323,14 +323,51 @@ const SchedulingManagement: React.FC<Props> = ({ onBack }) => {
 
   // Filter for the "Today's requests" list (includes time period filter)
   const filteredRequestsForList = useMemo(() => {
-    return requests.filter(request => {
+    console.log('🔍 SCHEDULING DEBUG - Filtering requests:', {
+      totalRequests: requests.length,
+      filterLocation,
+      filterStatus,
+      timePeriodFilter,
+      selectedDate: selectedDate.toISOString().split('T')[0],
+      requestsLoading
+    });
+
+    const filtered = requests.filter(request => {
       const matchesLocation = !filterLocation || 
         request.address.toLowerCase().includes(filterLocation.toLowerCase()) ||
         request.address.match(/\d{5}/)?.[0] === filterLocation;
       const matchesStatus = filterStatus === 'all' || !filterStatus || request.status === filterStatus;
       const matchesTimePeriod = isWithinTimePeriod(request.date, selectedDate, timePeriodFilter);
-      return matchesLocation && matchesStatus && matchesTimePeriod;
+      
+      // Debug individual request filtering
+      const passes = matchesLocation && matchesStatus && matchesTimePeriod;
+      if (!passes) {
+        console.log('🚫 Request filtered out:', {
+          id: request.id,
+          customerName: request.customerName,
+          date: request.date.toISOString().split('T')[0],
+          status: request.status,
+          address: request.address,
+          matchesLocation,
+          matchesStatus,
+          matchesTimePeriod
+        });
+      }
+      
+      return passes;
     });
+
+    console.log('✅ SCHEDULING DEBUG - Filtered results:', {
+      filteredCount: filtered.length,
+      sampleRequests: filtered.slice(0, 3).map(r => ({
+        id: r.id,
+        customerName: r.customerName,
+        date: r.date.toISOString().split('T')[0],
+        status: r.status
+      }))
+    });
+
+    return filtered;
   }, [requests, filterLocation, filterStatus, selectedDate, timePeriodFilter]);
 
   // Filter for the calendar (excludes time period filter)
