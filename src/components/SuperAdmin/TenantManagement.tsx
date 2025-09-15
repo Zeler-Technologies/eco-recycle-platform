@@ -1208,7 +1208,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                              <Button 
                                size="sm" 
                                variant="outline"
-                                onClick={() => selectedTenant && syncBusinessAddressWithMainLocation(selectedTenant)}
+                                onClick={async () => selectedTenant && await syncBusinessAddressWithMainLocation(selectedTenant)}
                               >
                                 Sync with Main Location
                              </Button>
