@@ -1442,8 +1442,17 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                <div>Address Consistency: {(() => {
                                  const primaryScrapyard = tenantScrapyards.find(s => s.is_primary);
                                  const tenantAddress = selectedTenantData?.base_address?.trim();
-                                 const scrapyardAddress = primaryScrapyard?.address?.trim();
-                                 return tenantAddress === scrapyardAddress ? "✓ Consistent" : "⚠ Needs Review";
+                                 
+                                 if (!primaryScrapyard) return "No primary location";
+                                 
+                                 // Create full scrapyard address for comparison
+                                 const fullScrapyardAddress = [
+                                   primaryScrapyard.address,
+                                   primaryScrapyard.postal_code,
+                                   primaryScrapyard.city
+                                 ].filter(Boolean).join(', ').trim();
+                                 
+                                 return tenantAddress === fullScrapyardAddress ? "✓ Consistent" : "⚠ Needs Review";
                                })()}</div>
                             </div>
                           </div>
