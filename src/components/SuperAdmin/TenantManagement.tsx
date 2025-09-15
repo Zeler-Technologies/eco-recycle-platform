@@ -1452,6 +1452,14 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ onBack, selectedTen
                                    primaryScrapyard.city
                                  ].filter(Boolean).join(', ').trim();
                                  
+                                 // Debug logging
+                                 console.log('Address Consistency Debug:', {
+                                   tenantAddress: tenantAddress,
+                                   fullScrapyardAddress: fullScrapyardAddress,
+                                   primaryScrapyard: primaryScrapyard,
+                                   match: tenantAddress === fullScrapyardAddress
+                                 });
+                                 
                                  return tenantAddress === fullScrapyardAddress ? "✓ Consistent" : "⚠ Needs Review";
                                })()}</div>
                             </div>
