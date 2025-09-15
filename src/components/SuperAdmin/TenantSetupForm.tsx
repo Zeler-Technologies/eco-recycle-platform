@@ -264,13 +264,18 @@ export const TenantSetupForm = ({ onTenantCreated, editTenant, onTenantUpdated }
         }
 
         // Update existing tenant
+        // Combine address components for base_address
+        const fullAddress = [data.address, data.postalCode, data.city]
+          .filter(Boolean)
+          .join(', ');
+          
         const { data: result, error } = await supabase
           .from('tenants')
           .update({
             name: data.companyName,
             country: data.country,
             service_type: data.serviceType || null,
-            base_address: data.address || null,
+            base_address: fullAddress || null,
             invoice_email: data.invoiceEmail,
             updated_at: new Date().toISOString(),
           })
