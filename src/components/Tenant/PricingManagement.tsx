@@ -441,9 +441,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
 
       <div className="space-y-6 p-6">
         <Tabs defaultValue="settings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-1">
             <TabsTrigger value="settings">Prisinställningar</TabsTrigger>
-            <TabsTrigger value="distance">Distansregler</TabsTrigger>
           </TabsList>
 
           {/* Settings Tab */}
@@ -824,17 +823,6 @@ const PricingManagement: React.FC<PricingManagementProps> = ({
             </div>
           </TabsContent>
 
-          {/* Distance Rules Tab */}
-          <TabsContent value="distance" className="space-y-6">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Hantera distansbaserade avdrag som automatiskt tillämpas baserat på hämtningsavstånd. Dessa regler kompletterar de fasta avståndsjusteringarna.
-              </AlertDescription>
-            </Alert>
-            
-            <DistanceRulesManager tenantId={tenantId} />
-          </TabsContent>
         </Tabs>
       </div>
     </div>
