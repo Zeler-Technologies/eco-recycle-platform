@@ -139,7 +139,7 @@ export const ScrapyardListScreen: React.FC<ScrapyardListScreenProps> = ({
 
         {/* Navigation Buttons */}
         {!loading && !error && scrapyards.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t">
+          <div className="fixed bottom-0 left-0 right-0 p-4 border-t" style={{ backgroundColor: 'hsl(48 96% 53%)' }}>
             <div className="flex gap-4 max-w-md mx-auto">
               <button
                 onClick={onBack}
