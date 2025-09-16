@@ -150,10 +150,10 @@ export const ScrapyardListScreen: React.FC<ScrapyardListScreenProps> = ({
               <button
                 onClick={handleNext}
                 disabled={!selectedScrapyard}
-                className={`flex-1 py-3 rounded-full font-semibold transition-colors ${
+                className={`flex-1 py-3 rounded-full font-semibold border-2 border-black transition-colors ${
                   selectedScrapyard
                     ? 'bg-black text-white hover:bg-gray-800'
-                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-gray-400 text-gray-600 cursor-not-allowed border-gray-400'
                 }`}
               >
                 Fortsätt
