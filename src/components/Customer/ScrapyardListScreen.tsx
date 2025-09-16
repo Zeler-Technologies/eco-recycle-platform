@@ -43,7 +43,7 @@ export const ScrapyardListScreen: React.FC<ScrapyardListScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-yellow-swedish mobile-container">
+    <div className="min-h-screen mobile-container" style={{ backgroundColor: 'hsl(48 96% 53%)' }}>
       <div className="bg-white rounded-t-[2rem] mt-6 p-6 h-full">
         {/* Header */}
         <div className="text-center mb-6">

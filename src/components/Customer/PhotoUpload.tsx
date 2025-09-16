@@ -307,7 +307,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
   };
 
   return (
-    <div className="min-h-screen bg-yellow-swedish p-4">
+    <div className="min-h-screen p-4" style={{ backgroundColor: 'hsl(48 96% 53%)' }}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
