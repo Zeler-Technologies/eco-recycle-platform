@@ -258,6 +258,11 @@
     margin: 0 auto;
     min-height: 100vh;
   }
+
+  /* Swedish yellow background for customer views */
+  .bg-yellow-swedish {
+    background-color: hsl(48 96% 53%); /* Golden yellow #F5D916 */
+  }
   
   /* BankID loading animation */
   @keyframes bankid-pulse {
