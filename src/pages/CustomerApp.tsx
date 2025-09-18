@@ -1494,6 +1494,7 @@ const CustomerApp = () => {
             return (
               <ScrapyardListScreen
                 registrationNumber={carDetails.registrationNumber}
+                customerRequestId={currentCustomerRequestId}
                 onScrapyardSelect={handleScrapyardSelect}
                 onNext={handleScrapyardNext}
                 onBack={handleScrapyardBack}
