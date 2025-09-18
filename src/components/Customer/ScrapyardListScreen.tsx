@@ -18,6 +18,7 @@ interface Scrapyard {
 
 interface ScrapyardListScreenProps {
   registrationNumber: string;
+  customerRequestId?: string;
   onScrapyardSelect: (scrapyard: Scrapyard) => void;
   onNext: () => void;
   onBack: () => void;
@@ -25,11 +26,12 @@ interface ScrapyardListScreenProps {
 
 export const ScrapyardListScreen: React.FC<ScrapyardListScreenProps> = ({
   registrationNumber,
+  customerRequestId,
   onScrapyardSelect,
   onNext,
   onBack
 }) => {
-  const { scrapyards, loading, error, selectedScrapyard, setSelectedScrapyard } = useScrapyardList(registrationNumber);
+  const { scrapyards, loading, error, selectedScrapyard, setSelectedScrapyard } = useScrapyardList(registrationNumber, undefined, customerRequestId);
 
   const handleScrapyardSelect = (scrapyard: Scrapyard) => {
     setSelectedScrapyard(scrapyard);

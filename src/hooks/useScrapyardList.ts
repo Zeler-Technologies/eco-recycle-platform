@@ -26,7 +26,38 @@ interface VehicleAddress {
   longitude: number;
 }
 
-// Mock function to get vehicle address - replace with real Transportstyrelsen API later
+// Get real vehicle location from customer_requests table
+const getRealVehicleLocation = async (customerRequestId: string): Promise<VehicleAddress | null> => {
+  try {
+    const { data: customerRequest, error } = await supabase
+      .from('customer_requests')
+      .select('pickup_latitude, pickup_longitude, pickup_address, pickup_postal_code, pickup_city')
+      .eq('id', customerRequestId)
+      .single();
+
+    if (error || !customerRequest) {
+      console.warn('Failed to fetch customer request:', error);
+      return null;
+    }
+
+    // If we have coordinates, use them
+    if (customerRequest.pickup_latitude && customerRequest.pickup_longitude) {
+      return {
+        postal_code: customerRequest.pickup_postal_code || '',
+        city: customerRequest.pickup_city || '',
+        latitude: Number(customerRequest.pickup_latitude),
+        longitude: Number(customerRequest.pickup_longitude)
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching customer request location:', error);
+    return null;
+  }
+};
+
+// Mock function to get vehicle address - fallback when real data is not available
 const mockGetVehicleAddress = async (registrationNumber: string): Promise<VehicleAddress> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -42,7 +73,7 @@ const mockGetVehicleAddress = async (registrationNumber: string): Promise<Vehicl
          { postal_code: '11122', city: 'Stockholm', latitude: 59.3293, longitude: 18.0686 };
 };
 
-export const useScrapyardList = (registrationNumber?: string, tenantId?: number) => {
+export const useScrapyardList = (registrationNumber?: string, tenantId?: number, customerRequestId?: string) => {
   const [scrapyards, setScrapyards] = useState<Scrapyard[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,9 +87,21 @@ export const useScrapyardList = (registrationNumber?: string, tenantId?: number)
       try {
         let scrapyardsData: Scrapyard[] = [];
 
-        if (registrationNumber) {
-          // Fetch nearby scrapyards based on vehicle location
-          const vehicleLocation = await mockGetVehicleAddress(registrationNumber);
+        if (registrationNumber || customerRequestId) {
+          // Fetch vehicle location - try real data first, fallback to mock
+          let vehicleLocation: VehicleAddress;
+          
+          if (customerRequestId) {
+            const realLocation = await getRealVehicleLocation(customerRequestId);
+            if (realLocation) {
+              vehicleLocation = realLocation;
+            } else {
+              // Fallback to mock data if no real coordinates available
+              vehicleLocation = await mockGetVehicleAddress(registrationNumber || 'default');
+            }
+          } else {
+            vehicleLocation = await mockGetVehicleAddress(registrationNumber!);
+          }
 
           // Get nearby scrapyards using the RPC function
           const { data: nearbyScrapyards, error: scrapyardsError } = await supabase
@@ -203,7 +246,7 @@ export const useScrapyardList = (registrationNumber?: string, tenantId?: number)
     };
 
     fetchScrapyards();
-  }, [registrationNumber, tenantId]);
+  }, [registrationNumber, tenantId, customerRequestId]);
 
   const refreshScrapyards = () => {
     // Trigger re-fetch by changing a dependency or calling fetchScrapyards directly
