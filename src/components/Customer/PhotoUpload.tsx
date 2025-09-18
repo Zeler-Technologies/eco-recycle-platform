@@ -131,8 +131,10 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Using PNR:', numericPnr, 'for registration:', customerRequest.car_registration_number);
 
-      // Step 3: Simplified car lookup (just use existing car)
+      // Step 3: Find or create car
       console.log('Looking for existing car...');
+      
+      let carId = null;
       
       const { data: existingCar, error: findError } = await supabase
         .from('cars')
@@ -146,12 +148,38 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         throw new Error('Fel vid kontroll av befintlig bil');
       }
 
-      if (!existingCar) {
-        throw new Error('Bil finns inte i systemet - kontakta support');
-      }
+      if (existingCar) {
+        carId = existingCar.id;
+        console.log('Using existing car with ID:', carId);
+      } else {
+        // Create new car if it doesn't exist
+        console.log('No existing car found, creating new one...');
+        
+        const { data: newCar, error: createError } = await supabase
+          .from('cars')
+          .insert({
+            tenant_id: customerRequest.scrapyard_id || 1,
+            license_plate: customerRequest.car_registration_number,
+            brand: customerRequest.car_brand || 'Unknown',
+            model: customerRequest.car_model || 'Unknown',
+            color: 'Unknown',
+            status: 'new',
+            treatment_type: 'pickup',
+            age: customerRequest.car_year?.toString() || null
+          })
+          .select('id')
+          .single();
+        
+        console.log('After car creation - success:', !!newCar, 'error:', createError);
 
-      const carId = existingCar.id;
-      console.log('Using existing car with ID:', carId);
+        if (createError || !newCar) {
+          console.error('Car creation failed:', createError);
+          throw new Error('Kunde inte skapa bil: ' + (createError?.message || 'okänt fel'));
+        }
+
+        carId = newCar.id;
+        console.log('Created new car with ID:', carId);
+      }
 
       // Step 4: Upload image to storage
       const fileExt = file.name.split('.').pop() || 'jpg';
