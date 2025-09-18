@@ -88,7 +88,7 @@ export const useScrapyardList = (registrationNumber?: string, tenantId?: number,
         let scrapyardsData: Scrapyard[] = [];
 
         if (registrationNumber || customerRequestId) {
-          // Fetch vehicle location - try real data first, fallback to mock
+          // Fetch vehicle location - try real data first, fallback to Stockholm
           let vehicleLocation: VehicleAddress;
           
           if (customerRequestId) {
@@ -96,20 +96,25 @@ export const useScrapyardList = (registrationNumber?: string, tenantId?: number,
             if (realLocation) {
               vehicleLocation = realLocation;
             } else {
-              // Fallback to mock data if no real coordinates available
-              vehicleLocation = await mockGetVehicleAddress(registrationNumber || 'default');
+              // Fallback to Stockholm coordinates
+              vehicleLocation = { postal_code: '11122', city: 'Stockholm', latitude: 59.3293, longitude: 18.0686 };
             }
           } else {
             vehicleLocation = await mockGetVehicleAddress(registrationNumber!);
           }
 
-          // Get nearby scrapyards using the RPC function
+          // Ensure coordinates are never null - final safety check
+          if (!vehicleLocation.latitude || !vehicleLocation.longitude) {
+            vehicleLocation = { postal_code: '11122', city: 'Stockholm', latitude: 59.3293, longitude: 18.0686 };
+          }
+
+          // Get nearby scrapyards using the RPC function with correct 4-parameter call
           const { data: nearbyScrapyards, error: scrapyardsError } = await supabase
             .rpc('find_scrapyards_by_material', {
-              p_material: 'stål', // Default material
+              p_material: 'Bil',
               p_latitude: vehicleLocation.latitude,
               p_longitude: vehicleLocation.longitude,
-              p_max_distance: 100
+              p_max_distance: 50
             });
 
           if (scrapyardsError) {
