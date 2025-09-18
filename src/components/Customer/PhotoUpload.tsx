@@ -81,6 +81,12 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
     setUploading(true);
     setError(null);
 
+    // Add timeout to prevent infinite loading
+    const uploadTimeout = setTimeout(() => {
+      setUploading(false);
+      setError('Upload timeout - försök igen');
+    }, 30000); // 30 second timeout
+
     try {
       console.log('Starting RLS-compliant photo upload for type:', currentPhotoType);
 
@@ -97,6 +103,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         `)
         .eq('id', customerRequestId)
         .single();
+      console.log('After customer request lookup - success:', !!customerRequest, 'error:', requestError);
 
       if (requestError || !customerRequest) {
         console.error('Customer request lookup failed:', requestError);
@@ -124,58 +131,27 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
 
       console.log('Using PNR:', numericPnr, 'for registration:', customerRequest.car_registration_number);
 
-      // Step 3: Create or find car record (required for RLS policy)
-      console.log('Creating/finding car record for RLS compliance...');
+      // Step 3: Simplified car lookup (just use existing car)
+      console.log('Looking for existing car...');
       
-      let carId = null;
-
-      // First check if car already exists
       const { data: existingCar, error: findError } = await supabase
         .from('cars')
         .select('id')
         .eq('license_plate', customerRequest.car_registration_number)
-        .eq('tenant_id', customerRequest.scrapyard_id)
         .maybeSingle();
+      console.log('After car lookup - found car:', !!existingCar, 'error:', findError);
 
       if (findError) {
         console.error('Error checking for existing car:', findError);
         throw new Error('Fel vid kontroll av befintlig bil');
       }
 
-      if (existingCar) {
-        carId = existingCar.id;
-        console.log('Found existing car with ID:', carId);
-      } else {
-        // Create new car record with all required fields and correct enum values
-        console.log('Creating new car record...');
-        
-        const carData = {
-          tenant_id: customerRequest.scrapyard_id,
-          license_plate: customerRequest.car_registration_number,
-          brand: customerRequest.car_brand || 'Okänd',
-          model: customerRequest.car_model || 'Okänd',
-          color: 'Okänd', // Default color
-          status: 'new' as const, // Valid car_status enum value
-          treatment_type: 'pickup' as const, // Valid treatment_type enum value
-          age: customerRequest.car_year?.toString() || null
-        };
-
-        console.log('Creating car with data:', carData);
-
-        const { data: newCar, error: createError } = await supabase
-          .from('cars')
-          .insert(carData)
-          .select('id')
-          .single();
-
-        if (createError) {
-          console.error('Car creation failed:', createError);
-          throw new Error(`Kunde inte skapa bilpost: ${createError.message}`);
-        }
-
-        carId = newCar.id;
-        console.log('Created new car with ID:', carId);
+      if (!existingCar) {
+        throw new Error('Bil finns inte i systemet - kontakta support');
       }
+
+      const carId = existingCar.id;
+      console.log('Using existing car with ID:', carId);
 
       // Step 4: Upload image to storage
       const fileExt = file.name.split('.').pop() || 'jpg';
@@ -188,6 +164,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('car-images')
         .upload(filePath, file);
+      console.log('After storage upload - success:', !!uploadData, 'error:', uploadError);
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
@@ -229,6 +206,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
         })
         .select('id')
         .single();
+      console.log('After database insert - success:', !!photoRecord, 'error:', dbError);
 
       if (dbError) {
         console.error('Database insert error:', {
@@ -288,6 +266,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ customerRequestId, onNext, on
       console.error('Complete photo upload process failed:', error);
       setError(error.message || 'Fel vid bilduppladdning. Försök igen.');
     } finally {
+      clearTimeout(uploadTimeout);
       setUploading(false);
     }
   };
